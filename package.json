@@ -4,6 +4,7 @@
 	"packageManager": "bun@1.2.18",
 	"workspaces": ["apps/*", "packages/*"],
 	"scripts": {
+		"postinstall": "cp apps/web/node_modules/phaser/dist/phaser.min.js apps/web/public/phaser.min.js",
 		"dev": "turbo run dev",
 		"dev:web": "turbo run dev --filter=@rimecraft/web",
 		"dev:tauri": "cd apps/tauri && bun run tauri dev",

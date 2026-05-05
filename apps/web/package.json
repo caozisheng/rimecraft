@@ -8,8 +8,7 @@
 		"start": "next start",
 		"lint": "biome check src/",
 		"lint:fix": "biome check src/ --write",
-		"clean": "rm -rf .next",
-		"postinstall": "cp node_modules/phaser/dist/phaser.min.js public/phaser.min.js"
+		"clean": "rm -rf .next"
 	},
 	"dependencies": {
 		"@radix-ui/react-dialog": "^1.1.15",
