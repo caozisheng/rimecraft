@@ -177,8 +177,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
 				agentCheckpoint = getEditorCore().command.getCheckpoint();
 			} catch { /* ignore */ }
 
-			// Multi-round agent loop: keep calling LLM until it responds
-			// with text only (no tool calls) or we hit maxIterations
+			const FILE_WRITE_TOOLS = new Set([
+				"write_file", "patch_file", "create_scene",
+				"delete_file", "rename_file", "set_game_config",
+			]);
+
+			const waitForRuntimeErrors = async (): Promise<string[]> => {
+				const { useGameStore } = await import("@/stores/game-store");
+				useGameStore.getState().clearErrors();
+				const { getEditorCore } = await import("@/core/editor-core");
+				getEditorCore().preview.requestCompilation();
+				// Wait for debounced compilation (300ms) + compile + iframe load + Phaser init
+				await new Promise((r) => setTimeout(r, 4000));
+				return useGameStore.getState().errors;
+			};
+
+			// Multi-round agent loop: keep calling LLM until the game runs
+			// without errors or we hit maxIterations
 			while (iterations < maxIterations) {
 				if (abortController.signal.aborted) break;
 
@@ -255,7 +270,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 										await ToolRegistry.executeToolCall(
 											toolCall,
 										);
-									if (["write_file", "patch_file", "create_scene", "delete_file", "rename_file", "set_game_config"].includes(toolCall.function.name)) {
+									if (FILE_WRITE_TOOLS.has(toolCall.function.name)) {
 										hadFileWrites = true;
 									}
 									state.addMessage(
@@ -306,61 +321,51 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 				iterations++;
 
-				if (shouldBreak || !hadToolCalls) break;
+				if (shouldBreak) break;
 
-				// After file-modifying tool calls, wait for compilation + game init,
-				// then check for NEW runtime errors
-				if (hadFileWrites) {
+				// When the LLM responded with text only (no tool calls),
+				// it thinks the task is done. Verify by running the game.
+				if (!hadToolCalls || hadFileWrites) {
 					try {
-						const { useGameStore } = await import("@/stores/game-store");
-						const errorsBefore = useGameStore.getState().errors.length;
-						// Wait for debounced compilation (300ms) + compile + iframe load + game init
-						await new Promise((r) => setTimeout(r, 3000));
-						const gameState = useGameStore.getState();
-						const newErrors = gameState.errors.slice(errorsBefore);
-						if (newErrors.length > 0) {
+						const runtimeErrors = await waitForRuntimeErrors();
+						if (runtimeErrors.length > 0 && !abortController.signal.aborted) {
 							state.addMessage(
 								"system",
-								`游戏运行时检测到 ${newErrors.length} 个新错误，请分析并修复:\n${newErrors.map((e) => `- ${e}`).join("\n")}`,
+								`游戏预览启动后检测到 ${runtimeErrors.length} 个运行时错误，请分析代码并修复:\n${runtimeErrors.map((e) => `- ${e}`).join("\n")}`,
 							);
+							// Continue the loop so the LLM can fix these errors
+							if (!hadToolCalls) {
+								// LLM thought it was done — force another round
+								set({ status: "thinking", streamingContent: "" });
+								continue;
+							}
+						} else if (!hadToolCalls) {
+							// No errors, LLM is done — exit loop
+							break;
 						}
-					} catch { /* ignore */ }
+					} catch {
+						if (!hadToolCalls) break;
+					}
+				} else if (!hadToolCalls) {
+					break;
 				}
 
 				set({ status: "thinking", streamingContent: "" });
 			}
 
-			// Final error check: after the agent loop ends, wait for compilation
-			// and check if there are any remaining runtime errors
-			try {
-				const { useGameStore } = await import("@/stores/game-store");
-				// Wait for debounced compilation + iframe load + game init
-				await new Promise((r) => setTimeout(r, 3000));
-				const finalGameState = useGameStore.getState();
-				const remainingErrors = finalGameState.errors;
-
-				if (remainingErrors.length > 0 && !abortController.signal.aborted) {
-					if (iterations < maxIterations - 1) {
-						// Still have iterations budget — inject error context and continue
+			// If we exhausted iterations and there are still errors, notify the user
+			if (iterations >= maxIterations && !abortController.signal.aborted) {
+				try {
+					const { useGameStore } = await import("@/stores/game-store");
+					const remainingErrors = useGameStore.getState().errors;
+					if (remainingErrors.length > 0) {
 						state.addMessage(
 							"system",
-							`执行完毕后游戏运行时仍有 ${remainingErrors.length} 个错误，请继续修复:\n${remainingErrors.map((e) => `- ${e}`).join("\n")}`,
-						);
-						set({ status: "thinking", streamingContent: "" });
-						// Continue loop would require restructuring; instead let
-						// the message remain so user can prompt "修复错误"
-						state.addMessage(
-							"system",
-							`⚠️ Agent 未能完全解决运行时错误 (${remainingErrors.length} 个)。你可以发送"修复错误"让 AI 重试，或手动检查代码。`,
-						);
-					} else {
-						state.addMessage(
-							"system",
-							`⚠️ Agent 已达到最大迭代次数但仍有 ${remainingErrors.length} 个运行时错误未解决:\n${remainingErrors.map((e) => `- ${e}`).join("\n")}\n\n你可以发送"修复错误"让 AI 重新尝试。`,
+							`⚠️ Agent 已达到最大迭代次数 (${maxIterations}) 但仍有 ${remainingErrors.length} 个运行时错误:\n${remainingErrors.map((e) => `- ${e}`).join("\n")}\n\n发送"修复错误"可以让 AI 重新尝试。`,
 						);
 					}
-				}
-			} catch { /* ignore */ }
+				} catch { /* ignore */ }
+			}
 		} catch (error) {
 			const message =
 				error instanceof Error ? error.message : String(error);

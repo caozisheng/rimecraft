@@ -5,19 +5,21 @@ import { useGameStore } from "@/stores/game-store";
 import { useEditorStore } from "@/stores/editor-store";
 import { useProjectStore } from "@/stores/project-store";
 import { getEditorCore } from "@/core/editor-core";
-import { Play, Pause, RotateCcw, Maximize2 } from "lucide-react";
+import { Play, Pause, RotateCcw, Maximize2, Copy, Check } from "lucide-react";
 
 export function PreviewPanel() {
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const fps = useGameStore((s) => s.fps);
 	const isRunning = useGameStore((s) => s.isRunning);
 	const errors = useGameStore((s) => s.errors);
+	const lastError = useGameStore((s) => s.lastError);
 	const setRunning = useGameStore((s) => s.setRunning);
 	const previewMode = useEditorStore((s) => s.previewMode);
 	const setPreviewMode = useEditorStore((s) => s.setPreviewMode);
 	const currentProject = useProjectStore((s) => s.currentProject);
 	const [compiledHtml, setCompiledHtml] = useState<string | null>(null);
 	const [revision, setRevision] = useState(0);
+	const [copied, setCopied] = useState(false);
 
 	useEffect(() => {
 		if (!currentProject) return;
@@ -154,8 +156,28 @@ export function PreviewPanel() {
 						</span>
 					)}
 					{errors.length > 0 && (
-						<span className="text-game-error">
-							{errors.length} 个错误
+						<span className="flex items-center gap-1.5 text-game-error">
+							<span className="max-w-[220px] truncate" title={lastError ?? ""}>
+								{errors.length} 个错误: {lastError}
+							</span>
+							<button
+								type="button"
+								title="复制错误信息"
+								onClick={() => {
+									if (lastError) {
+										navigator.clipboard.writeText(lastError);
+										setCopied(true);
+										setTimeout(() => setCopied(false), 1500);
+									}
+								}}
+								className="shrink-0 rounded p-0.5 hover:bg-accent"
+							>
+								{copied ? (
+									<Check className="h-3 w-3 text-game-success" />
+								) : (
+									<Copy className="h-3 w-3" />
+								)}
+							</button>
 						</span>
 					)}
 				</div>
