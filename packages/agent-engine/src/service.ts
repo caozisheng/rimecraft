@@ -304,6 +304,7 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 	parts.push("## 工作规则");
 	parts.push("- 使用中文回复，语言通俗易懂，避免过于专业的术语");
 	parts.push("- 生成代码时使用 TypeScript + Phaser 4 API");
+	parts.push("- 生成代码时自动附带简洁的中文注释，帮助用户理解关键逻辑，但不要过度注释");
 	parts.push("- 每次修改代码后，游戏预览会自动刷新");
 	parts.push("- 如果用户描述模糊，主动提问引导");
 	parts.push("- 出错时不要慌，分析原因后修复");

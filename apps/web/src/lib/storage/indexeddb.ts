@@ -6,6 +6,7 @@ import type {
 } from "@rimecraft/core";
 import { openDB, type IDBPDatabase } from "idb";
 import type { StorageProvider } from "./types";
+import { generateTemplateFiles } from "../templates";
 
 const DB_NAME = "rimecraft";
 const DB_VERSION = 1;
@@ -303,117 +304,6 @@ export class IndexedDBStorageProvider implements StorageProvider {
 	private getDefaultProjectFiles(
 		meta: ProjectMeta,
 	): { path: string; content: string }[] {
-		return [
-			{
-				path: "src/main.ts",
-				content: `import Phaser from "phaser";
-import { GameScene } from "./scenes/game-scene";
-import { MenuScene } from "./scenes/menu-scene";
-
-const config: Phaser.Types.Core.GameConfig = {
-	type: Phaser.AUTO,
-	width: 800,
-	height: 600,
-	backgroundColor: "#1a1a2e",
-	physics: {
-		default: "arcade",
-		arcade: {
-			gravity: { x: 0, y: 300 },
-			debug: false,
-		},
-	},
-	scene: [MenuScene, GameScene],
-};
-
-new Phaser.Game(config);
-`,
-			},
-			{
-				path: "src/scenes/menu-scene.ts",
-				content: `import Phaser from "phaser";
-
-export class MenuScene extends Phaser.Scene {
-	constructor() {
-		super("MenuScene");
-	}
-
-	create() {
-		// 标题文字
-		this.add
-			.text(400, 200, "${meta.name}", {
-				fontSize: "48px",
-				color: "#ffffff",
-				fontFamily: "Arial",
-			})
-			.setOrigin(0.5);
-
-		// 开始按钮
-		const startText = this.add
-			.text(400, 400, "点击开始游戏", {
-				fontSize: "24px",
-				color: "#06b6d4",
-				fontFamily: "Arial",
-			})
-			.setOrigin(0.5)
-			.setInteractive({ useHandCursor: true });
-
-		startText.on("pointerdown", () => {
-			this.scene.start("GameScene");
-		});
-
-		startText.on("pointerover", () => {
-			startText.setColor("#22c55e");
-		});
-
-		startText.on("pointerout", () => {
-			startText.setColor("#06b6d4");
-		});
-	}
-}
-`,
-			},
-			{
-				path: "src/scenes/game-scene.ts",
-				content: `import Phaser from "phaser";
-
-export class GameScene extends Phaser.Scene {
-	constructor() {
-		super("GameScene");
-	}
-
-	preload() {
-		// 在这里加载游戏资源
-	}
-
-	create() {
-		// 在这里创建游戏对象
-		this.add
-			.text(400, 300, "游戏场景 - 开始创作吧!", {
-				fontSize: "24px",
-				color: "#ffffff",
-				fontFamily: "Arial",
-			})
-			.setOrigin(0.5);
-	}
-
-	update() {
-		// 在这里编写游戏逻辑
-	}
-}
-`,
-			},
-			{
-				path: "src/config/game-config.ts",
-				content: `export const GAME_CONFIG = {
-	title: "${meta.name}",
-	width: 800,
-	height: 600,
-	fps: 60,
-	gravity: 300,
-	debug: false,
-};
-`,
-			},
-		];
+		return generateTemplateFiles(meta);
 	}
 }

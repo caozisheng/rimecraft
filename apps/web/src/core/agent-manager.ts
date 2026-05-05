@@ -7,6 +7,7 @@ import type { PreviewManager } from "./preview-manager";
 import type { CommandManager, Command } from "./command-manager";
 import { useProjectStore } from "@/stores/project-store";
 import { useGameStore } from "@/stores/game-store";
+import { ASSET_CATALOG, searchCatalog } from "@/lib/assets/asset-catalog";
 
 export class AgentManager {
 	private initialized = false;
@@ -733,50 +734,65 @@ export class AgentManager {
 			},
 			{
 				name: "search_assets",
-				description: "在项目 assets/ 目录中按类型或名称搜索资源文件",
+				description: "在项目 assets/ 目录和内置素材库中搜索资源。支持中英文关键词搜索。",
 				parameters: {
 					type: "object",
 					properties: {
-						query: { type: "string", description: "搜索关键词（文件名模糊匹配）" },
+						query: { type: "string", description: "搜索关键词（文件名模糊匹配，支持中英文）" },
 						type: { type: "string", enum: ["image", "audio", "data", "font", "all"], description: "资源类型过滤（默认 all）" },
 					},
 				},
 				async execute(args) {
 					try {
 						const projectId = useProjectStore.getState().currentProject?.id;
-						if (!projectId) return { success: false, message: "没有打开的项目" };
-
-						const storage = pm().getStorage();
-						const files = await storage.listFiles(projectId);
-						let assetFiles = files.filter((f) => f.path.startsWith("assets/"));
-
-						const extGroups: Record<string, string[]> = {
-							image: [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"],
-							audio: [".mp3", ".wav", ".ogg"],
-							data: [".json", ".xml", ".csv"],
-							font: [".ttf", ".otf", ".woff", ".woff2"],
-						};
-
-						const filterType = (args.type as string) || "all";
-						if (filterType !== "all" && extGroups[filterType]) {
-							const exts = extGroups[filterType];
-							assetFiles = assetFiles.filter((f) => exts.some((e) => f.path.toLowerCase().endsWith(e)));
-						}
-
 						const query = ((args.query as string) || "").toLowerCase();
-						if (query) {
-							assetFiles = assetFiles.filter((f) => f.path.toLowerCase().includes(query));
+						const filterType = (args.type as string) || "all";
+						const sections: string[] = [];
+
+						// 搜索内置素材库
+						const catalogResults = searchCatalog(query || "", filterType !== "all" ? filterType : undefined);
+						if (catalogResults.length > 0) {
+							const lines = catalogResults.map(
+								(a) => `  - ${a.nameZh} (${a.name}) [${a.category}]\n    生成代码:\n    ${a.generatorCode.split("\n").join("\n    ")}`,
+							);
+							sections.push(`内置素材库 (${catalogResults.length} 个匹配):\n${lines.join("\n")}`);
 						}
 
-						if (assetFiles.length === 0) {
-							return { success: true, message: `没有找到匹配的资源文件`, data: { results: [], count: 0 } };
+						// 搜索项目资源
+						if (projectId) {
+							const storage = pm().getStorage();
+							const files = await storage.listFiles(projectId);
+							let assetFiles = files.filter((f) => f.path.startsWith("assets/"));
+
+							const extGroups: Record<string, string[]> = {
+								image: [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"],
+								audio: [".mp3", ".wav", ".ogg"],
+								data: [".json", ".xml", ".csv"],
+								font: [".ttf", ".otf", ".woff", ".woff2"],
+							};
+
+							if (filterType !== "all" && extGroups[filterType]) {
+								const exts = extGroups[filterType];
+								assetFiles = assetFiles.filter((f) => exts.some((e) => f.path.toLowerCase().endsWith(e)));
+							}
+
+							if (query) {
+								assetFiles = assetFiles.filter((f) => f.path.toLowerCase().includes(query));
+							}
+
+							if (assetFiles.length > 0) {
+								sections.push(`项目资源 (${assetFiles.length} 个):\n${assetFiles.map((f) => `  - ${f.path}`).join("\n")}`);
+							}
 						}
 
-						const results = assetFiles.map((f) => f.path);
+						if (sections.length === 0) {
+							return { success: true, message: "没有找到匹配的资源。你可以使用 Graphics API 生成纹理作为替代。", data: { results: [], catalogResults: [], count: 0 } };
+						}
+
 						return {
 							success: true,
-							message: `找到 ${results.length} 个资源:\n${results.join("\n")}`,
-							data: { results, count: results.length },
+							message: sections.join("\n\n"),
+							data: { catalogResults, count: catalogResults.length },
 						};
 					} catch (e) {
 						return { success: false, message: `搜索资源失败: ${e instanceof Error ? e.message : String(e)}` };
@@ -908,6 +924,51 @@ export class AgentManager {
 					} catch (e) {
 						return { success: false, message: `创建动画失败: ${e instanceof Error ? e.message : String(e)}` };
 					}
+				},
+			},
+			{
+				name: "browse_asset_catalog",
+				description: "浏览内置素材库，按分类列出所有可用的程序化纹理素材及其生成代码。",
+				parameters: {
+					type: "object",
+					properties: {
+						category: {
+							type: "string",
+							enum: ["character", "environment", "ui", "effect", "item", "all"],
+							description: "素材分类（默认 all）",
+						},
+					},
+				},
+				async execute(args) {
+					const category = (args.category as string) || "all";
+					const filtered = category === "all"
+						? ASSET_CATALOG
+						: ASSET_CATALOG.filter((a) => a.category === category);
+
+					if (filtered.length === 0) {
+						return { success: true, message: "该分类下没有素材" };
+					}
+
+					const grouped: Record<string, typeof filtered> = {};
+					for (const a of filtered) {
+						(grouped[a.category] ??= []).push(a);
+					}
+
+					const sections = Object.entries(grouped).map(([cat, assets]) => {
+						const catNames: Record<string, string> = {
+							character: "角色", environment: "环境", ui: "UI", effect: "特效", item: "道具",
+						};
+						const lines = assets.map(
+							(a) => `  - ${a.nameZh} (key: "${a.name}")\n    ${a.generatorCode.split("\n").join("\n    ")}`,
+						);
+						return `【${catNames[cat] ?? cat}】(${assets.length})\n${lines.join("\n")}`;
+					});
+
+					return {
+						success: true,
+						message: `内置素材库 (${filtered.length} 个):\n\n${sections.join("\n\n")}\n\n使用方法: 在场景的 create() 开头调用生成代码，然后用 key 创建精灵即可。`,
+						data: { assets: filtered, count: filtered.length },
+					};
 				},
 			},
 			{
