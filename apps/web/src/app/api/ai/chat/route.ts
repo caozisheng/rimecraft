@@ -6,13 +6,15 @@ export async function POST(request: NextRequest) {
 
 	if (!baseUrl || !apiKey) {
 		return NextResponse.json(
-			{ error: "Missing baseUrl or apiKey" },
+			{ error: "请先在 LLM Settings 中配置 API Base URL 和 API Key" },
 			{ status: 400 },
 		);
 	}
 
+	const target = `${baseUrl}/chat/completions`;
+
 	try {
-		const response = await fetch(`${baseUrl}/chat/completions`, {
+		const response = await fetch(target, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
 		if (!response.ok) {
 			const errorText = await response.text();
 			return NextResponse.json(
-				{ error: errorText },
+				{ error: `API 返回 ${response.status}: ${errorText}` },
 				{ status: response.status },
 			);
 		}
@@ -45,8 +47,8 @@ export async function POST(request: NextRequest) {
 		const message =
 			error instanceof Error ? error.message : "Unknown error";
 		return NextResponse.json(
-			{ error: message },
-			{ status: 500 },
+			{ error: `无法连接到 ${target}: ${message}` },
+			{ status: 502 },
 		);
 	}
 }

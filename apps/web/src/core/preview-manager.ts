@@ -12,7 +12,7 @@ export class PreviewManager {
 
 	constructor(projectManager: ProjectManager) {
 		this.bridge = new PhaserBridge();
-		this.compiler = new GameCompiler(projectManager.getStorage());
+		this.compiler = new GameCompiler(() => projectManager.getStorage());
 
 		this.bridge.on("fps", (fps: number) => {
 			useGameStore.getState().setFps(fps);

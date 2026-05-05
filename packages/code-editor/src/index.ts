@@ -1,1 +1,1 @@
-export { MonacoEditorPlaceholder as MonacoEditor } from "./placeholder";
+export { CodeEditor } from "./code-editor";

@@ -5,24 +5,25 @@ const PHASER_CDN_URL =
 	"https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js";
 
 export class GameCompiler {
-	private storage: StorageProvider;
+	private getStorage: () => StorageProvider;
 
-	constructor(storage: StorageProvider) {
-		this.storage = storage;
+	constructor(getStorage: () => StorageProvider) {
+		this.getStorage = getStorage;
 	}
 
 	async compile(): Promise<string> {
 		const projectId = useProjectStore.getState().currentProject?.id;
 		if (!projectId) throw new Error("No project open");
 
-		const files = await this.storage.listFiles(projectId);
+		const storage = this.getStorage();
+		const files = await storage.listFiles(projectId);
 		const tsFiles = files.filter(
 			(f) => f.path.endsWith(".ts") && f.path.startsWith("src/"),
 		);
 
 		const sources: Record<string, string> = {};
 		for (const file of tsFiles) {
-			const content = await this.storage.readFile(projectId, file.path);
+			const content = await storage.readFile(projectId, file.path);
 			sources[file.path] = content;
 		}
 

@@ -19,6 +19,83 @@ interface RunAgentLoopParams {
 	signal?: AbortSignal;
 }
 
+const PHASER_KNOWLEDGE = `
+## Phaser 4 代码生成规则
+
+你生成的代码必须严格遵循以下规则：
+
+### 项目结构
+- 入口文件: src/main.ts — 创建 Phaser.Game 实例, 注册所有场景
+- 场景文件: src/scenes/<name>.ts — 每个场景一个文件, 导出场景类
+- 配置文件: src/config/game-config.ts — 游戏配置常量
+
+### main.ts 标准模板
+\`\`\`typescript
+import Phaser from "phaser";
+import { GameScene } from "./scenes/game-scene";
+
+const config: Phaser.Types.Core.GameConfig = {
+  type: Phaser.AUTO,
+  width: 800,
+  height: 600,
+  backgroundColor: "#1a1a2e",
+  physics: {
+    default: "arcade",
+    arcade: { gravity: { x: 0, y: 0 }, debug: false }
+  },
+  scene: [GameScene]
+};
+
+new Phaser.Game(config);
+\`\`\`
+
+### 场景标准模板
+\`\`\`typescript
+import Phaser from "phaser";
+
+export class GameScene extends Phaser.Scene {
+  constructor() { super("GameScene"); }
+  preload() { /* this.load.image("key", "url"); */ }
+  create() { /* this.add.sprite(x, y, "key"); */ }
+  update(time: number, delta: number) { /* 每帧逻辑 */ }
+}
+\`\`\`
+
+### 关键 API 速查
+- 创建精灵: this.add.sprite(x, y, "key") / this.physics.add.sprite(x, y, "key")
+- 创建文本: this.add.text(x, y, "text", { fontSize: "24px", color: "#fff" })
+- 创建图形: this.add.graphics() → graphics.fillRect(x, y, w, h)
+- 物理碰撞: this.physics.add.collider(objA, objB, callback)
+- 重叠检测: this.physics.add.overlap(objA, objB, callback)
+- 键盘输入: this.input.keyboard!.createCursorKeys()
+- 场景切换: this.scene.start("SceneName")
+- 计时器: this.time.addEvent({ delay: 1000, callback: fn, loop: true })
+- 补间动画: this.tweens.add({ targets: obj, x: 400, duration: 1000 })
+- 粒子: this.add.particles(x, y, "key", { speed: 100, lifespan: 500 })
+- 相机跟随: this.cameras.main.startFollow(player)
+- 设置物理体: sprite.body!.setVelocity(vx, vy) / .setGravityY(300) / .setBounce(0.2)
+- 静态物理组: this.physics.add.staticGroup()
+
+### 无图片资源时的替代方案
+如果项目没有图片素材, 使用 Graphics 绘制替代:
+\`\`\`typescript
+// 用矩形代替精灵
+const graphics = this.add.graphics();
+graphics.fillStyle(0x06b6d4, 1);
+graphics.fillRect(0, 0, 32, 48);
+graphics.generateTexture("player", 32, 48);
+graphics.destroy();
+const player = this.physics.add.sprite(100, 400, "player");
+\`\`\`
+
+### 重要注意事项
+- 所有 import 必须使用相对路径 (./xxx), Phaser 用 import Phaser from "phaser"
+- 使用 export class 导出场景类
+- 不要使用 async/await 在 preload() 中, Phaser 有自己的加载管理
+- physics.add.sprite() 返回的是带物理体的精灵, add.sprite() 返回的是普通精灵
+- 修改代码后游戏会自动重新编译和刷新预览
+`;
+
 function buildSystemPrompt(params: RunAgentLoopParams): string {
 	const parts: string[] = [];
 
@@ -46,18 +123,24 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 		}
 	}
 
+	parts.push(PHASER_KNOWLEDGE);
+	parts.push("");
+
 	if (params.gameContext) {
-		parts.push("当前游戏状态：");
+		parts.push("=== 当前游戏项目状态 ===");
 		parts.push(params.gameContext);
 		parts.push("");
 	}
 
-	parts.push("重要规则：");
+	parts.push("## 工作规则");
 	parts.push("- 使用中文回复，语言通俗易懂，避免过于专业的术语");
 	parts.push("- 生成代码时使用 TypeScript + Phaser 4 API");
 	parts.push("- 每次修改代码后，游戏预览会自动刷新");
 	parts.push("- 如果用户描述模糊，主动提问引导");
 	parts.push("- 出错时不要慌，分析原因后修复");
+	parts.push("- 使用 write_file 工具写入代码文件，路径以 src/ 开头");
+	parts.push("- 修改游戏时，先用 list_files 和 read_file 了解当前代码，再用 write_file 修改");
+	parts.push("- 生成完整可运行的代码，不要省略任何部分");
 
 	return parts.join("\n");
 }
@@ -71,7 +154,7 @@ export async function* runAgentLoop(
 		{ role: "system" as const, content: systemPrompt },
 		...params.messages.map((m) => ({
 			role: m.role as "user" | "assistant" | "system" | "tool",
-			content: m.content,
+			content: m.content || null,
 			...(m.toolCalls ? { tool_calls: m.toolCalls } : {}),
 			...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
 		})),
@@ -113,21 +196,41 @@ export async function* runAgentLoop(
 
 	yield { type: "status", status: "thinking" };
 
+	const isBrowser = typeof window !== "undefined" && !("__TAURI__" in window);
+
 	try {
-		const response = await fetch(`${params.llmConfig.baseUrl}/chat/completions`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${params.llmConfig.apiKey}`,
-			},
-			body: JSON.stringify({
-				model: params.llmConfig.model,
-				messages: apiMessages,
-				tools: tools.length > 0 ? tools : undefined,
-				stream: true,
-			}),
-			signal: params.signal,
-		});
+		let response: Response;
+
+		if (isBrowser) {
+			response = await fetch("/api/ai/chat", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					baseUrl: params.llmConfig.baseUrl,
+					apiKey: params.llmConfig.apiKey,
+					model: params.llmConfig.model,
+					messages: apiMessages,
+					tools: tools.length > 0 ? tools : undefined,
+					stream: true,
+				}),
+				signal: params.signal,
+			});
+		} else {
+			response = await fetch(`${params.llmConfig.baseUrl}/chat/completions`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${params.llmConfig.apiKey}`,
+				},
+				body: JSON.stringify({
+					model: params.llmConfig.model,
+					messages: apiMessages,
+					tools: tools.length > 0 ? tools : undefined,
+					stream: true,
+				}),
+				signal: params.signal,
+			});
+		}
 
 		if (!response.ok) {
 			const errorText = await response.text();

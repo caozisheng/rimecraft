@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useChatStore } from "@/stores/chat-store";
 import { Send, Square, Sparkles } from "lucide-react";
 import { EXPERT_ROLES } from "@rimecraft/agent-engine";
+import Markdown from "react-markdown";
 
 export function ChatPanel() {
 	const messages = useChatStore((s) => s.messages);
@@ -102,7 +103,17 @@ export function ChatPanel() {
 											: "bg-card text-card-foreground"
 							}`}
 						>
-							{msg.content}
+							{msg.role === "assistant" ? (
+								<Markdown
+									components={{
+										pre: ({ children }) => <pre className="my-2 overflow-x-auto rounded-lg bg-[#1a1a2e] p-3 text-xs">{children}</pre>,
+										code: ({ children, className }) =>
+											className ? <code className="text-game-primary">{children}</code> : <code className="rounded bg-[#2a2a4a] px-1 py-0.5 text-game-primary">{children}</code>,
+									}}
+								>{msg.content}</Markdown>
+							) : (
+								msg.content
+							)}
 						</div>
 					</div>
 				))}
@@ -110,7 +121,13 @@ export function ChatPanel() {
 				{streamingContent && (
 					<div className="mb-4 flex justify-start">
 						<div className="max-w-[85%] rounded-2xl bg-card px-4 py-2.5 text-sm text-card-foreground">
-							{streamingContent}
+							<Markdown
+								components={{
+									pre: ({ children }) => <pre className="my-2 overflow-x-auto rounded-lg bg-[#1a1a2e] p-3 text-xs">{children}</pre>,
+									code: ({ children, className }) =>
+										className ? <code className="text-game-primary">{children}</code> : <code className="rounded bg-[#2a2a4a] px-1 py-0.5 text-game-primary">{children}</code>,
+								}}
+							>{streamingContent}</Markdown>
 							<span className="ml-1 inline-block h-4 w-1 animate-pulse bg-game-primary" />
 						</div>
 					</div>

@@ -118,11 +118,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 			const currentMessages = get().messages;
 
+			// Build game context from current project files
+			let gameContext: string | null = null;
+			try {
+				const { getEditorCore } = await import("@/core/editor-core");
+				const core = getEditorCore();
+				const { useProjectStore } = await import("@/stores/project-store");
+				const projectState = useProjectStore.getState();
+				const projectId = projectState.currentProject?.id;
+				if (projectId) {
+					const storage = core.project.getStorage();
+					const files = await storage.listFiles(projectId);
+					const srcFiles = files.filter((f) => f.path.endsWith(".ts") && f.path.startsWith("src/"));
+					const parts: string[] = [];
+					parts.push(`项目: ${projectState.currentProject?.name ?? "未命名"}`);
+					parts.push(`文件 (${srcFiles.length}):`);
+					for (const f of srcFiles) {
+						const content = await storage.readFile(projectId, f.path);
+						parts.push(`\n--- ${f.path} ---`);
+						parts.push(content);
+					}
+					gameContext = parts.join("\n");
+				}
+			} catch { /* ignore */ }
+
 			const events = runAgentLoop({
 				messages: currentMessages,
 				llmConfig,
 				expertRole: state.expertRole,
 				activeRoleId: state.activeRoleId ?? undefined,
+				gameContext,
 				signal: abortController.signal,
 			});
 
@@ -145,6 +170,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
 						const { ToolRegistry } = await import(
 							"@rimecraft/agent-engine"
 						);
+
+						// Save the assistant message with tool_calls before adding tool results,
+						// so the message history stays valid for OpenAI-compatible APIs.
+						state.addMessage(
+							"assistant",
+							fullContent || "",
+							{ toolCalls: event.toolCalls },
+						);
+						fullContent = "";
+						set({ streamingContent: "" });
 
 						for (const toolCall of event.toolCalls) {
 							if (
