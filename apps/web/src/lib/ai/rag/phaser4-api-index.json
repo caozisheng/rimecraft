@@ -1,0 +1,188 @@
+{
+  "subsystems": [
+    {
+      "name": "GameObjects",
+      "keywords": ["sprite", "text", "image", "graphics", "container", "tilesprite", "精灵", "文本", "图片", "图形", "容器"],
+      "apis": [
+        "this.add.sprite(x, y, key) → Phaser.GameObjects.Sprite",
+        "this.add.image(x, y, key) → Phaser.GameObjects.Image",
+        "this.add.text(x, y, text, style) → Phaser.GameObjects.Text",
+        "this.add.graphics() → Phaser.GameObjects.Graphics",
+        "this.add.tileSprite(x, y, w, h, key) → Phaser.GameObjects.TileSprite",
+        "this.add.container(x, y, children?) → Phaser.GameObjects.Container",
+        "this.add.particles(x, y, key, config) → Phaser.GameObjects.Particles.ParticleEmitter",
+        "this.add.group(config?) → Phaser.GameObjects.Group",
+        "sprite.setOrigin(x, y)",
+        "sprite.setScale(x, y?)",
+        "sprite.setAlpha(alpha)",
+        "sprite.setTint(color)",
+        "sprite.clearTint()",
+        "sprite.setDepth(depth)",
+        "sprite.setScrollFactor(x, y?)",
+        "sprite.setVisible(visible)",
+        "sprite.setActive(active)",
+        "sprite.setInteractive(config?)",
+        "sprite.setFlipX(flip) / setFlipY(flip)",
+        "sprite.destroy()",
+        "text.setText(text)",
+        "text.setStyle(style)",
+        "graphics.fillStyle(color, alpha)",
+        "graphics.fillRect(x, y, w, h)",
+        "graphics.fillCircle(x, y, radius)",
+        "graphics.fillRoundedRect(x, y, w, h, radius)",
+        "graphics.lineStyle(width, color, alpha)",
+        "graphics.strokeRect(x, y, w, h)",
+        "graphics.generateTexture(key, w, h)",
+        "graphics.clear()",
+        "tileSprite.tilePositionX / tilePositionY"
+      ]
+    },
+    {
+      "name": "Physics.Arcade",
+      "keywords": ["physics", "collider", "velocity", "gravity", "bounce", "物理", "碰撞", "速度", "重力"],
+      "apis": [
+        "this.physics.add.sprite(x, y, key) → Phaser.Physics.Arcade.Sprite",
+        "this.physics.add.group(config?) → Phaser.Physics.Arcade.Group",
+        "this.physics.add.staticGroup() → Phaser.Physics.Arcade.StaticGroup",
+        "this.physics.add.collider(a, b, callback?, process?, scope?)",
+        "this.physics.add.overlap(a, b, callback?, process?, scope?)",
+        "this.physics.pause() / this.physics.resume()",
+        "body.setVelocity(x, y) / setVelocityX(x) / setVelocityY(y)",
+        "body.setGravityY(g)",
+        "body.setBounce(x, y?)",
+        "body.setCollideWorldBounds(true)",
+        "body.setImmovable(true)",
+        "body.setSize(w, h) / setOffset(x, y)",
+        "body.stop()",
+        "body.touching.down / up / left / right",
+        "body.velocity.x / velocity.y",
+        "group.getChildren() → GameObject[]",
+        "group.getFirst(active?, create?, x?, y?, key?)",
+        "group.countActive(true) / countActive(false)",
+        "group.killAndHide(obj)",
+        "staticGroup.create(x, y, key).refreshBody()"
+      ]
+    },
+    {
+      "name": "Input",
+      "keywords": ["keyboard", "mouse", "pointer", "touch", "drag", "键盘", "鼠标", "触摸", "输入"],
+      "apis": [
+        "this.input.keyboard!.createCursorKeys() → { left, right, up, down, space, shift }",
+        "this.input.keyboard!.addKey(keyCode) → Phaser.Input.Keyboard.Key",
+        "this.input.keyboard!.addKeys({...}) → Record<string, Key>",
+        "Phaser.Input.Keyboard.JustDown(key) → boolean",
+        "key.isDown → boolean",
+        "this.input.on('pointerdown', callback)",
+        "this.input.on('pointermove', callback)",
+        "sprite.setInteractive({ useHandCursor: true })",
+        "sprite.on('pointerdown' | 'pointerover' | 'pointerout', callback)",
+        "this.input.setDraggable(sprite)",
+        "this.input.on('drag', (pointer, obj, dragX, dragY) => {})"
+      ]
+    },
+    {
+      "name": "Scene",
+      "keywords": ["scene", "start", "launch", "restart", "场景", "切换", "启动"],
+      "apis": [
+        "this.scene.start(key, data?)",
+        "this.scene.restart(data?)",
+        "this.scene.launch(key, data?)",
+        "this.scene.stop(key?)",
+        "this.scene.pause(key?)",
+        "this.scene.resume(key?)",
+        "this.scene.get(key) → Phaser.Scene",
+        "this.scene.isActive(key) → boolean",
+        "this.scene.bringToTop(key?)",
+        "this.scene.sendToBack(key?)",
+        "create(data) — receives data from scene.start()"
+      ]
+    },
+    {
+      "name": "Camera",
+      "keywords": ["camera", "follow", "shake", "fade", "zoom", "相机", "跟随", "震动", "缩放"],
+      "apis": [
+        "this.cameras.main.startFollow(target, roundPixels?, lerpX?, lerpY?)",
+        "this.cameras.main.stopFollow()",
+        "this.cameras.main.setBounds(x, y, w, h)",
+        "this.cameras.main.setZoom(zoom)",
+        "this.cameras.main.shake(duration, intensity?)",
+        "this.cameras.main.flash(duration, r?, g?, b?)",
+        "this.cameras.main.fadeOut(duration, r?, g?, b?)",
+        "this.cameras.main.fadeIn(duration, r?, g?, b?)",
+        "this.cameras.main.once('camerafadeoutcomplete', callback)"
+      ]
+    },
+    {
+      "name": "Tweens",
+      "keywords": ["tween", "animate", "ease", "补间", "动画", "缓动"],
+      "apis": [
+        "this.tweens.add({ targets, props, duration, ease, repeat?, yoyo?, delay?, onComplete? })",
+        "this.tweens.chain({ targets, tweens: [...] })",
+        "tween.stop() / tween.pause() / tween.resume()",
+        "Ease functions: 'Linear', 'Power2', 'Bounce.Out', 'Sine.InOut', 'Back.Out', 'Elastic.Out'"
+      ]
+    },
+    {
+      "name": "Time",
+      "keywords": ["timer", "delay", "clock", "计时", "延迟", "时间"],
+      "apis": [
+        "this.time.addEvent({ delay, callback, loop?, repeat? }) → TimerEvent",
+        "this.time.delayedCall(delay, callback) → TimerEvent",
+        "timerEvent.remove()",
+        "update(time: number, delta: number) — time = total ms, delta = ms since last frame"
+      ]
+    },
+    {
+      "name": "Loader",
+      "keywords": ["load", "preload", "asset", "加载", "资源"],
+      "apis": [
+        "this.load.image(key, url)",
+        "this.load.spritesheet(key, url, { frameWidth, frameHeight })",
+        "this.load.audio(key, url | url[])",
+        "this.load.atlas(key, textureUrl, atlasUrl)",
+        "this.load.tilemapTiledJSON(key, url)",
+        "this.load.bitmapFont(key, textureUrl, fontDataUrl)",
+        "this.load.on('progress', (value) => {}) — loading progress 0..1",
+        "this.load.on('complete', () => {}) — all assets loaded"
+      ]
+    },
+    {
+      "name": "Animation",
+      "keywords": ["animation", "anim", "frame", "动画", "帧"],
+      "apis": [
+        "this.anims.create({ key, frames, frameRate, repeat })",
+        "this.anims.generateFrameNumbers(key, { start, end })",
+        "sprite.play(animKey, ignoreIfPlaying?)",
+        "sprite.anims.play(animKey, ignoreIfPlaying?)",
+        "sprite.anims.stop()",
+        "sprite.on('animationcomplete', callback)"
+      ]
+    },
+    {
+      "name": "Math",
+      "keywords": ["random", "math", "distance", "angle", "随机", "数学", "距离"],
+      "apis": [
+        "Phaser.Math.Between(min, max) → integer",
+        "Phaser.Math.FloatBetween(min, max) → float",
+        "Phaser.Math.Distance.Between(x1, y1, x2, y2) → number",
+        "Phaser.Math.Angle.Between(x1, y1, x2, y2) → radians",
+        "Phaser.Math.Clamp(value, min, max) → number",
+        "Phaser.Math.DegToRad(degrees) / RadToDeg(radians)",
+        "Phaser.Utils.Array.GetRandom(array) → item",
+        "Phaser.Utils.Array.Shuffle(array) → array"
+      ]
+    },
+    {
+      "name": "Sound",
+      "keywords": ["sound", "audio", "music", "sfx", "声音", "音频", "音乐", "音效"],
+      "apis": [
+        "this.sound.add(key, config?) → Sound",
+        "this.sound.play(key, config?)",
+        "sound.play(config?)",
+        "sound.stop()",
+        "sound.setVolume(vol) / setLoop(loop)",
+        "this.sound.pauseAll() / resumeAll() / stopAll()"
+      ]
+    }
+  ]
+}

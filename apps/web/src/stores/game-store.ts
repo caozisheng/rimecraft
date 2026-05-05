@@ -16,6 +16,10 @@ interface GameState {
 	clearErrors: () => void;
 }
 
+function normalizeError(error: string): string {
+	return error.replace(/\(line \d+(?::\d+)?\)/g, "").replace(/game:\d+:\d+/g, "").trim();
+}
+
 export const useGameStore = create<GameState>((set) => ({
 	fps: 0,
 	isRunning: false,
@@ -29,9 +33,16 @@ export const useGameStore = create<GameState>((set) => ({
 	setActiveScene: (activeSceneId) => set({ activeSceneId }),
 	setObjectCount: (objectCount) => set({ objectCount }),
 	addError: (error) =>
-		set((s) => ({
-			errors: [...s.errors.slice(-49), error],
-			lastError: error,
-		})),
+		set((s) => {
+			const normalized = normalizeError(error);
+			const isDuplicate = s.errors.some(
+				(e) => normalizeError(e) === normalized,
+			);
+			if (isDuplicate) return s;
+			return {
+				errors: [...s.errors.slice(-49), error],
+				lastError: error,
+			};
+		}),
 	clearErrors: () => set({ errors: [], lastError: null }),
 }));

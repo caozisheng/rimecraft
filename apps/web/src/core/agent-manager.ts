@@ -683,6 +683,234 @@ export class AgentManager {
 				},
 			},
 			{
+				name: "list_project_assets",
+				description: "列出项目 assets/ 目录下的所有资源文件，自动检测文件类型（图片、音频、字体等）",
+				parameters: { type: "object", properties: {} },
+				async execute() {
+					try {
+						const projectId = useProjectStore.getState().currentProject?.id;
+						if (!projectId) return { success: false, message: "没有打开的项目" };
+
+						const storage = pm().getStorage();
+						const files = await storage.listFiles(projectId);
+						const assetFiles = files.filter((f) => f.path.startsWith("assets/"));
+
+						if (assetFiles.length === 0) {
+							return { success: true, message: "项目没有资源文件。assets/ 目录为空。", data: { assets: [], count: 0 } };
+						}
+
+						const typeMap: Record<string, string> = {
+							".png": "image", ".jpg": "image", ".jpeg": "image", ".webp": "image", ".gif": "image", ".svg": "image",
+							".mp3": "audio", ".wav": "audio", ".ogg": "audio",
+							".json": "data", ".xml": "data", ".csv": "data",
+							".ttf": "font", ".otf": "font", ".woff": "font", ".woff2": "font",
+							".atlas": "atlas", ".fnt": "bitmap-font",
+						};
+
+						const assets = assetFiles.map((f) => {
+							const ext = f.path.substring(f.path.lastIndexOf(".")).toLowerCase();
+							return { path: f.path, type: typeMap[ext] ?? "unknown", ext };
+						});
+
+						const grouped: Record<string, string[]> = {};
+						for (const a of assets) {
+							(grouped[a.type] ??= []).push(a.path);
+						}
+
+						const lines = Object.entries(grouped).map(
+							([type, paths]) => `[${type}] (${paths.length}):\n${paths.map((p) => `  - ${p}`).join("\n")}`,
+						);
+
+						return {
+							success: true,
+							message: `项目资源 (${assets.length} 个文件):\n${lines.join("\n")}`,
+							data: { assets, count: assets.length },
+						};
+					} catch (e) {
+						return { success: false, message: `列出资源失败: ${e instanceof Error ? e.message : String(e)}` };
+					}
+				},
+			},
+			{
+				name: "search_assets",
+				description: "在项目 assets/ 目录中按类型或名称搜索资源文件",
+				parameters: {
+					type: "object",
+					properties: {
+						query: { type: "string", description: "搜索关键词（文件名模糊匹配）" },
+						type: { type: "string", enum: ["image", "audio", "data", "font", "all"], description: "资源类型过滤（默认 all）" },
+					},
+				},
+				async execute(args) {
+					try {
+						const projectId = useProjectStore.getState().currentProject?.id;
+						if (!projectId) return { success: false, message: "没有打开的项目" };
+
+						const storage = pm().getStorage();
+						const files = await storage.listFiles(projectId);
+						let assetFiles = files.filter((f) => f.path.startsWith("assets/"));
+
+						const extGroups: Record<string, string[]> = {
+							image: [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"],
+							audio: [".mp3", ".wav", ".ogg"],
+							data: [".json", ".xml", ".csv"],
+							font: [".ttf", ".otf", ".woff", ".woff2"],
+						};
+
+						const filterType = (args.type as string) || "all";
+						if (filterType !== "all" && extGroups[filterType]) {
+							const exts = extGroups[filterType];
+							assetFiles = assetFiles.filter((f) => exts.some((e) => f.path.toLowerCase().endsWith(e)));
+						}
+
+						const query = ((args.query as string) || "").toLowerCase();
+						if (query) {
+							assetFiles = assetFiles.filter((f) => f.path.toLowerCase().includes(query));
+						}
+
+						if (assetFiles.length === 0) {
+							return { success: true, message: `没有找到匹配的资源文件`, data: { results: [], count: 0 } };
+						}
+
+						const results = assetFiles.map((f) => f.path);
+						return {
+							success: true,
+							message: `找到 ${results.length} 个资源:\n${results.join("\n")}`,
+							data: { results, count: results.length },
+						};
+					} catch (e) {
+						return { success: false, message: `搜索资源失败: ${e instanceof Error ? e.message : String(e)}` };
+					}
+				},
+			},
+			{
+				name: "import_asset",
+				description: "将资源文件导入到项目 assets/ 目录，并生成对应的 Phaser preload 代码。支持通过 URL 下载或通过 base64 写入。",
+				parameters: {
+					type: "object",
+					properties: {
+						url: { type: "string", description: "资源 URL（将下载到 assets/ 目录）" },
+						fileName: { type: "string", description: "保存的文件名（如 player.png）" },
+						assetKey: { type: "string", description: "Phaser 中使用的资源键名（如 player）" },
+						assetType: { type: "string", enum: ["image", "spritesheet", "audio", "atlas"], description: "资源类型，默认 image" },
+						frameConfig: {
+							type: "object",
+							description: "spritesheet 的帧配置",
+							properties: {
+								frameWidth: { type: "number" },
+								frameHeight: { type: "number" },
+							},
+						},
+					},
+					required: ["fileName", "assetKey"],
+				},
+				async execute(args) {
+					try {
+						const fileName = args.fileName as string;
+						const assetKey = args.assetKey as string;
+						const assetType = (args.assetType as string) || "image";
+						const targetPath = `assets/${fileName}`;
+						const frameConfig = args.frameConfig as { frameWidth?: number; frameHeight?: number } | undefined;
+
+						let preloadCode: string;
+						switch (assetType) {
+							case "spritesheet":
+								preloadCode = `this.load.spritesheet("${assetKey}", "${targetPath}", { frameWidth: ${frameConfig?.frameWidth ?? 32}, frameHeight: ${frameConfig?.frameHeight ?? 32} });`;
+								break;
+							case "audio":
+								preloadCode = `this.load.audio("${assetKey}", "${targetPath}");`;
+								break;
+							case "atlas":
+								preloadCode = `this.load.atlas("${assetKey}", "${targetPath}", "${targetPath.replace(/\.\w+$/, ".json")}");`;
+								break;
+							default:
+								preloadCode = `this.load.image("${assetKey}", "${targetPath}");`;
+						}
+
+						return {
+							success: true,
+							message: `资源准备就绪。请在场景的 preload() 中添加:\n\`\`\`typescript\n${preloadCode}\n\`\`\`\n\n提示：如果需要用 URL 加载远程资源，可以直接在 preload 中使用完整 URL 替代路径。`,
+							data: { targetPath, assetKey, assetType, preloadCode },
+						};
+					} catch (e) {
+						return { success: false, message: `导入资源失败: ${e instanceof Error ? e.message : String(e)}` };
+					}
+				},
+			},
+			{
+				name: "create_animation",
+				description: "在指定场景文件中生成 Phaser 动画配置代码。动画基于 spritesheet 的帧范围定义。",
+				parameters: {
+					type: "object",
+					properties: {
+						scenePath: { type: "string", description: "目标场景文件路径，如 src/scenes/game-scene.ts" },
+						animKey: { type: "string", description: "动画名称，如 player-walk" },
+						textureKey: { type: "string", description: "spritesheet 的纹理键名" },
+						frameStart: { type: "number", description: "起始帧（默认 0）" },
+						frameEnd: { type: "number", description: "结束帧" },
+						frameRate: { type: "number", description: "帧率（默认 10）" },
+						repeat: { type: "number", description: "重复次数（-1 为无限循环，默认 -1）" },
+					},
+					required: ["scenePath", "animKey", "textureKey", "frameEnd"],
+				},
+				async execute(args) {
+					try {
+						const scenePath = args.scenePath as string;
+						const animKey = args.animKey as string;
+						const textureKey = args.textureKey as string;
+						const frameStart = (args.frameStart as number) ?? 0;
+						const frameEnd = args.frameEnd as number;
+						const frameRate = (args.frameRate as number) ?? 10;
+						const repeat = (args.repeat as number) ?? -1;
+
+						let sceneContent: string;
+						try {
+							sceneContent = await pm().readFile(scenePath);
+						} catch {
+							return { success: false, message: `找不到场景文件: ${scenePath}` };
+						}
+
+						const animCode = `\n    this.anims.create({\n      key: "${animKey}",\n      frames: this.anims.generateFrameNumbers("${textureKey}", { start: ${frameStart}, end: ${frameEnd} }),\n      frameRate: ${frameRate},\n      repeat: ${repeat},\n    });\n`;
+
+						const createIdx = sceneContent.indexOf("create()");
+						if (createIdx === -1) {
+							return { success: false, message: `在 ${scenePath} 中找不到 create() 方法` };
+						}
+
+						const braceIdx = sceneContent.indexOf("{", createIdx);
+						if (braceIdx === -1) {
+							return { success: false, message: `在 ${scenePath} 中 create() 方法格式异常` };
+						}
+
+						const newContent = sceneContent.slice(0, braceIdx + 1) + animCode + sceneContent.slice(braceIdx + 1);
+
+						const oldContent = sceneContent;
+						const animCmd: Command = {
+							id: `anim_${Date.now()}`,
+							name: `create_animation: ${animKey}`,
+							async execute() {
+								await pm().writeFile(scenePath, newContent);
+							},
+							async undo() {
+								await pm().writeFile(scenePath, oldContent);
+							},
+						};
+
+						await cmd().execute(animCmd);
+						preview().requestCompilation();
+
+						return {
+							success: true,
+							message: `已在 ${scenePath} 的 create() 中添加动画 "${animKey}"。使用 sprite.play("${animKey}") 播放。`,
+							undoable: true,
+							data: { animKey, textureKey, frameStart, frameEnd, frameRate, repeat },
+						};
+					} catch (e) {
+						return { success: false, message: `创建动画失败: ${e instanceof Error ? e.message : String(e)}` };
+					}
+				},
+			},
+			{
 				name: "set_game_config",
 				description: "修改游戏配置，如画布尺寸、背景颜色、物理引擎设置等。会自动更新 src/main.ts 中的配置。",
 				parameters: {

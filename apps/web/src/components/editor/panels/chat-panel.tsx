@@ -12,8 +12,10 @@ import {
 	X,
 	Wrench,
 	Copy,
+	Users,
+	RotateCcw,
 } from "lucide-react";
-import { EXPERT_ROLES, type AgentMessage } from "@rimecraft/agent-engine";
+import { EXPERT_ROLES, type AgentMessage, type ExpertRole } from "@rimecraft/agent-engine";
 import Markdown from "react-markdown";
 
 function ToolCallCard({ msg }: { msg: AgentMessage }) {
@@ -178,7 +180,10 @@ export function ChatPanel() {
 	const expertRole = useChatStore((s) => s.expertRole);
 	const currentIteration = useChatStore((s) => s.currentIteration);
 	const maxIterations = useChatStore((s) => s.maxIterations);
+	const setExpertRole = useChatStore((s) => s.setExpertRole);
+	const setActiveRoleId = useChatStore((s) => s.setActiveRoleId);
 	const [input, setInput] = useState("");
+	const [showRoleMenu, setShowRoleMenu] = useState(false);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -210,9 +215,40 @@ export function ChatPanel() {
 				<span className="text-sm font-medium">
 					{roleInfo?.name ?? "AI 助手"}
 				</span>
-				<span className="text-xs text-muted-foreground">
+				<span className="hidden text-xs text-muted-foreground sm:inline">
 					{roleInfo?.description}
 				</span>
+				<div className="relative ml-auto">
+					<button
+						type="button"
+						onClick={() => setShowRoleMenu(!showRoleMenu)}
+						disabled={status !== "idle"}
+						className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
+					>
+						<Users className="h-3 w-3" />
+						<span>切换角色</span>
+						<ChevronDown className="h-3 w-3" />
+					</button>
+					{showRoleMenu && (
+						<div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border bg-card py-1 shadow-lg">
+							{(Object.entries(EXPERT_ROLES) as [ExpertRole, typeof roleInfo][]).map(([id, role]) => (
+								<button
+									key={id}
+									type="button"
+									onClick={() => {
+										setExpertRole(id);
+										setActiveRoleId(id === "director" ? null : id);
+										setShowRoleMenu(false);
+									}}
+									className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-accent ${currentRole === id ? "text-game-primary" : "text-foreground"}`}
+								>
+									<span className="font-medium">{role.name}</span>
+									{currentRole === id && <Check className="ml-auto h-3 w-3 text-game-primary" />}
+								</button>
+							))}
+						</div>
+					)}
+				</div>
 			</div>
 
 			{/* Messages */}
@@ -280,6 +316,31 @@ export function ChatPanel() {
 					return (
 						<div key={msg.id} className="mb-4 flex justify-start">
 							<div className="max-w-[85%] rounded-2xl bg-card px-4 py-2.5 text-sm text-card-foreground">
+								{msg.commandCheckpoint !== undefined && (
+									<div className="mb-2 flex items-center gap-1.5 border-b border-border pb-2">
+										<div className="h-1.5 w-1.5 rounded-full bg-game-primary" />
+										<span className="text-[10px] text-muted-foreground">检查点</span>
+										<button
+											type="button"
+											disabled={status !== "idle"}
+											onClick={async () => {
+												try {
+													const { getEditorCore } = await import("@/core/editor-core");
+													const core = getEditorCore();
+													await core.command.undoToCheckpoint(msg.commandCheckpoint!);
+													core.preview.requestCompilation();
+													useChatStore.getState().addMessage("system", `已回滚到此检查点`);
+												} catch {
+													useChatStore.getState().addMessage("system", "回滚失败");
+												}
+											}}
+											className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+										>
+											<RotateCcw className="h-3 w-3" />
+											回滚到此
+										</button>
+									</div>
+								)}
 								{msg.content && (
 									<Markdown components={markdownComponents}>
 										{msg.content}

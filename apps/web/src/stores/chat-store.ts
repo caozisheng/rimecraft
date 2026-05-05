@@ -170,6 +170,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 			const gameContext = await buildGameContext();
 
+			let ragContext: string | null = null;
+			try {
+				const { buildRagContext } = await import("@/lib/ai/rag/retrieval");
+				ragContext = buildRagContext(content) || null;
+			} catch { /* RAG optional */ }
+
 			// Create undo checkpoint so all agent operations can be rolled back
 			let agentCheckpoint: number | undefined;
 			try {
@@ -182,14 +188,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
 				"delete_file", "rename_file", "set_game_config",
 			]);
 
+			const previousErrorSignatures = new Set<string>();
+
 			const waitForRuntimeErrors = async (): Promise<string[]> => {
 				const { useGameStore } = await import("@/stores/game-store");
 				useGameStore.getState().clearErrors();
 				const { getEditorCore } = await import("@/core/editor-core");
 				getEditorCore().preview.requestCompilation();
-				// Wait for debounced compilation (300ms) + compile + iframe load + Phaser init
 				await new Promise((r) => setTimeout(r, 4000));
-				return useGameStore.getState().errors;
+				const errors = useGameStore.getState().errors;
+				const newErrors = errors.filter((e) => {
+					const sig = e.replace(/(line d+(?::d+)?)/g, "").replace(/game:d+:d+/g, "").trim();
+					return !previousErrorSignatures.has(sig);
+				});
+				for (const e of errors) {
+					const sig = e.replace(/(line d+(?::d+)?)/g, "").replace(/game:d+:d+/g, "").trim();
+					previousErrorSignatures.add(sig);
+				}
+				return newErrors;
 			};
 
 			// Multi-round agent loop: keep calling LLM until the game runs
@@ -206,6 +222,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 					expertRole: state.expertRole,
 					activeRoleId: get().activeRoleId ?? undefined,
 					gameContext,
+					ragContext,
 					signal: abortController.signal,
 				});
 

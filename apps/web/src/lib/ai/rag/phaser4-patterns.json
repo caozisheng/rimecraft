@@ -1,0 +1,136 @@
+{
+  "patterns": [
+    {
+      "id": "platformer-basic",
+      "keywords": ["platformer", "platform", "jump", "跳跃", "平台", "跑酷"],
+      "title": "Basic Platformer",
+      "code": "// Player with gravity + platforms\nconst player = this.physics.add.sprite(100, 400, \"player\");\nplayer.body!.setCollideWorldBounds(true);\nplayer.body!.setGravityY(300);\n\nconst platforms = this.physics.add.staticGroup();\nplatforms.create(400, 580, \"ground\").setScale(2).refreshBody();\nplatforms.create(600, 400, \"ground\");\nplatforms.create(50, 250, \"ground\");\n\nthis.physics.add.collider(player, platforms);\n\n// Jump\nconst cursors = this.input.keyboard!.createCursorKeys();\n// In update():\nif (cursors.left.isDown) player.body!.setVelocityX(-160);\nelse if (cursors.right.isDown) player.body!.setVelocityX(160);\nelse player.body!.setVelocityX(0);\nif (cursors.up.isDown && player.body!.touching.down) player.body!.setVelocityY(-330);"
+    },
+    {
+      "id": "shooter-topdown",
+      "keywords": ["shooter", "shoot", "bullet", "射击", "子弹", "飞机"],
+      "title": "Top-Down Shooter with Object Pool",
+      "code": "// Bullet pool\nthis.bullets = this.physics.add.group({\n  classType: Phaser.Physics.Arcade.Sprite,\n  maxSize: 20,\n  runChildUpdate: true\n});\n\n// Fire bullet\nfunction fireBullet(scene: Phaser.Scene, x: number, y: number) {\n  const bullet = scene.bullets.getFirst(false, true, x, y, \"bullet\");\n  if (bullet) {\n    bullet.setActive(true).setVisible(true);\n    bullet.body!.setVelocityY(-400);\n  }\n}\n\n// Recycle off-screen bullets in update()\nthis.bullets.getChildren().forEach((b) => {\n  const bullet = b as Phaser.Physics.Arcade.Sprite;\n  if (bullet.active && (bullet.y < -50 || bullet.y > this.scale.height + 50)) {\n    this.bullets.killAndHide(bullet);\n    bullet.body!.stop();\n  }\n});"
+    },
+    {
+      "id": "endless-runner",
+      "keywords": ["runner", "endless", "infinite", "跑酷", "无尽", "障碍"],
+      "title": "Endless Runner",
+      "code": "// Obstacle spawner\nthis.obstacles = this.physics.add.group();\nthis.time.addEvent({\n  delay: 1500,\n  loop: true,\n  callback: () => {\n    const x = this.scale.width + 50;\n    const y = this.scale.height - 60;\n    const obs = this.obstacles.getFirst(false, true, x, y, \"obstacle\");\n    if (obs) {\n      obs.setActive(true).setVisible(true);\n      obs.body!.setVelocityX(-300);\n    }\n  }\n});\n\n// Ground scrolling background\nthis.ground = this.add.tileSprite(400, 580, 800, 40, \"ground\");\n// In update(): this.ground.tilePositionX += 3;\n\n// Recycle obstacles\nthis.obstacles.getChildren().forEach((obj) => {\n  const o = obj as Phaser.Physics.Arcade.Sprite;\n  if (o.active && o.x < -50) { this.obstacles.killAndHide(o); o.body!.stop(); }\n});"
+    },
+    {
+      "id": "score-system",
+      "keywords": ["score", "point", "得分", "分数", "计分"],
+      "title": "Score System",
+      "code": "private score = 0;\nprivate scoreText!: Phaser.GameObjects.Text;\n\ncreate() {\n  this.scoreText = this.add.text(16, 16, \"Score: 0\", {\n    fontSize: \"28px\", color: \"#fff\", fontFamily: \"Arial\"\n  }).setScrollFactor(0).setDepth(100);\n}\n\naddScore(points: number) {\n  this.score += points;\n  this.scoreText.setText(\"Score: \" + this.score);\n  // Optional: tween effect\n  this.tweens.add({ targets: this.scoreText, scale: 1.2, duration: 100, yoyo: true });\n}"
+    },
+    {
+      "id": "health-system",
+      "keywords": ["health", "hp", "life", "血量", "生命", "血条"],
+      "title": "Health Bar System",
+      "code": "private maxHp = 100;\nprivate currentHp = 100;\nprivate hpBar!: Phaser.GameObjects.Graphics;\n\ncreate() {\n  this.hpBar = this.add.graphics().setScrollFactor(0).setDepth(100);\n  this.drawHpBar();\n}\n\ndrawHpBar() {\n  this.hpBar.clear();\n  this.hpBar.fillStyle(0x333333, 1);\n  this.hpBar.fillRect(16, 50, 200, 16);\n  const ratio = Math.max(0, this.currentHp / this.maxHp);\n  this.hpBar.fillStyle(ratio > 0.3 ? 0x4ade80 : 0xef4444, 1);\n  this.hpBar.fillRect(16, 50, 200 * ratio, 16);\n}\n\ntakeDamage(amount: number) {\n  this.currentHp = Math.max(0, this.currentHp - amount);\n  this.drawHpBar();\n  this.cameras.main.shake(100, 0.01);\n  if (this.currentHp <= 0) this.gameOver();\n}"
+    },
+    {
+      "id": "tilesprite-scroll",
+      "keywords": ["background", "scroll", "parallax", "背景", "滚动", "视差"],
+      "title": "Scrolling Background / Parallax",
+      "code": "// In create():\nthis.bg = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, \"sky\").setOrigin(0, 0);\nthis.midground = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, \"mountains\").setOrigin(0, 0);\n\n// In update() — parallax at different speeds:\nthis.bg.tilePositionX += 0.5;\nthis.midground.tilePositionX += 1.5;"
+    },
+    {
+      "id": "camera-follow",
+      "keywords": ["camera", "follow", "scroll", "相机", "跟随", "视角"],
+      "title": "Camera Follow Player",
+      "code": "// In create():\nthis.cameras.main.startFollow(this.player, true, 0.1, 0.1);\nthis.cameras.main.setBounds(0, 0, worldWidth, worldHeight);\nthis.physics.world.setBounds(0, 0, worldWidth, worldHeight);\n\n// Camera effects:\nthis.cameras.main.shake(200, 0.01);  // shake on hit\nthis.cameras.main.flash(300);         // flash on collect\nthis.cameras.main.fadeOut(500);       // fade to black"
+    },
+    {
+      "id": "collectibles",
+      "keywords": ["collect", "coin", "item", "pickup", "收集", "金币", "物品"],
+      "title": "Collectible Items",
+      "code": "// In create():\nthis.coins = this.physics.add.group();\nfor (let i = 0; i < 10; i++) {\n  const x = Phaser.Math.Between(50, 750);\n  const y = Phaser.Math.Between(50, 400);\n  this.coins.create(x, y, \"coin\");\n}\n\nthis.physics.add.overlap(this.player, this.coins, (player, coin) => {\n  const c = coin as Phaser.Physics.Arcade.Sprite;\n  c.disableBody(true, true);\n  this.addScore(10);\n  // Optional particle burst\n  this.add.particles(c.x, c.y, \"coin\", { speed: 80, lifespan: 300, quantity: 5 });\n}, null, this);"
+    },
+    {
+      "id": "enemy-patrol",
+      "keywords": ["enemy", "patrol", "ai", "敌人", "巡逻", "怪物"],
+      "title": "Enemy Patrol AI",
+      "code": "// Simple back-and-forth patrol\nconst enemy = this.physics.add.sprite(300, 400, \"enemy\");\nenemy.body!.setVelocityX(100);\nenemy.body!.setBounce(1, 0);\nenemy.body!.setCollideWorldBounds(true);\n\n// Or custom patrol with waypoints:\nclass PatrolEnemy {\n  sprite: Phaser.Physics.Arcade.Sprite;\n  speed = 100;\n  direction = 1;\n  leftBound: number;\n  rightBound: number;\n\n  constructor(scene: Phaser.Scene, x: number, y: number, range: number) {\n    this.sprite = scene.physics.add.sprite(x, y, \"enemy\");\n    this.leftBound = x - range;\n    this.rightBound = x + range;\n  }\n\n  update() {\n    this.sprite.body!.setVelocityX(this.speed * this.direction);\n    if (this.sprite.x >= this.rightBound) this.direction = -1;\n    if (this.sprite.x <= this.leftBound) this.direction = 1;\n    this.sprite.setFlipX(this.direction < 0);\n  }\n}"
+    },
+    {
+      "id": "particles",
+      "keywords": ["particle", "effect", "explosion", "粒子", "特效", "爆炸"],
+      "title": "Particle Effects",
+      "code": "// Explosion burst (one-shot)\nthis.add.particles(x, y, \"particle\", {\n  speed: { min: 50, max: 200 },\n  angle: { min: 0, max: 360 },\n  scale: { start: 1, end: 0 },\n  lifespan: 600,\n  quantity: 20,\n  emitting: false\n}).explode();\n\n// Continuous emitter (fire, trail)\nconst emitter = this.add.particles(0, 0, \"particle\", {\n  speed: 50,\n  scale: { start: 0.5, end: 0 },\n  lifespan: 400,\n  frequency: 50,\n  follow: this.player\n});"
+    },
+    {
+      "id": "tween-animation",
+      "keywords": ["tween", "animate", "motion", "补间", "动画", "移动"],
+      "title": "Tween Animations",
+      "code": "// Scale bounce\nthis.tweens.add({\n  targets: sprite,\n  scale: { from: 0, to: 1 },\n  duration: 500,\n  ease: \"Bounce.Out\"\n});\n\n// Floating effect\nthis.tweens.add({\n  targets: sprite,\n  y: sprite.y - 10,\n  duration: 1000,\n  yoyo: true,\n  repeat: -1,\n  ease: \"Sine.InOut\"\n});\n\n// Chain tweens\nthis.tweens.chain({\n  targets: sprite,\n  tweens: [\n    { x: 400, duration: 500 },\n    { y: 300, duration: 500 },\n    { alpha: 0, duration: 300 }\n  ]\n});"
+    },
+    {
+      "id": "input-keyboard",
+      "keywords": ["keyboard", "input", "key", "键盘", "输入", "控制"],
+      "title": "Keyboard Input",
+      "code": "// Cursor keys (arrows)\nconst cursors = this.input.keyboard!.createCursorKeys();\n// In update():\nif (cursors.left.isDown) player.body!.setVelocityX(-200);\nelse if (cursors.right.isDown) player.body!.setVelocityX(200);\nelse player.body!.setVelocityX(0);\n\n// WASD\nconst keys = this.input.keyboard!.addKeys({\n  up: Phaser.Input.Keyboard.KeyCodes.W,\n  down: Phaser.Input.Keyboard.KeyCodes.S,\n  left: Phaser.Input.Keyboard.KeyCodes.A,\n  right: Phaser.Input.Keyboard.KeyCodes.D,\n}) as Record<string, Phaser.Input.Keyboard.Key>;\n\n// Single press (not held)\nconst space = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);\nif (Phaser.Input.Keyboard.JustDown(space)) { /* fire once */ }"
+    },
+    {
+      "id": "input-mouse",
+      "keywords": ["mouse", "click", "pointer", "touch", "鼠标", "触摸", "点击"],
+      "title": "Mouse / Touch Input",
+      "code": "// Click anywhere\nthis.input.on(\"pointerdown\", (pointer: Phaser.Input.Pointer) => {\n  console.log(\"Clicked at\", pointer.x, pointer.y);\n});\n\n// Make sprite clickable\nsprite.setInteractive({ useHandCursor: true });\nsprite.on(\"pointerdown\", () => { /* handle click */ });\nsprite.on(\"pointerover\", () => sprite.setTint(0x44ff44));\nsprite.on(\"pointerout\", () => sprite.clearTint());\n\n// Drag\nthis.input.setDraggable(sprite);\nthis.input.on(\"drag\", (pointer: Phaser.Input.Pointer, obj: Phaser.GameObjects.Sprite, dragX: number, dragY: number) => {\n  obj.x = dragX; obj.y = dragY;\n});"
+    },
+    {
+      "id": "scene-transition",
+      "keywords": ["scene", "transition", "switch", "场景", "切换", "过渡"],
+      "title": "Scene Transitions",
+      "code": "// Simple switch\nthis.scene.start(\"GameScene\", { level: 2, score: this.score });\n\n// Receive data in target scene\ncreate(data: { level: number; score: number }) {\n  const level = data.level ?? 1;\n  const score = data.score ?? 0;\n}\n\n// Fade transition\nthis.cameras.main.fadeOut(500, 0, 0, 0);\nthis.cameras.main.once(\"camerafadeoutcomplete\", () => {\n  this.scene.start(\"NextScene\");\n});\n\n// Overlay scene (HUD)\nthis.scene.launch(\"UIScene\");\n// Remove overlay\nthis.scene.stop(\"UIScene\");"
+    },
+    {
+      "id": "tilemap",
+      "keywords": ["tilemap", "map", "tile", "地图", "瓦片"],
+      "title": "Tilemap Loading",
+      "code": "// In preload():\nthis.load.tilemapTiledJSON(\"map\", \"assets/maps/level1.json\");\nthis.load.image(\"tiles\", \"assets/tilesets/tileset.png\");\n\n// In create():\nconst map = this.make.tilemap({ key: \"map\" });\nconst tileset = map.addTilesetImage(\"tileset-name-in-tiled\", \"tiles\")!;\nconst ground = map.createLayer(\"Ground\", tileset)!;\nconst walls = map.createLayer(\"Walls\", tileset)!;\nwalls.setCollisionByProperty({ collides: true });\nthis.physics.add.collider(this.player, walls);"
+    },
+    {
+      "id": "timer-events",
+      "keywords": ["timer", "delay", "interval", "计时", "延迟", "定时"],
+      "title": "Timer Events",
+      "code": "// Repeating timer\nthis.time.addEvent({\n  delay: 1000,\n  loop: true,\n  callback: () => { this.spawnEnemy(); }\n});\n\n// One-shot delay\nthis.time.delayedCall(2000, () => {\n  this.showBossWarning();\n});\n\n// Countdown timer\nlet timeLeft = 60;\nconst timerText = this.add.text(700, 16, \"60\", { fontSize: \"32px\", color: \"#fff\" }).setScrollFactor(0);\nthis.time.addEvent({\n  delay: 1000,\n  repeat: 59,\n  callback: () => {\n    timeLeft--;\n    timerText.setText(String(timeLeft));\n    if (timeLeft <= 0) this.gameOver();\n  }\n});"
+    },
+    {
+      "id": "texture-generation",
+      "keywords": ["texture", "graphics", "generate", "no-image", "纹理", "图形", "无图"],
+      "title": "Generate Textures Without Images",
+      "code": "function makeTexture(scene: Phaser.Scene, key: string, color: number, w: number, h: number) {\n  const g = scene.add.graphics();\n  g.fillStyle(color, 1);\n  g.fillRect(0, 0, w, h);\n  g.generateTexture(key, w, h);\n  g.destroy();\n}\n\n// Circle texture\nfunction makeCircle(scene: Phaser.Scene, key: string, color: number, radius: number) {\n  const g = scene.add.graphics();\n  g.fillStyle(color, 1);\n  g.fillCircle(radius, radius, radius);\n  g.generateTexture(key, radius * 2, radius * 2);\n  g.destroy();\n}\n\n// Usage in create():\nmakeTexture(this, \"player\", 0x06b6d4, 32, 48);\nmakeTexture(this, \"ground\", 0x4ade80, 800, 40);\nmakeCircle(this, \"coin\", 0xfbbf24, 10);"
+    },
+    {
+      "id": "physics-collision",
+      "keywords": ["collision", "collider", "overlap", "碰撞", "检测", "重叠"],
+      "title": "Physics Collision & Overlap",
+      "code": "// Solid collision (objects bounce off each other)\nthis.physics.add.collider(player, platforms);\nthis.physics.add.collider(enemies, platforms);\n\n// Overlap detection (pass through + callback)\nthis.physics.add.overlap(player, coins, (player, coin) => {\n  const c = coin as Phaser.Physics.Arcade.Sprite;\n  c.disableBody(true, true);\n  this.addScore(10);\n}, null, this);\n\n// Bullet hits enemy\nthis.physics.add.overlap(this.bullets, this.enemies, (bullet, enemy) => {\n  const b = bullet as Phaser.Physics.Arcade.Sprite;\n  const e = enemy as Phaser.Physics.Arcade.Sprite;\n  this.bullets.killAndHide(b); b.body!.stop();\n  e.disableBody(true, true);\n  this.addScore(50);\n}, null, this);"
+    },
+    {
+      "id": "game-over",
+      "keywords": ["gameover", "game over", "death", "die", "结束", "死亡", "游戏结束"],
+      "title": "Game Over Flow",
+      "code": "gameOver() {\n  this.physics.pause();\n  this.player.setTint(0xff0000);\n  this.cameras.main.shake(300, 0.02);\n  \n  this.time.delayedCall(1000, () => {\n    this.scene.start(\"GameOverScene\", { score: this.score });\n  });\n}\n\n// GameOverScene\ncreate(data: { score: number }) {\n  const { width, height } = this.scale;\n  this.add.text(width / 2, height / 3, \"Game Over\", { fontSize: \"48px\", color: \"#ef4444\" }).setOrigin(0.5);\n  this.add.text(width / 2, height / 2, `Score: ${data.score ?? 0}`, { fontSize: \"28px\", color: \"#fff\" }).setOrigin(0.5);\n  \n  const retry = this.add.text(width / 2, height * 0.7, \"Retry\", { fontSize: \"24px\", color: \"#06b6d4\" })\n    .setOrigin(0.5).setInteractive({ useHandCursor: true });\n  retry.on(\"pointerdown\", () => this.scene.start(\"GameScene\"));\n}"
+    },
+    {
+      "id": "rpg-dialog",
+      "keywords": ["rpg", "dialog", "dialogue", "npc", "对话", "角色扮演"],
+      "title": "RPG Dialog System",
+      "code": "// Simple dialog box\nclass DialogBox {\n  private bg: Phaser.GameObjects.Graphics;\n  private text: Phaser.GameObjects.Text;\n  private lines: string[];\n  private index = 0;\n\n  constructor(private scene: Phaser.Scene) {\n    const { width, height } = scene.scale;\n    this.bg = scene.add.graphics().setScrollFactor(0).setDepth(200);\n    this.bg.fillStyle(0x000000, 0.8);\n    this.bg.fillRoundedRect(20, height - 120, width - 40, 100, 8);\n    this.text = scene.add.text(40, height - 110, \"\", {\n      fontSize: \"16px\", color: \"#fff\", wordWrap: { width: width - 80 }\n    }).setScrollFactor(0).setDepth(201);\n    this.lines = [];\n    this.hide();\n  }\n\n  show(lines: string[]) {\n    this.lines = lines; this.index = 0;\n    this.bg.setVisible(true); this.text.setVisible(true);\n    this.text.setText(this.lines[0]);\n  }\n\n  next(): boolean {\n    this.index++;\n    if (this.index >= this.lines.length) { this.hide(); return false; }\n    this.text.setText(this.lines[this.index]);\n    return true;\n  }\n\n  hide() { this.bg.setVisible(false); this.text.setVisible(false); }\n}"
+    },
+    {
+      "id": "puzzle-match",
+      "keywords": ["puzzle", "match", "grid", "拼图", "匹配", "消除", "网格"],
+      "title": "Grid-Based Puzzle",
+      "code": "// Simple grid setup\nconst COLS = 6;\nconst ROWS = 8;\nconst CELL = 64;\nconst OFFSET_X = 100;\nconst OFFSET_Y = 50;\nconst grid: (Phaser.GameObjects.Sprite | null)[][] = [];\nconst colors = [\"red\", \"blue\", \"green\", \"yellow\"];\n\nfor (let r = 0; r < ROWS; r++) {\n  grid[r] = [];\n  for (let c = 0; c < COLS; c++) {\n    const color = Phaser.Utils.Array.GetRandom(colors);\n    const x = OFFSET_X + c * CELL + CELL / 2;\n    const y = OFFSET_Y + r * CELL + CELL / 2;\n    const gem = this.add.sprite(x, y, color).setInteractive();\n    gem.setData({ row: r, col: c, color });\n    grid[r][c] = gem;\n  }\n}"
+    },
+    {
+      "id": "spritesheet-anim",
+      "keywords": ["spritesheet", "sprite sheet", "animation", "帧动画", "精灵表"],
+      "title": "Spritesheet Animation",
+      "code": "// In preload():\nthis.load.spritesheet(\"player\", \"assets/player.png\", { frameWidth: 32, frameHeight: 48 });\n\n// In create():\nthis.anims.create({\n  key: \"walk\",\n  frames: this.anims.generateFrameNumbers(\"player\", { start: 0, end: 3 }),\n  frameRate: 10,\n  repeat: -1\n});\nthis.anims.create({\n  key: \"idle\",\n  frames: this.anims.generateFrameNumbers(\"player\", { start: 4, end: 5 }),\n  frameRate: 4,\n  repeat: -1\n});\nthis.anims.create({\n  key: \"jump\",\n  frames: [{ key: \"player\", frame: 6 }],\n  frameRate: 1\n});\n\n// Play animation\nplayer.play(\"walk\");\n// In update(): switch anim based on state\nif (!player.body!.touching.down) player.anims.play(\"jump\", true);\nelse if (Math.abs(player.body!.velocity.x) > 10) player.anims.play(\"walk\", true);\nelse player.anims.play(\"idle\", true);"
+    }
+  ]
+}

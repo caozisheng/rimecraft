@@ -15,6 +15,7 @@ interface RunAgentLoopParams {
 	expertRole: ExpertRole;
 	activeRoleId?: ExpertRole;
 	gameContext?: string | null;
+	ragContext?: string | null;
 	tools?: ToolDefinition[];
 	signal?: AbortSignal;
 }
@@ -22,7 +23,7 @@ interface RunAgentLoopParams {
 const PHASER_KNOWLEDGE = `
 ## Phaser 4 代码生成规则
 
-你生成的代码必须严格遵循以下规则：
+你生成的代码必须严格遵循以下规则。注意：本项目使用 **Phaser 4.0.0**，与 Phaser 3 有重大 API 差异。
 
 ### 项目结构
 - 入口文件: src/main.ts — 创建 Phaser.Game 实例, 注册所有场景
@@ -61,31 +62,185 @@ export class GameScene extends Phaser.Scene {
 }
 \`\`\`
 
+### ⚠️ Phaser 4 vs Phaser 3 关键差异（必读）
+
+以下是最容易出错的 API 变化，**绝对不要使用 Phaser 3 的写法**：
+
+#### Group (对象组/对象池)
+Phaser 4 中 Group.children 是 **Set** 类型，不是自定义集合。
+\`\`\`typescript
+// ❌ Phaser 3 (错误！会报 children.each is not a function)
+group.children.each((child) => { ... });
+group.children.iterate((child) => { ... });
+group.children.size;
+
+// ✅ Phaser 4 (正确)
+group.getChildren().forEach((child) => { ... });   // 遍历所有子对象
+group.getChildren().length;                         // 获取子对象数量
+group.getFirst(true);                               // 获取第一个活跃对象
+group.getFirst(false);                              // 获取第一个非活跃对象 (对象池回收)
+group.countActive(true);                            // 活跃对象计数
+group.countActive(false);                           // 非活跃对象计数
+group.getMatching("active", true);                  // 按属性过滤
+group.killAndHide(obj);                             // 对象池: 回收对象 (setActive(false) + setVisible(false))
+\`\`\`
+
+#### Physics Group (物理组)
+\`\`\`typescript
+// 创建物理组 (对象池模式)
+this.bullets = this.physics.add.group({
+  classType: Phaser.Physics.Arcade.Sprite,
+  maxSize: 20,
+  runChildUpdate: true,
+  createCallback: (obj: Phaser.GameObjects.GameObject) => {
+    const bullet = obj as Phaser.Physics.Arcade.Sprite;
+    bullet.setActive(false).setVisible(false);
+  }
+});
+
+// 从池中获取/发射子弹
+const bullet = this.bullets.getFirst(false, true, x, y, "bullet");
+if (bullet) {
+  bullet.setActive(true).setVisible(true);
+  bullet.body!.setVelocityY(-400);
+}
+
+// 回收子弹 (出屏幕时)
+this.bullets.getChildren().forEach((b) => {
+  const bullet = b as Phaser.Physics.Arcade.Sprite;
+  if (bullet.active && bullet.y < -50) {
+    this.bullets.killAndHide(bullet);
+    bullet.body!.stop();
+  }
+});
+\`\`\`
+
+#### Static Group (静态物理组)
+\`\`\`typescript
+const platforms = this.physics.add.staticGroup();
+platforms.create(400, 580, "ground").setScale(2).refreshBody();
+// refreshBody() 必须在 setScale 后调用，否则物理体大小不匹配
+\`\`\`
+
 ### 关键 API 速查
-- 创建精灵: this.add.sprite(x, y, "key") / this.physics.add.sprite(x, y, "key")
-- 创建文本: this.add.text(x, y, "text", { fontSize: "24px", color: "#fff" })
-- 创建图形: this.add.graphics() → graphics.fillRect(x, y, w, h)
-- 物理碰撞: this.physics.add.collider(objA, objB, callback)
-- 重叠检测: this.physics.add.overlap(objA, objB, callback)
-- 键盘输入: this.input.keyboard!.createCursorKeys()
-- 场景切换: this.scene.start("SceneName")
+
+#### 创建对象
+- 精灵: this.add.sprite(x, y, "key") / this.physics.add.sprite(x, y, "key")
+- 文本: this.add.text(x, y, "text", { fontSize: "24px", color: "#fff" })
+- 图形: this.add.graphics() → graphics.fillRect(x, y, w, h)
+- 平铺精灵(滚动背景): this.add.tileSprite(x, y, w, h, "key")
+- 图片(静态): this.add.image(x, y, "key")
+
+#### 物理系统
+- 碰撞: this.physics.add.collider(objA, objB, callback, null, this)
+- 重叠: this.physics.add.overlap(objA, objB, callback, null, this)
+- 速度: sprite.body!.setVelocity(vx, vy) / setVelocityX(v) / setVelocityY(v)
+- 重力: sprite.body!.setGravityY(300)
+- 弹跳: sprite.body!.setBounce(0.2)
+- 不可移动: sprite.body!.setImmovable(true)
+- 世界边界碰撞: sprite.body!.setCollideWorldBounds(true)
+- 大小: sprite.body!.setSize(w, h) / setOffset(x, y)
+
+#### 输入
+- 键盘方向键: this.input.keyboard!.createCursorKeys() → cursors.left.isDown
+- 单个按键: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+- 鼠标/触控: this.input.on("pointerdown", (pointer) => { ... })
+- 对象可点击: sprite.setInteractive(); sprite.on("pointerdown", callback)
+
+#### 场景管理
+- 切换场景: this.scene.start("SceneName", { score: 100 })
+- 传递数据: create(data: { score: number }) { ... } 接收
+- 并行场景: this.scene.launch("UIScene") / this.scene.stop("UIScene")
+- 重启当前: this.scene.restart()
+
+#### 动画与特效
+- 补间动画: this.tweens.add({ targets: obj, x: 400, duration: 1000, ease: "Power2" })
 - 计时器: this.time.addEvent({ delay: 1000, callback: fn, loop: true })
-- 补间动画: this.tweens.add({ targets: obj, x: 400, duration: 1000 })
+- 延迟调用: this.time.delayedCall(500, callback)
 - 粒子: this.add.particles(x, y, "key", { speed: 100, lifespan: 500 })
 - 相机跟随: this.cameras.main.startFollow(player)
-- 设置物理体: sprite.body!.setVelocity(vx, vy) / .setGravityY(300) / .setBounce(0.2)
-- 静态物理组: this.physics.add.staticGroup()
+- 相机震动: this.cameras.main.shake(200, 0.01)
+- 相机闪烁: this.cameras.main.flash(300)
+
+#### 常用游戏模式代码
+
+##### 无尽跑酷 — 障碍物循环生成
+\`\`\`typescript
+this.time.addEvent({
+  delay: 1500,
+  loop: true,
+  callback: () => {
+    const x = this.scale.width + 50;
+    const y = this.scale.height - 60;
+    const obstacle = this.obstacles.getFirst(false, true, x, y, "obstacle");
+    if (obstacle) {
+      obstacle.setActive(true).setVisible(true);
+      obstacle.body!.setVelocityX(-300);
+    }
+  }
+});
+
+// update() 中回收出屏障碍物
+this.obstacles.getChildren().forEach((obj) => {
+  const o = obj as Phaser.Physics.Arcade.Sprite;
+  if (o.active && o.x < -50) {
+    this.obstacles.killAndHide(o);
+    o.body!.stop();
+  }
+});
+\`\`\`
+
+##### 得分系统
+\`\`\`typescript
+private score = 0;
+private scoreText!: Phaser.GameObjects.Text;
+
+create() {
+  this.scoreText = this.add.text(16, 16, "分数: 0", {
+    fontSize: "28px", color: "#fff", fontFamily: "Arial"
+  }).setScrollFactor(0).setDepth(100);
+}
+
+addScore(points: number) {
+  this.score += points;
+  this.scoreText.setText("分数: " + this.score);
+}
+\`\`\`
+
+##### 游戏结束流程
+\`\`\`typescript
+gameOver() {
+  this.physics.pause();
+  this.scene.start("GameOverScene", { score: this.score });
+}
+\`\`\`
 
 ### 无图片资源时的替代方案
 如果项目没有图片素材, 使用 Graphics 绘制替代:
 \`\`\`typescript
-// 用矩形代替精灵
-const graphics = this.add.graphics();
-graphics.fillStyle(0x06b6d4, 1);
-graphics.fillRect(0, 0, 32, 48);
-graphics.generateTexture("player", 32, 48);
-graphics.destroy();
+const gfx = this.add.graphics();
+gfx.fillStyle(0x06b6d4, 1);
+gfx.fillRect(0, 0, 32, 48);
+gfx.generateTexture("player", 32, 48);
+gfx.destroy();
 const player = this.physics.add.sprite(100, 400, "player");
+\`\`\`
+
+多个不同颜色的纹理:
+\`\`\`typescript
+function makeTexture(scene: Phaser.Scene, key: string, color: number, w: number, h: number) {
+  const g = scene.add.graphics();
+  g.fillStyle(color, 1);
+  g.fillRect(0, 0, w, h);
+  g.generateTexture(key, w, h);
+  g.destroy();
+}
+// 在 preload() 或 create() 开头调用
+makeTexture(this, "player", 0x06b6d4, 32, 48);
+makeTexture(this, "ground", 0x4ade80, 800, 40);
+makeTexture(this, "obstacle", 0xef4444, 30, 50);
+makeTexture(this, "bullet", 0xfbbf24, 8, 8);
+makeTexture(this, "sky", 0x1e3a5f, 800, 600);
 \`\`\`
 
 ### 重要注意事项
@@ -94,6 +249,10 @@ const player = this.physics.add.sprite(100, 400, "player");
 - 不要使用 async/await 在 preload() 中, Phaser 有自己的加载管理
 - physics.add.sprite() 返回的是带物理体的精灵, add.sprite() 返回的是普通精灵
 - 修改代码后游戏会自动重新编译和刷新预览
+- collider/overlap 回调函数签名: (objA, objB) => void, 如果需要 this 引用, 传第四个参数 null 和第五个 this
+- 对象池 (Group maxSize) 比反复 new 更高效, 射击/障碍物/粒子等应使用对象池
+- 使用 setScrollFactor(0) 让 UI 元素不跟随相机滚动 (如分数文本)
+- 使用 setDepth(n) 控制渲染层级, 数值越大越在前面
 `;
 
 function buildSystemPrompt(params: RunAgentLoopParams): string {
@@ -134,6 +293,11 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 	if (params.gameContext) {
 		parts.push("=== 当前游戏项目状态 ===");
 		parts.push(params.gameContext);
+		parts.push("");
+	}
+
+	if (params.ragContext) {
+		parts.push(params.ragContext);
 		parts.push("");
 	}
 

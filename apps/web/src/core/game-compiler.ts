@@ -371,16 +371,31 @@ canvas { display: block; }
 
 	// Capture errors
 	window.onerror = function(msg, url, line, col, error) {
+		let detail = String(msg);
+		if (line) detail += " (line " + line + (col ? ":" + col : "") + ")";
+		if (error && error.stack) {
+			const stackLines = error.stack.split("\\n").slice(0, 6).map(function(l) {
+				return l.replace(/\\s+at\\s+/, "  at ").replace(/blob:[^:]+:/, "game:");
+			});
+			detail += "\\nStack:\\n" + stackLines.join("\\n");
+		}
 		window.parent.postMessage({
 			type: "event", event: "error",
-			data: msg + (line ? " (line " + line + ")" : "")
+			data: detail
 		}, "*");
 	};
 
 	window.addEventListener("unhandledrejection", function(e) {
+		let detail = "Promise rejected: " + (e.reason?.message || e.reason || "unknown");
+		if (e.reason?.stack) {
+			const stackLines = e.reason.stack.split("\\n").slice(0, 6).map(function(l) {
+				return l.replace(/\\s+at\\s+/, "  at ").replace(/blob:[^:]+:/, "game:");
+			});
+			detail += "\\nStack:\\n" + stackLines.join("\\n");
+		}
 		window.parent.postMessage({
 			type: "event", event: "error",
-			data: "Promise rejected: " + (e.reason?.message || e.reason || "unknown")
+			data: detail
 		}, "*");
 	});
 })();
