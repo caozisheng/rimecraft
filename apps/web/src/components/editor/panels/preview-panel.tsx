@@ -1,14 +1,11 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useState } from "react";
 import { useGameStore } from "@/stores/game-store";
 import { useEditorStore } from "@/stores/editor-store";
-import {
-	Play,
-	Pause,
-	RotateCcw,
-	Maximize2,
-} from "lucide-react";
+import { useProjectStore } from "@/stores/project-store";
+import { getEditorCore } from "@/core/editor-core";
+import { Play, Pause, RotateCcw, Maximize2 } from "lucide-react";
 
 export function PreviewPanel() {
 	const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -18,13 +15,51 @@ export function PreviewPanel() {
 	const setRunning = useGameStore((s) => s.setRunning);
 	const previewMode = useEditorStore((s) => s.previewMode);
 	const setPreviewMode = useEditorStore((s) => s.setPreviewMode);
+	const currentProject = useProjectStore((s) => s.currentProject);
+	const [compiledHtml, setCompiledHtml] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (!currentProject) return;
+
+		const core = getEditorCore();
+		core.agent.initialize();
+
+		core.preview.setHtmlReadyCallback((html) => {
+			setCompiledHtml(html);
+		});
+
+		core.preview.requestCompilation();
+	}, [currentProject]);
+
+	useEffect(() => {
+		if (!compiledHtml || !iframeRef.current) return;
+
+		const core = getEditorCore();
+		core.preview.detachIframe();
+
+		const blob = new Blob([compiledHtml], { type: "text/html" });
+		const url = URL.createObjectURL(blob);
+
+		const iframe = iframeRef.current;
+		iframe.src = url;
+
+		iframe.onload = () => {
+			core.preview.attachIframe(iframe);
+			URL.revokeObjectURL(url);
+		};
+	}, [compiledHtml]);
 
 	const handlePlay = useCallback(() => {
 		setPreviewMode("play");
 		setRunning(true);
 		if (iframeRef.current?.contentWindow) {
 			iframeRef.current.contentWindow.postMessage(
-				{ type: "execute", id: "play", method: "game.resume", args: [] },
+				{
+					type: "execute",
+					id: "play",
+					method: "game.resume",
+					args: [],
+				},
 				"*",
 			);
 		}
@@ -35,19 +70,22 @@ export function PreviewPanel() {
 		setRunning(false);
 		if (iframeRef.current?.contentWindow) {
 			iframeRef.current.contentWindow.postMessage(
-				{ type: "execute", id: "pause", method: "game.pause", args: [] },
+				{
+					type: "execute",
+					id: "pause",
+					method: "game.pause",
+					args: [],
+				},
 				"*",
 			);
 		}
 	}, [setPreviewMode, setRunning]);
 
 	const handleRestart = useCallback(() => {
-		if (iframeRef.current) {
-			iframeRef.current.src = iframeRef.current.src;
-		}
+		const core = getEditorCore();
+		core.preview.requestCompilation();
 		setPreviewMode("play");
-		setRunning(true);
-	}, [setPreviewMode, setRunning]);
+	}, [setPreviewMode]);
 
 	const handleFullscreen = useCallback(() => {
 		iframeRef.current?.requestFullscreen?.();
@@ -56,7 +94,8 @@ export function PreviewPanel() {
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent) => {
 			const msg = event.data;
-			if (!msg || typeof msg !== "object" || msg.type !== "event") return;
+			if (!msg || typeof msg !== "object" || msg.type !== "event")
+				return;
 
 			if (msg.event === "fps") {
 				useGameStore.getState().setFps(msg.data as number);
@@ -104,7 +143,13 @@ export function PreviewPanel() {
 
 				<div className="flex items-center gap-3 text-xs text-muted-foreground">
 					{isRunning && (
-						<span className={fps < 30 ? "text-game-error" : "text-game-success"}>
+						<span
+							className={
+								fps < 30
+									? "text-game-error"
+									: "text-game-success"
+							}
+						>
 							FPS: {fps}
 						</span>
 					)}
@@ -125,7 +170,7 @@ export function PreviewPanel() {
 					sandbox="allow-scripts allow-same-origin"
 				/>
 
-				{!isRunning && previewMode === "stop" && (
+				{!isRunning && !compiledHtml && (
 					<div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
 						<Play className="mb-4 h-16 w-16 text-muted-foreground/30" />
 						<p className="text-sm text-muted-foreground">

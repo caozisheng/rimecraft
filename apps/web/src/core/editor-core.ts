@@ -14,8 +14,9 @@ class EditorCore {
 	private constructor() {
 		this.command = new CommandManager();
 		this.project = new ProjectManager();
-		this.preview = new PreviewManager();
+		this.preview = new PreviewManager(this.project);
 		this.agent = new AgentManager();
+		this.agent.setManagers(this.project, this.preview, this.command);
 	}
 
 	static getInstance(): EditorCore {

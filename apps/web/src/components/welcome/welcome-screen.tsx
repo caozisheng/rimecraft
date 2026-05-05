@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useProjectStore } from "@/stores/project-store";
-import { Gamepad2, Plus, FolderOpen, Sparkles } from "lucide-react";
+import { getEditorCore } from "@/core/editor-core";
+import { Gamepad2, FolderOpen, Sparkles } from "lucide-react";
 
 const TEMPLATES = [
 	{
@@ -44,20 +44,54 @@ const TEMPLATES = [
 ];
 
 export function WelcomeScreen() {
-	const setCurrentProject = useProjectStore((s) => s.setCurrentProject);
 	const [projectName, setProjectName] = useState("");
+	const [isCreating, setIsCreating] = useState(false);
 
-	const handleCreateProject = (templateId: string) => {
-		const name = projectName.trim() || "我的游戏";
-		const project = {
-			id: `proj_${Date.now().toString(36)}`,
-			name,
-			template: templateId,
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
-			tags: [],
+	const handleCreateProject = async (templateId: string) => {
+		if (isCreating) return;
+		setIsCreating(true);
+
+		try {
+			const name = projectName.trim() || "我的游戏";
+			const meta = {
+				id: `proj_${Date.now().toString(36)}`,
+				name,
+				template: templateId,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+				tags: [] as string[],
+			};
+
+			const core = getEditorCore();
+			await core.project.createProject(meta);
+		} catch (e) {
+			console.error("Failed to create project:", e);
+			setIsCreating(false);
+		}
+	};
+
+	const handleImportProject = async () => {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = ".rimecraft,.zip";
+		input.onchange = async () => {
+			const file = input.files?.[0];
+			if (!file) return;
+
+			try {
+				setIsCreating(true);
+				const core = getEditorCore();
+				const project = await core.project.importProject(file);
+				// importProject returns a Project but doesn't set it in the store
+				// The openProject path inside importProject handles store updates
+				// We need to open it explicitly
+				await core.project.openProject(project.meta.id);
+			} catch (e) {
+				console.error("Failed to import project:", e);
+				setIsCreating(false);
+			}
 		};
-		setCurrentProject(project);
+		input.click();
 	};
 
 	return (
@@ -82,7 +116,8 @@ export function WelcomeScreen() {
 					value={projectName}
 					onChange={(e) => setProjectName(e.target.value)}
 					placeholder="给你的游戏起个名字..."
-					className="w-full rounded-xl border border-border bg-card px-6 py-4 text-center text-lg outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/50"
+					disabled={isCreating}
+					className="w-full rounded-xl border border-border bg-card px-6 py-4 text-center text-lg outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
 				/>
 			</div>
 
@@ -92,8 +127,9 @@ export function WelcomeScreen() {
 					<button
 						key={template.id}
 						type="button"
+						disabled={isCreating}
 						onClick={() => handleCreateProject(template.id)}
-						className="group flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/50 hover:bg-accent"
+						className="group flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/50 hover:bg-accent disabled:opacity-50"
 					>
 						<span className="text-4xl">{template.icon}</span>
 						<span className="font-medium">{template.name}</span>
@@ -108,19 +144,29 @@ export function WelcomeScreen() {
 			<div className="flex gap-4">
 				<button
 					type="button"
-					className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+					disabled={isCreating}
+					onClick={handleImportProject}
+					className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
 				>
 					<FolderOpen className="h-4 w-4" />
 					打开项目
 				</button>
 				<button
 					type="button"
-					className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+					disabled={isCreating}
+					onClick={handleImportProject}
+					className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
 				>
 					<Sparkles className="h-4 w-4" />
 					导入 .rimecraft 文件
 				</button>
 			</div>
+
+			{isCreating && (
+				<p className="mt-4 text-sm text-muted-foreground animate-pulse">
+					正在创建项目...
+				</p>
+			)}
 
 			{/* Footer */}
 			<p className="mt-12 text-xs text-muted-foreground">
