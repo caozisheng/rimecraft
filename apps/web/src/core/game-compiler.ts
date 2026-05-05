@@ -1,8 +1,7 @@
 import type { StorageProvider } from "@/lib/storage/types";
 import { useProjectStore } from "@/stores/project-store";
 
-const PHASER_CDN_URL =
-	"https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js";
+const PHASER_CDN_URL = "/phaser.min.js";
 
 export class GameCompiler {
 	private getStorage: () => StorageProvider;
@@ -100,39 +99,13 @@ ${sorted.map((id) => `	__define("${id}", function(exports, require) {\n${modules
 			"",
 		);
 
-		// Remove interface/type declarations (simplified - handles common cases)
+		// Remove interface/type declarations (handles common cases)
 		result = result.replace(
 			/(?:export\s+)?(?:interface|type)\s+\w+(?:<[^>]*>)?\s*(?:extends\s+[^{]*)?{[^}]*}\n?/g,
 			"",
 		);
 
-		// Remove standalone type annotations from variable declarations
-		// let x: Type = ... → let x = ...
-		result = result.replace(
-			/((?:const|let|var)\s+\w+)\s*:\s*[^=\n;]+(\s*=)/g,
-			"$1$2",
-		);
-
-		// Remove type annotations from function params (simplified)
-		// Handle `: Type` in function parameters - be conservative
-		result = result.replace(
-			/(\w+)\s*:\s*(?:string|number|boolean|void|any|unknown|never|null|undefined)(?=[,)\s])/g,
-			"$1",
-		);
-
-		// Remove `as Type` assertions
-		result = result.replace(/\s+as\s+\w+(?:\[\])?/g, "");
-
-		// Remove <Type> type arguments from new expressions and calls (but not JSX)
-		result = result.replace(
-			/(?<=\w)<(?:string|number|boolean|any|unknown|Record|Map|Set|Array|Promise)\b[^>]*>/g,
-			"",
-		);
-
-		// Remove `!` non-null assertions
-		result = result.replace(/(\w)!/g, "$1");
-
-		// Remove access modifiers
+		// Remove access modifiers (must run before class field handling)
 		result = result.replace(
 			/\b(private|protected|public|readonly)\s+/g,
 			"",
@@ -143,6 +116,67 @@ ${sorted.map((id) => `	__define("${id}", function(exports, require) {\n${modules
 			/(class\s+\w+(?:\s+extends\s+[^{]+)?)\s+implements\s+[^{]+/g,
 			"$1",
 		);
+
+		// Remove type annotations from variable declarations (with initializer)
+		// let x: Type = ... → let x = ...
+		result = result.replace(
+			/((?:const|let|var)\s+\w+)\s*:\s*[^=\n;]+(\s*=)/g,
+			"$1$2",
+		);
+
+		// Remove type annotations from variable declarations (without initializer)
+		// let x: Type; → let x;
+		result = result.replace(
+			/((?:const|let|var)\s+\w+)\s*:\s*[^=\n;]+(\s*;)/g,
+			"$1$2",
+		);
+
+		// Remove class field type annotations (without initializer)
+		// Handles: fieldName: Type; / fieldName!: Type; / fieldName?: Type;
+		result = result.replace(
+			/^(\s+\w+)[?!]?\s*:\s*[^=\n;{(]+;/gm,
+			"$1;",
+		);
+
+		// Remove class field type annotations (with initializer)
+		// fieldName: Type = value → fieldName = value
+		result = result.replace(
+			/^(\s+\w+)[?!]?\s*:\s*[^=\n;{(]+(\s*=)/gm,
+			"$1$2",
+		);
+
+		// Remove function/method return type annotations
+		// ): ReturnType { → ) {
+		result = result.replace(
+			/(\))\s*:\s*[^{;(]*?(\s*\{)/g,
+			"$1$2",
+		);
+
+		// Remove return type from arrow functions: ): Type =>
+		result = result.replace(
+			/(\))\s*:\s*[^=;(]+?(\s*=>)/g,
+			"$1$2",
+		);
+
+		// Remove type annotations from function parameters
+		// Only matches after ( or , to avoid mangling object literal properties
+		// (x: number, scene: Phaser.Scene, items: Item[]) → (x, scene, items)
+		result = result.replace(
+			/([(,]\s*)(\w+)\??\s*:\s*(?:string|number|boolean|void|any|unknown|never|null|undefined|[A-Z][\w.]*(?:<[^>]*>)?(?:\[\])?)(?=\s*[,)=])/g,
+			"$1$2",
+		);
+
+		// Remove `as Type` assertions
+		result = result.replace(/\s+as\s+[\w.]+(?:\[\])?/g, "");
+
+		// Remove <Type> type arguments from new expressions and calls (but not JSX)
+		result = result.replace(
+			/(?<=\w)<(?:string|number|boolean|any|unknown|Record|Map|Set|Array|Promise)\b[^>]*>/g,
+			"",
+		);
+
+		// Remove `!` non-null assertions
+		result = result.replace(/(\w)!/g, "$1");
 
 		return result;
 	}
@@ -254,6 +288,7 @@ ${sorted.map((id) => `	__define("${id}", function(exports, require) {\n${modules
 	}
 
 	generateSandboxHtml(bundledJs: string): string {
+		const origin = typeof window !== "undefined" ? window.location.origin : "";
 		return `<!DOCTYPE html>
 <html>
 <head>
@@ -266,7 +301,7 @@ canvas { display: block; }
 </style>
 </head>
 <body>
-<script src="${PHASER_CDN_URL}"></script>
+<script src="${origin}${PHASER_CDN_URL}"></script>
 <script>
 // Bridge: report events to parent
 (function() {
@@ -305,28 +340,34 @@ canvas { display: block; }
 
 	// Override Phaser.Game to capture the instance
 	const _origGame = Phaser.Game;
-	Phaser.Game = function() {
-		const game = new _origGame(...arguments);
-		window.__game = game;
+	class _WrappedGame extends _origGame {
+		constructor(config) {
+			super(config);
+			window.__game = this;
 
-		// Report ready
-		game.events.once("ready", function() {
-			window.parent.postMessage({ type: "event", event: "ready", data: true }, "*");
-		});
+			// Report ready
+			this.events.once("ready", function() {
+				window.parent.postMessage({ type: "event", event: "ready", data: true }, "*");
+			});
 
-		// FPS reporting
-		fpsInterval = setInterval(function() {
-			if (game && game.loop) {
-				window.parent.postMessage({
-					type: "event", event: "fps",
-					data: Math.round(game.loop.actualFps || 0)
-				}, "*");
-			}
-		}, 1000);
+			// FPS reporting
+			fpsInterval = setInterval(() => {
+				if (this && this.loop) {
+					window.parent.postMessage({
+						type: "event", event: "fps",
+						data: Math.round(this.loop.actualFps || 0)
+					}, "*");
+				}
+			}, 1000);
+		}
 
-		return game;
-	};
-	Phaser.Game.prototype = _origGame.prototype;
+		destroy(removeCanvas) {
+			if (fpsInterval) { clearInterval(fpsInterval); fpsInterval = null; }
+			super.destroy(removeCanvas);
+			window.__game = null;
+		}
+	}
+	Phaser.Game = _WrappedGame;
 
 	// Capture errors
 	window.onerror = function(msg, url, line, col, error) {

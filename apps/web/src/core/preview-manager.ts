@@ -33,6 +33,14 @@ export class PreviewManager {
 	}
 
 	detachIframe(): void {
+		if (this.iframe?.contentWindow) {
+			try {
+				this.iframe.contentWindow.postMessage(
+					{ type: "execute", id: "destroy", method: "game.destroy", args: [] },
+					"*",
+				);
+			} catch {}
+		}
 		this.bridge.detach();
 		this.iframe = null;
 	}

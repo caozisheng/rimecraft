@@ -56,7 +56,7 @@ bun dev:web
 ### Technical Stack
 
 - **Build**：Turborepo + Bun workspaces
-- **Frontal**：React 19 + Next.js 16 + TypeScript 5.8
+- **Front-end**：React 19 + Next.js 16 + TypeScript 5.8
 - **Style**：TailwindCSS 4 + Radix UI
 - **State Manager**：Zustand 5
 - **Game Engine**：Phaser 4

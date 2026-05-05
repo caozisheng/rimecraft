@@ -1,10 +1,172 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useChatStore } from "@/stores/chat-store";
-import { Send, Square, Sparkles } from "lucide-react";
-import { EXPERT_ROLES } from "@rimecraft/agent-engine";
+import {
+	Send,
+	Square,
+	Sparkles,
+	ChevronDown,
+	ChevronRight,
+	Check,
+	X,
+	Wrench,
+	Copy,
+} from "lucide-react";
+import { EXPERT_ROLES, type AgentMessage } from "@rimecraft/agent-engine";
 import Markdown from "react-markdown";
+
+function ToolCallCard({ msg }: { msg: AgentMessage }) {
+	const [expanded, setExpanded] = useState(false);
+
+	if (!msg.toolCalls || msg.toolCalls.length === 0) return null;
+
+	return (
+		<div className="mt-2 space-y-1.5">
+			{msg.toolCalls.map((tc) => (
+				<button
+					key={tc.id}
+					type="button"
+					onClick={() => setExpanded(!expanded)}
+					className="flex w-full items-start gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-left text-xs transition-colors hover:bg-muted"
+				>
+					<Wrench className="mt-0.5 h-3 w-3 shrink-0 text-game-primary" />
+					<div className="min-w-0 flex-1">
+						<div className="flex items-center gap-1.5">
+							{expanded ? (
+								<ChevronDown className="h-3 w-3 text-muted-foreground" />
+							) : (
+								<ChevronRight className="h-3 w-3 text-muted-foreground" />
+							)}
+							<span className="font-mono font-medium text-foreground">
+								{tc.function.name}
+							</span>
+						</div>
+						{expanded && (
+							<pre className="mt-1.5 overflow-x-auto whitespace-pre-wrap break-all rounded bg-[#1a1a2e] p-2 text-[10px] text-gray-300">
+								{(() => {
+									try {
+										return JSON.stringify(
+											JSON.parse(tc.function.arguments),
+											null,
+											2,
+										);
+									} catch {
+										return tc.function.arguments;
+									}
+								})()}
+							</pre>
+						)}
+					</div>
+				</button>
+			))}
+		</div>
+	);
+}
+
+function ToolResultMessage({ msg }: { msg: AgentMessage }) {
+	const [expanded, setExpanded] = useState(false);
+	const result = msg.toolResults?.[0];
+	if (!result) {
+		return (
+			<div className="max-w-[85%] rounded-2xl border border-border bg-card px-4 py-2.5 text-xs text-muted-foreground">
+				{msg.content}
+			</div>
+		);
+	}
+
+	return (
+		<button
+			type="button"
+			onClick={() => setExpanded(!expanded)}
+			className="max-w-[85%] rounded-xl border border-border bg-card px-3 py-2 text-left text-xs transition-colors hover:bg-muted/50"
+		>
+			<div className="flex items-center gap-2">
+				{result.success ? (
+					<Check className="h-3 w-3 text-green-400" />
+				) : (
+					<X className="h-3 w-3 text-red-400" />
+				)}
+				<span className="font-mono text-muted-foreground">
+					{result.toolName}
+				</span>
+				{result.undoable && (
+					<span className="rounded bg-game-primary/20 px-1 py-0.5 text-[10px] text-game-primary">
+						可撤销
+					</span>
+				)}
+				{expanded ? (
+					<ChevronDown className="h-3 w-3 text-muted-foreground" />
+				) : (
+					<ChevronRight className="h-3 w-3 text-muted-foreground" />
+				)}
+			</div>
+			{expanded && (
+				<pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-[#1a1a2e] p-2 text-[10px] text-gray-300">
+					{msg.content}
+				</pre>
+			)}
+		</button>
+	);
+}
+
+function CodeBlock({
+	children,
+	className,
+}: {
+	children?: React.ReactNode;
+	className?: string;
+}) {
+	const [copied, setCopied] = useState(false);
+
+	const handleCopy = useCallback(() => {
+		const text =
+			typeof children === "string"
+				? children
+				// biome-ignore lint: accessing ReactElement props for clipboard
+				: (children as unknown as { props?: { children?: string } })?.props?.children ?? "";
+		navigator.clipboard.writeText(String(text));
+		setCopied(true);
+		setTimeout(() => setCopied(false), 1500);
+	}, [children]);
+
+	if (!className) {
+		return (
+			<code className="rounded bg-[#2a2a4a] px-1 py-0.5 text-game-primary">
+				{children}
+			</code>
+		);
+	}
+
+	const lang = className?.replace("language-", "") ?? "";
+
+	return (
+		<div className="group relative my-2">
+			<div className="flex items-center justify-between rounded-t-lg bg-[#12121f] px-3 py-1.5 text-[10px] text-gray-500">
+				<span>{lang}</span>
+				<button
+					type="button"
+					onClick={handleCopy}
+					className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+				>
+					{copied ? (
+						<Check className="h-3 w-3 text-green-400" />
+					) : (
+						<Copy className="h-3 w-3" />
+					)}
+				</button>
+			</div>
+			<pre className="overflow-x-auto rounded-b-lg bg-[#1a1a2e] p-3 text-xs">
+				<code className="text-game-primary">{children}</code>
+			</pre>
+		</div>
+	);
+}
+
+const markdownComponents = {
+	pre: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+	code: CodeBlock,
+} as import("react-markdown").Components;
 
 export function ChatPanel() {
 	const messages = useChatStore((s) => s.messages);
@@ -14,6 +176,8 @@ export function ChatPanel() {
 	const cancelRequest = useChatStore((s) => s.cancelRequest);
 	const activeRoleId = useChatStore((s) => s.activeRoleId);
 	const expertRole = useChatStore((s) => s.expertRole);
+	const currentIteration = useChatStore((s) => s.currentIteration);
+	const maxIterations = useChatStore((s) => s.maxIterations);
 	const [input, setInput] = useState("");
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -83,57 +247,62 @@ export function ChatPanel() {
 					</div>
 				)}
 
-				{messages.map((msg) => (
-					<div
-						key={msg.id}
-						className={`mb-4 ${
-							msg.role === "user"
-								? "flex justify-end"
-								: "flex justify-start"
-						}`}
-					>
-						<div
-							className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
-								msg.role === "user"
-									? "bg-primary text-primary-foreground"
-									: msg.role === "tool"
-										? "border border-border bg-card text-xs text-muted-foreground"
-										: msg.role === "system"
-											? "text-xs text-game-error"
-											: "bg-card text-card-foreground"
-							}`}
-						>
-							{msg.role === "assistant" ? (
-								<Markdown
-									components={{
-										pre: ({ children }) => <pre className="my-2 overflow-x-auto rounded-lg bg-[#1a1a2e] p-3 text-xs">{children}</pre>,
-										code: ({ children, className }) =>
-											className ? <code className="text-game-primary">{children}</code> : <code className="rounded bg-[#2a2a4a] px-1 py-0.5 text-game-primary">{children}</code>,
-									}}
-								>{msg.content}</Markdown>
-							) : (
-								msg.content
-							)}
+				{messages.map((msg) => {
+					if (msg.role === "user") {
+						return (
+							<div key={msg.id} className="mb-4 flex justify-end">
+								<div className="max-w-[85%] rounded-2xl bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+									{msg.content}
+								</div>
+							</div>
+						);
+					}
+
+					if (msg.role === "tool") {
+						return (
+							<div key={msg.id} className="mb-2 flex justify-start">
+								<ToolResultMessage msg={msg} />
+							</div>
+						);
+					}
+
+					if (msg.role === "system") {
+						return (
+							<div key={msg.id} className="mb-4 flex justify-start">
+								<div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-xs text-game-error">
+									{msg.content}
+								</div>
+							</div>
+						);
+					}
+
+					// assistant
+					return (
+						<div key={msg.id} className="mb-4 flex justify-start">
+							<div className="max-w-[85%] rounded-2xl bg-card px-4 py-2.5 text-sm text-card-foreground">
+								{msg.content && (
+									<Markdown components={markdownComponents}>
+										{msg.content}
+									</Markdown>
+								)}
+								<ToolCallCard msg={msg} />
+							</div>
 						</div>
-					</div>
-				))}
+					);
+				})}
 
 				{streamingContent && (
 					<div className="mb-4 flex justify-start">
 						<div className="max-w-[85%] rounded-2xl bg-card px-4 py-2.5 text-sm text-card-foreground">
-							<Markdown
-								components={{
-									pre: ({ children }) => <pre className="my-2 overflow-x-auto rounded-lg bg-[#1a1a2e] p-3 text-xs">{children}</pre>,
-									code: ({ children, className }) =>
-										className ? <code className="text-game-primary">{children}</code> : <code className="rounded bg-[#2a2a4a] px-1 py-0.5 text-game-primary">{children}</code>,
-								}}
-							>{streamingContent}</Markdown>
+							<Markdown components={markdownComponents}>
+								{streamingContent}
+							</Markdown>
 							<span className="ml-1 inline-block h-4 w-1 animate-pulse bg-game-primary" />
 						</div>
 					</div>
 				)}
 
-				{status === "thinking" && !streamingContent && (
+				{status !== "idle" && !streamingContent && (
 					<div className="mb-4 flex justify-start">
 						<div className="flex items-center gap-2 rounded-2xl bg-card px-4 py-2.5 text-sm text-muted-foreground">
 							<div className="flex gap-1">
@@ -141,7 +310,9 @@ export function ChatPanel() {
 								<span className="h-2 w-2 animate-bounce rounded-full bg-game-primary [animation-delay:150ms]" />
 								<span className="h-2 w-2 animate-bounce rounded-full bg-game-primary [animation-delay:300ms]" />
 							</div>
-							正在思考...
+							{currentIteration > 0
+								? `正在工作中... (${currentIteration}/${maxIterations})`
+								: "正在思考..."}
 						</div>
 					</div>
 				)}

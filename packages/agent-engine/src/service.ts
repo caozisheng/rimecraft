@@ -119,6 +119,11 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 			parts.push(
 				`当前激活的专家角色：${activeRole.name}（${params.activeRoleId}）`,
 			);
+			parts.push(
+				"你现在必须以该专家角色的身份工作，使用对应的专业知识和工具来完成任务。",
+			);
+			parts.push("");
+			parts.push(activeRole.systemPromptAddition);
 			parts.push("");
 		}
 	}
@@ -141,6 +146,9 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 	parts.push("- 使用 write_file 工具写入代码文件，路径以 src/ 开头");
 	parts.push("- 修改游戏时，先用 list_files 和 read_file 了解当前代码，再用 write_file 修改");
 	parts.push("- 生成完整可运行的代码，不要省略任何部分");
+	parts.push("- 对已有文件做小修改时，优先使用 patch_file 工具进行精确替换，避免重写整个文件");
+	parts.push("- 写完代码后，用 get_runtime_errors 检查是否有运行时错误，如有则自动修复");
+	parts.push("- 创建新游戏时，需要同时创建 src/main.ts（入口）和 src/scenes/ 下的场景文件");
 
 	return parts.join("\n");
 }

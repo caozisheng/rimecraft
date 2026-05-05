@@ -42,6 +42,16 @@ export class AgentManager {
 		const preview = () => this.previewManager;
 		const cmd = () => this.commandManager;
 
+		const refreshFileList = async () => {
+			const projectId = useProjectStore.getState().currentProject?.id;
+			if (projectId) {
+				const files = await pm().getStorage().listFiles(projectId);
+				useProjectStore
+					.getState()
+					.setFiles(files.map((f) => ({ path: f.path, type: "file" as const })));
+			}
+		};
+
 		return [
 			{
 				name: "list_files",
@@ -157,23 +167,7 @@ export class AgentManager {
 							name: `write_file: ${path}`,
 							async execute() {
 								await pm().writeFile(path, content);
-								const projectId =
-									useProjectStore.getState().currentProject
-										?.id;
-								if (projectId) {
-									const files =
-										await pm()
-											.getStorage()
-											.listFiles(projectId);
-									useProjectStore
-										.getState()
-										.setFiles(
-											files.map((f) => ({
-												path: f.path,
-												type: "file" as const,
-											})),
-										);
-								}
+								await refreshFileList();
 							},
 							async undo() {
 								if (oldContent !== null) {
@@ -181,23 +175,7 @@ export class AgentManager {
 								} else {
 									await pm().deleteFile(path);
 								}
-								const projectId =
-									useProjectStore.getState().currentProject
-										?.id;
-								if (projectId) {
-									const files =
-										await pm()
-											.getStorage()
-											.listFiles(projectId);
-									useProjectStore
-										.getState()
-										.setFiles(
-											files.map((f) => ({
-												path: f.path,
-												type: "file" as const,
-											})),
-										);
-								}
+								await refreshFileList();
 							},
 						};
 
@@ -240,43 +218,11 @@ export class AgentManager {
 							name: `delete_file: ${path}`,
 							async execute() {
 								await pm().deleteFile(path);
-								const projectId =
-									useProjectStore.getState().currentProject
-										?.id;
-								if (projectId) {
-									const files =
-										await pm()
-											.getStorage()
-											.listFiles(projectId);
-									useProjectStore
-										.getState()
-										.setFiles(
-											files.map((f) => ({
-												path: f.path,
-												type: "file" as const,
-											})),
-										);
-								}
+								await refreshFileList();
 							},
 							async undo() {
 								await pm().writeFile(path, oldContent);
-								const projectId =
-									useProjectStore.getState().currentProject
-										?.id;
-								if (projectId) {
-									const files =
-										await pm()
-											.getStorage()
-											.listFiles(projectId);
-									useProjectStore
-										.getState()
-										.setFiles(
-											files.map((f) => ({
-												path: f.path,
-												type: "file" as const,
-											})),
-										);
-								}
+								await refreshFileList();
 							},
 						};
 
@@ -340,43 +286,11 @@ export class AgentManager {
 							name: `create_scene: ${className}`,
 							async execute() {
 								await pm().writeFile(filePath, content);
-								const projectId =
-									useProjectStore.getState().currentProject
-										?.id;
-								if (projectId) {
-									const files =
-										await pm()
-											.getStorage()
-											.listFiles(projectId);
-									useProjectStore
-										.getState()
-										.setFiles(
-											files.map((f) => ({
-												path: f.path,
-												type: "file" as const,
-											})),
-										);
-								}
+								await refreshFileList();
 							},
 							async undo() {
 								await pm().deleteFile(filePath);
-								const projectId =
-									useProjectStore.getState().currentProject
-										?.id;
-								if (projectId) {
-									const files =
-										await pm()
-											.getStorage()
-											.listFiles(projectId);
-									useProjectStore
-										.getState()
-										.setFiles(
-											files.map((f) => ({
-												path: f.path,
-												type: "file" as const,
-											})),
-										);
-								}
+								await refreshFileList();
 							},
 						};
 
@@ -490,6 +404,400 @@ export class AgentManager {
 						success: false,
 						message: "没有可重做的操作",
 					};
+				},
+			},
+			{
+				name: "undo_all",
+				description: "撤销当前对话中 Agent 的所有文件操作，回到对话开始前的状态",
+				parameters: { type: "object", properties: {} },
+				async execute() {
+					try {
+						const checkpoint = cmd().getCheckpoint();
+						if (checkpoint <= 0) {
+							return { success: false, message: "没有可撤销的操作" };
+						}
+						await cmd().undoToCheckpoint(0);
+						preview().requestCompilation();
+						return {
+							success: true,
+							message: `已撤销所有操作，回到初始状态`,
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `撤销失败: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
+				},
+			},
+			{
+				name: "rename_file",
+				description: "重命名或移动文件到新路径",
+				parameters: {
+					type: "object",
+					properties: {
+						oldPath: {
+							type: "string",
+							description: "原文件路径，如 src/scenes/old-name.ts",
+						},
+						newPath: {
+							type: "string",
+							description: "新文件路径，如 src/scenes/new-name.ts",
+						},
+					},
+					required: ["oldPath", "newPath"],
+				},
+				async execute(args) {
+					try {
+						const oldPath = args.oldPath as string;
+						const newPath = args.newPath as string;
+						const content = await pm().readFile(oldPath);
+
+						const renameCmd: Command = {
+							id: `rename_${Date.now()}`,
+							name: `rename_file: ${oldPath} → ${newPath}`,
+							async execute() {
+								await pm().writeFile(newPath, content);
+								await pm().deleteFile(oldPath);
+								await refreshFileList();
+							},
+							async undo() {
+								await pm().writeFile(oldPath, content);
+								await pm().deleteFile(newPath);
+								await refreshFileList();
+							},
+						};
+
+						await cmd().execute(renameCmd);
+						preview().requestCompilation();
+
+						return {
+							success: true,
+							message: `成功重命名: ${oldPath} → ${newPath}`,
+							undoable: true,
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `重命名文件失败: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
+				},
+			},
+			{
+				name: "patch_file",
+				description: "对文件进行局部修改：搜索指定内容并替换为新内容。适用于小范围修改，无需重写整个文件。",
+				parameters: {
+					type: "object",
+					properties: {
+						path: {
+							type: "string",
+							description: "文件路径",
+						},
+						search: {
+							type: "string",
+							description: "要搜索的原始内容（精确匹配）",
+						},
+						replace: {
+							type: "string",
+							description: "替换后的新内容",
+						},
+					},
+					required: ["path", "search", "replace"],
+				},
+				async execute(args) {
+					try {
+						const path = args.path as string;
+						const search = args.search as string;
+						const replace = args.replace as string;
+
+						const oldContent = await pm().readFile(path);
+						if (!oldContent.includes(search)) {
+							return {
+								success: false,
+								message: `在 ${path} 中找不到要替换的内容。请确认搜索内容完全匹配。`,
+							};
+						}
+
+						const newContent = oldContent.replace(search, replace);
+
+						const patchCmd: Command = {
+							id: `patch_${Date.now()}`,
+							name: `patch_file: ${path}`,
+							async execute() {
+								await pm().writeFile(path, newContent);
+							},
+							async undo() {
+								await pm().writeFile(path, oldContent);
+							},
+						};
+
+						await cmd().execute(patchCmd);
+						preview().requestCompilation();
+
+						return {
+							success: true,
+							message: `成功修改文件: ${path}`,
+							undoable: true,
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `修改文件失败: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
+				},
+			},
+			{
+				name: "get_project_structure",
+				description: "获取项目的完整目录结构，包含文件大小信息",
+				parameters: { type: "object", properties: {} },
+				async execute() {
+					try {
+						const projectId =
+							useProjectStore.getState().currentProject?.id;
+						if (!projectId)
+							return { success: false, message: "没有打开的项目" };
+
+						const storage = pm().getStorage();
+						const files = await storage.listFiles(projectId);
+						const sorted = [...files].sort((a, b) =>
+							a.path.localeCompare(b.path),
+						);
+
+						const tree: string[] = [];
+						for (const f of sorted) {
+							const depth = f.path.split("/").length - 1;
+							const indent = "  ".repeat(depth);
+							const name = f.path.split("/").pop() ?? f.path;
+							tree.push(`${indent}${name}`);
+						}
+
+						return {
+							success: true,
+							message: `项目结构 (${files.length} 个文件):\n${tree.join("\n")}`,
+							data: { files: sorted.map((f) => f.path), count: files.length },
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `获取项目结构失败: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
+				},
+			},
+			{
+				name: "search_in_files",
+				description: "在项目文件中搜索包含指定关键词的代码行",
+				parameters: {
+					type: "object",
+					properties: {
+						query: {
+							type: "string",
+							description: "要搜索的关键词或文本",
+						},
+						filePattern: {
+							type: "string",
+							description: "文件后缀过滤，如 .ts（可选，默认搜索所有文件）",
+						},
+					},
+					required: ["query"],
+				},
+				async execute(args) {
+					try {
+						const query = args.query as string;
+						const filePattern = (args.filePattern as string) || "";
+						const projectId =
+							useProjectStore.getState().currentProject?.id;
+						if (!projectId)
+							return { success: false, message: "没有打开的项目" };
+
+						const storage = pm().getStorage();
+						const files = await storage.listFiles(projectId);
+						const filtered = filePattern
+							? files.filter((f) => f.path.endsWith(filePattern))
+							: files;
+
+						const results: string[] = [];
+						for (const f of filtered) {
+							try {
+								const content = await storage.readFile(
+									projectId,
+									f.path,
+								);
+								const lines = content.split("\n");
+								for (let i = 0; i < lines.length; i++) {
+									if (lines[i].includes(query)) {
+										results.push(
+											`${f.path}:${i + 1}: ${lines[i].trim()}`,
+										);
+									}
+								}
+							} catch {
+								// skip unreadable files
+							}
+						}
+
+						if (results.length === 0) {
+							return {
+								success: true,
+								message: `没有找到包含 "${query}" 的代码`,
+							};
+						}
+
+						const limited = results.slice(0, 50);
+						return {
+							success: true,
+							message: `找到 ${results.length} 处匹配:\n${limited.join("\n")}${results.length > 50 ? `\n... 还有 ${results.length - 50} 处` : ""}`,
+							data: { matches: limited, total: results.length },
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `搜索失败: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
+				},
+			},
+			{
+				name: "get_runtime_errors",
+				description: "获取游戏运行时的错误日志，用于诊断和修复问题",
+				parameters: { type: "object", properties: {} },
+				async execute() {
+					const gameState = useGameStore.getState();
+					const errors = gameState.errors;
+
+					if (errors.length === 0) {
+						return {
+							success: true,
+							message: "没有运行时错误",
+							data: { errors: [], count: 0 },
+						};
+					}
+
+					return {
+						success: true,
+						message: `运行时错误 (${errors.length}):\n${errors.map((e, i) => `${i + 1}. ${e}`).join("\n")}`,
+						data: { errors, count: errors.length },
+					};
+				},
+			},
+			{
+				name: "set_game_config",
+				description: "修改游戏配置，如画布尺寸、背景颜色、物理引擎设置等。会自动更新 src/main.ts 中的配置。",
+				parameters: {
+					type: "object",
+					properties: {
+						width: {
+							type: "number",
+							description: "游戏画布宽度（像素）",
+						},
+						height: {
+							type: "number",
+							description: "游戏画布高度（像素）",
+						},
+						backgroundColor: {
+							type: "string",
+							description: "背景颜色（十六进制，如 #1a1a2e）",
+						},
+						gravity: {
+							type: "number",
+							description: "重力值（Y轴，如 300 表示向下的重力）",
+						},
+						debug: {
+							type: "boolean",
+							description: "是否开启物理调试模式",
+						},
+					},
+				},
+				async execute(args) {
+					try {
+						let mainContent: string;
+						try {
+							mainContent = await pm().readFile("src/main.ts");
+						} catch {
+							return {
+								success: false,
+								message: "找不到 src/main.ts，请先创建主文件",
+							};
+						}
+
+						const oldContent = mainContent;
+						const changes: string[] = [];
+
+						if (args.width !== undefined || args.height !== undefined) {
+							const w = (args.width as number) ?? 800;
+							const h = (args.height as number) ?? 600;
+							mainContent = mainContent.replace(
+								/width:\s*\d+/,
+								`width: ${w}`,
+							);
+							mainContent = mainContent.replace(
+								/height:\s*\d+/,
+								`height: ${h}`,
+							);
+							changes.push(`尺寸: ${w}x${h}`);
+						}
+
+						if (args.backgroundColor) {
+							const bg = args.backgroundColor as string;
+							mainContent = mainContent.replace(
+								/backgroundColor:\s*["']#?[0-9a-fA-F]+["']/,
+								`backgroundColor: "${bg}"`,
+							);
+							changes.push(`背景色: ${bg}`);
+						}
+
+						if (args.gravity !== undefined) {
+							const g = args.gravity as number;
+							mainContent = mainContent.replace(
+								/gravity:\s*\{[^}]*\}/,
+								`gravity: { x: 0, y: ${g} }`,
+							);
+							changes.push(`重力: ${g}`);
+						}
+
+						if (args.debug !== undefined) {
+							const d = args.debug as boolean;
+							mainContent = mainContent.replace(
+								/debug:\s*(true|false)/,
+								`debug: ${d}`,
+							);
+							changes.push(`调试模式: ${d ? "开" : "关"}`);
+						}
+
+						if (mainContent === oldContent) {
+							return {
+								success: true,
+								message: "配置未发生变化",
+							};
+						}
+
+						const configCmd: Command = {
+							id: `config_${Date.now()}`,
+							name: "set_game_config",
+							async execute() {
+								await pm().writeFile("src/main.ts", mainContent);
+							},
+							async undo() {
+								await pm().writeFile("src/main.ts", oldContent);
+							},
+						};
+
+						await cmd().execute(configCmd);
+						preview().requestCompilation();
+
+						return {
+							success: true,
+							message: `已更新游戏配置: ${changes.join(", ")}`,
+							undoable: true,
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `修改配置失败: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
 				},
 			},
 		];

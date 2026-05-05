@@ -17,6 +17,7 @@ export function PreviewPanel() {
 	const setPreviewMode = useEditorStore((s) => s.setPreviewMode);
 	const currentProject = useProjectStore((s) => s.currentProject);
 	const [compiledHtml, setCompiledHtml] = useState<string | null>(null);
+	const [revision, setRevision] = useState(0);
 
 	useEffect(() => {
 		if (!currentProject) return;
@@ -26,6 +27,7 @@ export function PreviewPanel() {
 
 		core.preview.setHtmlReadyCallback((html) => {
 			setCompiledHtml(html);
+			setRevision((r) => r + 1);
 		});
 
 		core.preview.requestCompilation();
@@ -36,6 +38,7 @@ export function PreviewPanel() {
 
 		const core = getEditorCore();
 		core.preview.detachIframe();
+		core.preview.attachIframe(iframeRef.current);
 
 		const blob = new Blob([compiledHtml], { type: "text/html" });
 		const url = URL.createObjectURL(blob);
@@ -44,10 +47,9 @@ export function PreviewPanel() {
 		iframe.src = url;
 
 		iframe.onload = () => {
-			core.preview.attachIframe(iframe);
 			URL.revokeObjectURL(url);
 		};
-	}, [compiledHtml]);
+	}, [compiledHtml, revision]);
 
 	const handlePlay = useCallback(() => {
 		setPreviewMode("play");
@@ -82,10 +84,12 @@ export function PreviewPanel() {
 	}, [setPreviewMode, setRunning]);
 
 	const handleRestart = useCallback(() => {
+		setRunning(false);
+		useGameStore.getState().clearErrors();
 		const core = getEditorCore();
 		core.preview.requestCompilation();
 		setPreviewMode("play");
-	}, [setPreviewMode]);
+	}, [setPreviewMode, setRunning]);
 
 	const handleFullscreen = useCallback(() => {
 		iframeRef.current?.requestFullscreen?.();
@@ -97,11 +101,7 @@ export function PreviewPanel() {
 			if (!msg || typeof msg !== "object" || msg.type !== "event")
 				return;
 
-			if (msg.event === "fps") {
-				useGameStore.getState().setFps(msg.data as number);
-			} else if (msg.event === "error") {
-				useGameStore.getState().addError(msg.data as string);
-			} else if (msg.event === "ready") {
+			if (msg.event === "ready") {
 				setRunning(true);
 				setPreviewMode("play");
 			}

@@ -17,6 +17,10 @@ export class CommandManager {
 		return this.pointer;
 	}
 
+	getCheckpoint(): number {
+		return this.pointer + 1;
+	}
+
 	async execute(command: Command): Promise<void> {
 		this.history = this.history.slice(0, this.pointer + 1);
 		await command.execute();
