@@ -1,0 +1,25 @@
+{
+	"name": "rimecraft",
+	"private": true,
+	"packageManager": "bun@1.2.18",
+	"workspaces": ["apps/*", "packages/*"],
+	"scripts": {
+		"dev": "turbo run dev",
+		"dev:web": "turbo run dev --filter=@rimecraft/web",
+		"dev:tauri": "cd apps/tauri && bun run tauri dev",
+		"build": "turbo run build",
+		"build:web": "turbo run build --filter=@rimecraft/web",
+		"build:tauri": "cd apps/tauri && bun run tauri build",
+		"lint": "biome check .",
+		"lint:fix": "biome check . --write",
+		"format": "biome format . --write",
+		"test": "bun test",
+		"clean": "turbo run clean"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.8",
+		"turbo": "^2.8.20",
+		"typescript": "^5.8.3"
+	},
+	"trustedDependencies": ["@tailwindcss/oxide"]
+}

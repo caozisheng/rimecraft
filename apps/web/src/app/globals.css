@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+	--color-background: #0f0f1a;
+	--color-foreground: #e8e8f0;
+	--color-card: #1a1a2e;
+	--color-card-foreground: #e8e8f0;
+	--color-popover: #1a1a2e;
+	--color-popover-foreground: #e8e8f0;
+	--color-primary: #7c3aed;
+	--color-primary-foreground: #ffffff;
+	--color-secondary: #1e1e3a;
+	--color-secondary-foreground: #e8e8f0;
+	--color-muted: #1e1e3a;
+	--color-muted-foreground: #9090a0;
+	--color-accent: #2a2a4a;
+	--color-accent-foreground: #e8e8f0;
+	--color-destructive: #ef4444;
+	--color-destructive-foreground: #ffffff;
+	--color-border: #2a2a4a;
+	--color-input: #2a2a4a;
+	--color-ring: #7c3aed;
+	--radius: 0.75rem;
+
+	--color-game-primary: #06b6d4;
+	--color-game-secondary: #8b5cf6;
+	--color-game-success: #22c55e;
+	--color-game-warning: #f59e0b;
+	--color-game-error: #ef4444;
+}

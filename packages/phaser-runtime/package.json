@@ -1,0 +1,15 @@
+{
+	"name": "@rimecraft/phaser-runtime",
+	"version": "0.1.0",
+	"private": true,
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"scripts": {
+		"lint": "biome check src/",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"eventemitter3": "^5.0.1",
+		"phaser": "4.0.0"
+	}
+}

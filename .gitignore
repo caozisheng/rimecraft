@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+dist/
+build/
+
+# Turborepo
+.turbo
+
+# Environment
+.env*
+!*.env.example
+
+# Tauri generated
+apps/tauri/src-tauri/gen/
+target/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+
+# Bun
+bun.lockb
+
+# Claude Code
+.claude/
