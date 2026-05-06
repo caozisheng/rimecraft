@@ -342,6 +342,15 @@ canvas { display: block; }
 	const _origGame = Phaser.Game;
 	class _WrappedGame extends _origGame {
 		constructor(config) {
+			// Inject scale config to auto-fit the container
+			if (!config.scale) {
+				config.scale = {
+					mode: Phaser.Scale.FIT,
+					autoCenter: Phaser.Scale.CENTER_BOTH,
+					width: config.width || 800,
+					height: config.height || 600,
+				};
+			}
 			super(config);
 			window.__game = this;
 
@@ -359,6 +368,14 @@ canvas { display: block; }
 					}, "*");
 				}
 			}, 1000);
+
+			// Resize canvas when iframe resizes
+			const game = this;
+			window.addEventListener("resize", function() {
+				if (game && game.scale) {
+					game.scale.resize(config.scale.width || config.width || 800, config.scale.height || config.height || 600);
+				}
+			});
 		}
 
 		destroy(removeCanvas) {

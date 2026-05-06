@@ -312,10 +312,15 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 	parts.push("- 修改游戏时，先用 list_files 和 read_file 了解当前代码，再用 write_file 修改");
 	parts.push("- 生成完整可运行的代码，不要省略任何部分");
 	parts.push("- 对已有文件做小修改时，优先使用 patch_file 工具进行精确替换，避免重写整个文件");
-	parts.push("- 写完代码后，系统会自动编译并启动游戏预览，检测运行时错误");
-	parts.push("- 如果系统报告了运行时错误，你必须分析错误信息，读取相关代码，修复问题");
-	parts.push("- 不要在还有运行时错误的情况下结束任务，确保游戏能正常运行");
 	parts.push("- 创建新游戏时，需要同时创建 src/main.ts（入口）和 src/scenes/ 下的场景文件");
+	parts.push("");
+	parts.push("## ⚠️ 运行时错误处理规则（最高优先级）");
+	parts.push("- 写完代码后，系统会自动编译并运行游戏预览，检测运行时错误");
+	parts.push("- 如果系统报告了运行时错误，你**必须**先用 read_file 阅读相关代码，分析原因，然后修复");
+	parts.push("- **绝对不要**在还有运行时错误的情况下结束对话或宣布任务完成");
+	parts.push("- 系统会在每次你修改代码后自动验证——如果错误仍然存在，会再次通知你");
+	parts.push("- 收到错误通知后，必须使用工具（read_file + write_file/patch_file）进行修复，不要只用文字回复");
+	parts.push("- 如果多次修复失败，尝试完全不同的实现方案，不要在同一个方向上反复尝试");
 
 	return parts.join("\n");
 }

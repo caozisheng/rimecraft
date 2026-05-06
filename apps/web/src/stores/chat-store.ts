@@ -189,23 +189,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
 			]);
 
 			const previousErrorSignatures = new Set<string>();
+			let consecutiveErrorRounds = 0;
 
-			const waitForRuntimeErrors = async (): Promise<string[]> => {
+			const normalizeErrorSig = (e: string): string =>
+				e.replace(/(line \d+(?::\d+)?)/g, "").replace(/game:\d+:\d+/g, "").trim();
+
+			const waitForRuntimeErrors = async (): Promise<{ all: string[]; fresh: string[] }> => {
 				const { useGameStore } = await import("@/stores/game-store");
 				useGameStore.getState().clearErrors();
 				const { getEditorCore } = await import("@/core/editor-core");
 				getEditorCore().preview.requestCompilation();
 				await new Promise((r) => setTimeout(r, 4000));
-				const errors = useGameStore.getState().errors;
-				const newErrors = errors.filter((e) => {
-					const sig = e.replace(/(line d+(?::d+)?)/g, "").replace(/game:d+:d+/g, "").trim();
-					return !previousErrorSignatures.has(sig);
-				});
-				for (const e of errors) {
-					const sig = e.replace(/(line d+(?::d+)?)/g, "").replace(/game:d+:d+/g, "").trim();
-					previousErrorSignatures.add(sig);
+				const all = useGameStore.getState().errors;
+				const fresh = all.filter((e) => !previousErrorSignatures.has(normalizeErrorSig(e)));
+				for (const e of all) {
+					previousErrorSignatures.add(normalizeErrorSig(e));
 				}
-				return newErrors;
+				return { all, fresh };
 			};
 
 			// Multi-round agent loop: keep calling LLM until the game runs
@@ -344,21 +344,40 @@ export const useChatStore = create<ChatState>((set, get) => ({
 				// it thinks the task is done. Verify by running the game.
 				if (!hadToolCalls || hadFileWrites) {
 					try {
-						const runtimeErrors = await waitForRuntimeErrors();
-						if (runtimeErrors.length > 0 && !abortController.signal.aborted) {
+						const { all: allErrors, fresh: freshErrors } = await waitForRuntimeErrors();
+						if (allErrors.length > 0 && !abortController.signal.aborted) {
+							consecutiveErrorRounds++;
+
+							// Auto-switch to debug role for specialized fixing
+							if (state.expertRole === "director" && get().activeRoleId !== "debug") {
+								set({ activeRoleId: "debug" });
+							}
+
+							const errorList = freshErrors.length > 0
+								? freshErrors.map((e) => `- ${e}`).join("\n")
+								: allErrors.slice(-5).map((e) => `- ${e}`).join("\n");
+							const prefix = freshErrors.length > 0
+								? `游戏预览检测到 ${freshErrors.length} 个运行时错误`
+								: `⚠️ 仍有 ${allErrors.length} 个运行时错误未修复`;
+
+							let debugHint = "\n\n请：1. 用 read_file 查看相关代码 2. 分析错误原因 3. 用 write_file/patch_file 修复";
+							if (consecutiveErrorRounds >= 3) {
+								debugHint = "\n\n⚠️ 之前的修复方案未解决问题，请尝试完全不同的方法。建议：\n- 重新阅读所有相关文件，检查是否遗漏了问题根因\n- 检查文件之间的导入和依赖关系\n- 考虑简化代码逻辑来排除问题";
+							}
+
 							state.addMessage(
 								"system",
-								`游戏预览启动后检测到 ${runtimeErrors.length} 个运行时错误，请分析代码并修复:\n${runtimeErrors.map((e) => `- ${e}`).join("\n")}`,
+								`${prefix}，请以调试医生身份分析并修复:\n${errorList}${debugHint}`,
 							);
-							// Continue the loop so the LLM can fix these errors
+							// Force another round regardless of hadToolCalls
+							set({ status: "thinking", streamingContent: "" });
+							continue;
+						} else {
+							consecutiveErrorRounds = 0;
 							if (!hadToolCalls) {
-								// LLM thought it was done — force another round
-								set({ status: "thinking", streamingContent: "" });
-								continue;
+								// No errors, LLM is done — exit loop
+								break;
 							}
-						} else if (!hadToolCalls) {
-							// No errors, LLM is done — exit loop
-							break;
 						}
 					} catch {
 						if (!hadToolCalls) break;

@@ -1,9 +1,8 @@
 # RimeCraft
 
-RimeCraft is an agentic chat-style game craft based on Phaser.js
+RimeCraft is an agentic chat-style game craft based on [Phaser.js]([GitHub - phaserjs/phaser: Phaser is a fun, free and fast 2D game framework for making HTML5 games for desktop and mobile web browsers, supporting Canvas and WebGL rendering. · GitHub](https://github.com/phaserjs/phaser))
 
 <img width="956" height="784" alt="image" src="https://github.com/user-attachments/assets/ffed150f-f4fd-4aa1-93d8-0b2472b42157" />
-
 
 ## Project Structure
 
@@ -51,21 +50,20 @@ bun run dev:tauri
 bun run build:tauri
 ```
 
-
 ## Commands
 
-| Commands | Explain |
-|------|------|
-| `bun dev` | Start Dev server |
-| `bun dev:web` | Start Web |
-| `bun dev:tauri` | Start Tauri desktop |
-| `bun build` | Build all packages and Apps |
-| `bun build:web` | Build Web  |
-| `bun lint` | Code lints（Biome） |
-| `bun lint:fix` | Auto-fix |
-| `bun format` | Code format |
-| `bun test` | Test |
-| `bun clean` | Clean builds |
+| Commands        | Explain                     |
+| --------------- | --------------------------- |
+| `bun dev`       | Start Dev server            |
+| `bun dev:web`   | Start Web                   |
+| `bun dev:tauri` | Start Tauri desktop         |
+| `bun build`     | Build all packages and Apps |
+| `bun build:web` | Build Web                   |
+| `bun lint`      | Code lints（Biome）           |
+| `bun lint:fix`  | Auto-fix                    |
+| `bun format`    | Code format                 |
+| `bun test`      | Test                        |
+| `bun clean`     | Clean builds                |
 
 ## Contributors
 
