@@ -9,10 +9,12 @@ import {
 	Download,
 	FolderOpen,
 	Home,
+	Palette,
 	Settings,
 	Upload,
 } from "lucide-react";
 import { LLMSettingsDialog } from "./llm-settings-dialog";
+import { AssetLibraryDialog } from "./asset-library-dialog";
 
 export function EditorToolbar() {
 	const project = useProjectStore((s) => s.currentProject);
@@ -20,6 +22,7 @@ export function EditorToolbar() {
 	const toggleCodePanel = useEditorStore((s) => s.toggleCodePanel);
 	const codePanelVisible = useEditorStore((s) => s.codePanelVisible);
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [assetLibOpen, setAssetLibOpen] = useState(false);
 	const [exporting, setExporting] = useState(false);
 
 	const handleExport = useCallback(async () => {
@@ -98,6 +101,11 @@ export function EditorToolbar() {
 						onClick={toggleCodePanel}
 					/>
 					<ToolbarButton
+						icon={<Palette className="h-4 w-4" />}
+						label="素材库"
+						onClick={() => setAssetLibOpen(true)}
+					/>
+					<ToolbarButton
 						icon={<Download className="h-4 w-4" />}
 						label={exporting ? "导出中..." : "导出"}
 						onClick={handleExport}
@@ -114,6 +122,10 @@ export function EditorToolbar() {
 			<LLMSettingsDialog
 				open={settingsOpen}
 				onOpenChange={setSettingsOpen}
+			/>
+			<AssetLibraryDialog
+				open={assetLibOpen}
+				onOpenChange={setAssetLibOpen}
 			/>
 		</>
 	);

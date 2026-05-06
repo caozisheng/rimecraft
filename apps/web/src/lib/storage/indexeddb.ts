@@ -9,7 +9,7 @@ import type { StorageProvider } from "./types";
 import { generateTemplateFiles } from "../templates";
 
 const DB_NAME = "rimecraft";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const PROJECTS_STORE = "projects";
 const FILES_STORE = "files";
 const ASSETS_STORE = "assets";
@@ -41,21 +41,30 @@ function fileKey(projectId: string, path: string): string {
 
 async function getDb(): Promise<IDBPDatabase> {
 	return openDB(DB_NAME, DB_VERSION, {
-		upgrade(db) {
-			if (!db.objectStoreNames.contains(PROJECTS_STORE)) {
-				db.createObjectStore(PROJECTS_STORE, { keyPath: "id" });
+		upgrade(db, oldVersion) {
+			if (oldVersion < 1) {
+				if (!db.objectStoreNames.contains(PROJECTS_STORE)) {
+					db.createObjectStore(PROJECTS_STORE, { keyPath: "id" });
+				}
+				if (!db.objectStoreNames.contains(FILES_STORE)) {
+					const fileStore = db.createObjectStore(FILES_STORE, {
+						keyPath: "key",
+					});
+					fileStore.createIndex("projectId", "projectId");
+				}
+				if (!db.objectStoreNames.contains(ASSETS_STORE)) {
+					const assetStore = db.createObjectStore(ASSETS_STORE, {
+						keyPath: "key",
+					});
+					assetStore.createIndex("projectId", "projectId");
+				}
 			}
-			if (!db.objectStoreNames.contains(FILES_STORE)) {
-				const fileStore = db.createObjectStore(FILES_STORE, {
-					keyPath: "key",
-				});
-				fileStore.createIndex("projectId", "projectId");
-			}
-			if (!db.objectStoreNames.contains(ASSETS_STORE)) {
-				const assetStore = db.createObjectStore(ASSETS_STORE, {
-					keyPath: "key",
-				});
-				assetStore.createIndex("projectId", "projectId");
+			if (oldVersion < 2) {
+				if (!db.objectStoreNames.contains("user_assets")) {
+					const store = db.createObjectStore("user_assets", { keyPath: "id" });
+					store.createIndex("category", "category");
+					store.createIndex("source", "source");
+				}
 			}
 		},
 	});

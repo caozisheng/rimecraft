@@ -8,6 +8,7 @@ import type { CommandManager, Command } from "./command-manager";
 import { useProjectStore } from "@/stores/project-store";
 import { useGameStore } from "@/stores/game-store";
 import { ASSET_CATALOG, searchCatalog } from "@/lib/assets/asset-catalog";
+import { assetRegistry } from "@/lib/assets/asset-registry";
 
 export class AgentManager {
 	private initialized = false;
@@ -934,7 +935,7 @@ export class AgentManager {
 					properties: {
 						category: {
 							type: "string",
-							enum: ["character", "environment", "ui", "effect", "item", "all"],
+							enum: ["character", "environment", "ui", "effect", "item", "shape", "background", "particle", "all"],
 							description: "素材分类（默认 all）",
 						},
 					},
@@ -956,7 +957,7 @@ export class AgentManager {
 
 					const sections = Object.entries(grouped).map(([cat, assets]) => {
 						const catNames: Record<string, string> = {
-							character: "角色", environment: "环境", ui: "UI", effect: "特效", item: "道具",
+							character: "角色", environment: "环境", ui: "UI", effect: "特效", item: "道具", shape: "形状", background: "背景", particle: "粒子",
 						};
 						const lines = assets.map(
 							(a) => `  - ${a.nameZh} (key: "${a.name}")\n    ${a.generatorCode.split("\n").join("\n    ")}`,
@@ -969,6 +970,71 @@ export class AgentManager {
 						message: `内置素材库 (${filtered.length} 个):\n\n${sections.join("\n\n")}\n\n使用方法: 在场景的 create() 开头调用生成代码，然后用 key 创建精灵即可。`,
 						data: { assets: filtered, count: filtered.length },
 					};
+				},
+			},
+			{
+				name: "generate_asset",
+				description: "根据用户描述生成 Phaser 程序化纹理代码并保存到用户素材库。生成后用户可以在素材库的「我的」标签页中找到。",
+				parameters: {
+					type: "object",
+					properties: {
+						name: {
+							type: "string",
+							description: "素材英文名（用作纹理 key，如 magic-sword）",
+						},
+						nameZh: {
+							type: "string",
+							description: "素材中文名（如 魔法剑）",
+						},
+						category: {
+							type: "string",
+							enum: ["character", "environment", "ui", "effect", "item", "shape", "background", "particle"],
+							description: "素材分类",
+						},
+						generatorCode: {
+							type: "string",
+							description: "Phaser Graphics API 生成代码（完整的，包含 const g = this.add.graphics() 到 g.destroy()）",
+						},
+						tags: {
+							type: "array",
+							items: { type: "string" },
+							description: "搜索标签（中英文）",
+						},
+					},
+					required: ["name", "nameZh", "category", "generatorCode"],
+				},
+				async execute(args) {
+					try {
+						const name = args.name as string;
+						const nameZh = args.nameZh as string;
+						const category = args.category as string;
+						const generatorCode = args.generatorCode as string;
+						const tags = (args.tags as string[]) || [name, nameZh];
+						const id = `llm-${Date.now().toString(36)}`;
+
+						await assetRegistry.load();
+						await assetRegistry.addUserAsset({
+							id,
+							name,
+							nameZh,
+							type: "texture",
+							category,
+							tags,
+							source: "llm-generated",
+							generatorCode,
+						});
+
+						return {
+							success: true,
+							message: `已生成素材「${nameZh}」并保存到素材库。\n\n使用方法：在场景 create() 中添加以下代码：\n\`\`\`typescript\n${generatorCode}\n\`\`\`\n然后用 this.add.sprite(x, y, "${name}") 创建精灵。\n\n用户可在素材库「我的」标签页中找到此素材。`,
+							data: { id, name, nameZh, category, generatorCode },
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `生成素材失败: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
 				},
 			},
 			{
