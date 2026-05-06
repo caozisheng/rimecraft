@@ -264,6 +264,16 @@ export class IndexedDBStorageProvider implements StorageProvider {
 		return zip.generateAsync({ type: "blob" });
 	}
 
+	async downloadExport(id: string, fileName: string): Promise<void> {
+		const blob = await this.exportProject(id);
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = fileName;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
 	async importProject(blob: Blob): Promise<Project> {
 		const { default: JSZip } = await import("jszip");
 		const zip = await JSZip.loadAsync(blob);

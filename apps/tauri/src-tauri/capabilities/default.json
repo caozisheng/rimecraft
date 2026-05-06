@@ -10,6 +10,9 @@
 		"fs:allow-app-write-recursive",
 		"fs:allow-appdata-read-recursive",
 		"fs:allow-appdata-write-recursive",
+		"fs:allow-desktop-write",
+		"fs:allow-download-write",
+		"fs:allow-document-write",
 		"dialog:default",
 		"shell:allow-open",
 		"process:default"

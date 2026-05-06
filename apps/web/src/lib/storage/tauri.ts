@@ -15,7 +15,7 @@ import {
 	remove,
 	exists,
 } from "@tauri-apps/plugin-fs";
-import { appDataDir, sep } from "@tauri-apps/api/path";
+import { appDataDir, sep, downloadDir } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { generateTemplateFiles } from "../templates";
 
@@ -245,6 +245,19 @@ export class TauriStorageProvider implements StorageProvider {
 		}
 
 		return zip.generateAsync({ type: "blob" });
+	}
+
+	async downloadExport(id: string, fileName: string): Promise<void> {
+		const { save } = await import("@tauri-apps/plugin-dialog");
+		const defaultPath = joinPath(await downloadDir(), fileName);
+		const filePath = await save({
+			defaultPath,
+			filters: [{ name: "RimeCraft Project", extensions: ["zip"] }],
+		});
+		if (!filePath) return;
+		const blob = await this.exportProject(id);
+		const buffer = await blob.arrayBuffer();
+		await writeFile(filePath, new Uint8Array(buffer));
 	}
 
 	async importProject(blob: Blob): Promise<Project> {

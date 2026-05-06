@@ -117,6 +117,13 @@ export class ProjectManager {
 		return this.storage.exportProject(projectId);
 	}
 
+	async downloadExport(fileName: string): Promise<void> {
+		await this.ensureReady();
+		const projectId = useProjectStore.getState().currentProject?.id;
+		if (!projectId) throw new Error("No project open");
+		await this.storage.downloadExport(projectId, fileName);
+	}
+
 	async importProject(blob: Blob): Promise<Project> {
 		await this.ensureReady();
 		return this.storage.importProject(blob);

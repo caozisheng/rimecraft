@@ -1,6 +1,6 @@
 # RimeCraft
 
-RimeCraft is an agentic chat-style game craft based on [Phaser.js]([GitHub - phaserjs/phaser: Phaser is a fun, free and fast 2D game framework for making HTML5 games for desktop and mobile web browsers, supporting Canvas and WebGL rendering. · GitHub](https://github.com/phaserjs/phaser))
+RimeCraft is an agentic chat-style game craft based on [Phaser.js](https://github.com/phaserjs/phaser)
 
 <img width="956" height="784" alt="image" src="https://github.com/user-attachments/assets/ffed150f-f4fd-4aa1-93d8-0b2472b42157" />
 

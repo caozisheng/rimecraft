@@ -7,7 +7,6 @@ import { getEditorCore } from "@/core/editor-core";
 import {
 	Code2,
 	Download,
-	FolderOpen,
 	Home,
 	Palette,
 	Settings,
@@ -30,13 +29,7 @@ export function EditorToolbar() {
 		setExporting(true);
 		try {
 			const core = getEditorCore();
-			const blob = await core.project.exportProject();
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = `${project.name}.rimecraft.zip`;
-			a.click();
-			URL.revokeObjectURL(url);
+			await core.project.downloadExport(`${project.name}.rimecraft.zip`);
 		} catch (e) {
 			console.error("Export failed:", e);
 		} finally {
