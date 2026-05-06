@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
+import { getMessages, t } from "@/i18n";
 import type {
 	AgentMessage,
 	AgentStatus,
@@ -116,13 +117,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
 					{
 						id: nanoid(),
 						role: "system",
-						content: "已回滚到此检查点，Agent 的所有操作已撤销",
+						content: getMessages().chat.undoSuccess,
 						createdAt: Date.now(),
 					},
 				],
 			});
 		} catch {
-			state.addMessage("system", "回滚失败");
+			state.addMessage("system", getMessages().chat.undoFailed);
 		}
 	},
 
@@ -174,9 +175,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 						(f) => f.path.endsWith(".ts") && f.path.startsWith("src/"),
 					);
 
+					const m = getMessages();
 					const parts: string[] = [];
-					parts.push(`项目: ${projectState.currentProject?.name ?? "未命名"}`);
-					parts.push(`文件 (${srcFiles.length}):`);
+					parts.push(`${m.agent.project}: ${projectState.currentProject?.name ?? "未命名"}`);
+					parts.push(`${m.agent.files} (${srcFiles.length}):`);
 					for (const f of srcFiles) {
 						const fileContent = await storage.readFile(projectId, f.path);
 						if (fileContent.length > 10000) {
@@ -188,11 +190,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 						}
 					}
 
-					parts.push("\n=== 游戏运行时状态 ===");
-					parts.push(`运行中: ${gameState.isRunning ? "是" : "否"}`);
+					parts.push(`\n=== ${m.agent.runtimeState} ===`);
+					parts.push(`${m.agent.running}: ${gameState.isRunning ? "是" : "否"}`);
 					parts.push(`FPS: ${gameState.fps}`);
 					if (gameState.errors.length > 0) {
-						parts.push(`最近错误 (${gameState.errors.length}):`);
+						parts.push(`${m.agent.recentErrors} (${gameState.errors.length}):`);
 						for (const err of gameState.errors.slice(-5)) {
 							parts.push(`  - ${err}`);
 						}
@@ -332,7 +334,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 									});
 									state.addMessage(
 										"tool",
-										`已切换到角色: ${args.role}`,
+										t(getMessages().agent.switchedRole, { role: args.role }),
 										{ toolCallId: toolCall.id },
 									);
 								} else {
@@ -387,7 +389,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 							set({ status: "error" });
 							state.addMessage(
 								"system",
-								`错误: ${event.message}`,
+								`${getMessages().common.error}: ${event.message}`,
 							);
 							shouldBreak = true;
 							break;
@@ -411,16 +413,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
 								set({ activeRoleId: "debug" });
 							}
 
+							const em = getMessages();
 							const errorList = freshErrors.length > 0
 								? freshErrors.map((e) => `- ${e}`).join("\n")
 								: allErrors.slice(-5).map((e) => `- ${e}`).join("\n");
 							const prefix = freshErrors.length > 0
-								? `游戏预览检测到 ${freshErrors.length} 个运行时错误`
-								: `⚠️ 仍有 ${allErrors.length} 个运行时错误未修复`;
+								? t(em.agent.runtimeErrors, { count: freshErrors.length })
+								: t(em.agent.stillErrors, { count: allErrors.length });
 
-							let debugHint = "\n\n请：1. 用 read_file 查看相关代码 2. 分析错误原因 3. 用 write_file/patch_file 修复";
+							let debugHint = "\n\n" + em.agent.debugHint;
 							if (consecutiveErrorRounds >= 3) {
-								debugHint = "\n\n⚠️ 之前的修复方案未解决问题，请尝试完全不同的方法。建议：\n- 重新阅读所有相关文件，检查是否遗漏了问题根因\n- 检查文件之间的导入和依赖关系\n- 考虑简化代码逻辑来排除问题";
+								debugHint = "\n\n" + em.agent.debugHintAlt;
 							}
 
 							state.addMessage(
@@ -453,9 +456,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 					const { useGameStore } = await import("@/stores/game-store");
 					const remainingErrors = useGameStore.getState().errors;
 					if (remainingErrors.length > 0) {
+						const mm = getMessages();
 						state.addMessage(
 							"system",
-							`⚠️ Agent 已达到最大迭代次数 (${maxIterations}) 但仍有 ${remainingErrors.length} 个运行时错误:\n${remainingErrors.map((e) => `- ${e}`).join("\n")}\n\n发送"修复错误"可以让 AI 重新尝试。`,
+							`${t(mm.agent.maxIterations, { max: maxIterations, count: remainingErrors.length })}:\n${remainingErrors.map((e) => `- ${e}`).join("\n")}\n\n${mm.agent.retryHint}`,
 						);
 					}
 				} catch { /* ignore */ }
@@ -463,7 +467,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		} catch (error) {
 			const message =
 				error instanceof Error ? error.message : String(error);
-			state.addMessage("system", `发送消息失败: ${message}`);
+			state.addMessage("system", t(getMessages().chat.sendFailed, { message }));
 		} finally {
 			set({
 				status: "idle",

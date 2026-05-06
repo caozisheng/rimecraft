@@ -5,6 +5,7 @@ import { useEditorStore } from "@/stores/editor-store";
 import { useProjectStore } from "@/stores/project-store";
 import { getEditorCore } from "@/core/editor-core";
 import { Code2, FileCode, ChevronRight, FileText } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 let CodeEditor: React.ComponentType<{
 	value: string;
@@ -14,6 +15,7 @@ let CodeEditor: React.ComponentType<{
 }> | null = null;
 
 export function CodePanel() {
+	const { messages: m } = useI18n();
 	const currentFilePath = useEditorStore((s) => s.currentFilePath);
 	const setCurrentFilePath = useEditorStore((s) => s.setCurrentFilePath);
 	const files = useProjectStore((s) => s.files);
@@ -56,11 +58,11 @@ export function CodePanel() {
 		<div className="flex h-full flex-col border-t border-border bg-card">
 			<div className="flex items-center gap-2 border-b border-border px-3 py-2">
 				<Code2 className="h-3.5 w-3.5 text-muted-foreground" />
-				<span className="text-xs font-medium">代码编辑器</span>
+				<span className="text-xs font-medium">{m.codePanel.title}</span>
 				{currentFilePath && (
 					<span className="text-xs text-muted-foreground">— {currentFilePath}</span>
 				)}
-				{saving && <span className="ml-auto text-xs text-game-warning">保存中...</span>}
+				{saving && <span className="ml-auto text-xs text-game-warning">{m.codePanel.saving}</span>}
 			</div>
 
 			<div className="flex flex-1 overflow-hidden">
@@ -82,7 +84,7 @@ export function CodePanel() {
 						</button>
 					))}
 					{tsFiles.length === 0 && (
-						<p className="p-2 text-xs text-muted-foreground">暂无文件</p>
+						<p className="p-2 text-xs text-muted-foreground">{m.codePanel.noFiles}</p>
 					)}
 				</div>
 
@@ -98,7 +100,7 @@ export function CodePanel() {
 						<div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
 							<FileCode className="h-8 w-8 opacity-30" />
 							<p className="text-xs">
-								{editorLoaded ? "在左侧选择文件来查看代码" : "编辑器加载中..."}
+								{editorLoaded ? m.codePanel.selectFile : m.codePanel.editorLoading}
 							</p>
 						</div>
 					)}

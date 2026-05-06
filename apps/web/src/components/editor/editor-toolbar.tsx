@@ -14,8 +14,10 @@ import {
 } from "lucide-react";
 import { LLMSettingsDialog } from "./llm-settings-dialog";
 import { AssetLibraryDialog } from "./asset-library-dialog";
+import { useI18n } from "@/i18n";
 
 export function EditorToolbar() {
+	const { messages: m } = useI18n();
 	const project = useProjectStore((s) => s.currentProject);
 	const closeProject = useProjectStore((s) => s.closeProject);
 	const toggleCodePanel = useEditorStore((s) => s.toggleCodePanel);
@@ -63,7 +65,7 @@ export function EditorToolbar() {
 						type="button"
 						onClick={closeProject}
 						className="flex items-center gap-2 transition-colors hover:opacity-80"
-						title="返回首页"
+						title={m.toolbar.backHome}
 					>
 						<span className="bg-gradient-to-r from-game-primary to-game-secondary bg-clip-text text-lg font-bold text-transparent">
 							RimeCraft
@@ -79,34 +81,34 @@ export function EditorToolbar() {
 				<div className="flex items-center gap-1">
 					<ToolbarButton
 						icon={<Home className="h-4 w-4" />}
-						label="首页"
+						label={m.toolbar.home}
 						onClick={closeProject}
 					/>
 					<ToolbarButton
 						icon={<Upload className="h-4 w-4" />}
-						label="导入"
+						label={m.toolbar.import}
 						onClick={handleImport}
 					/>
 					<ToolbarButton
 						icon={<Code2 className="h-4 w-4" />}
-						label="代码"
+						label={m.toolbar.code}
 						active={codePanelVisible}
 						onClick={toggleCodePanel}
 					/>
 					<ToolbarButton
 						icon={<Palette className="h-4 w-4" />}
-						label="素材库"
+						label={m.toolbar.assetLib}
 						onClick={() => setAssetLibOpen(true)}
 					/>
 					<ToolbarButton
 						icon={<Download className="h-4 w-4" />}
-						label={exporting ? "导出中..." : "导出"}
+						label={exporting ? m.toolbar.exporting : m.toolbar.export}
 						onClick={handleExport}
 					/>
 					<div className="mx-2 h-6 w-px bg-border" />
 					<ToolbarButton
 						icon={<Settings className="h-4 w-4" />}
-						label="设置"
+						label={m.common.settings}
 						onClick={() => setSettingsOpen(true)}
 					/>
 				</div>

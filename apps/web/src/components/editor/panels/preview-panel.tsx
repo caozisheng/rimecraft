@@ -6,8 +6,10 @@ import { useEditorStore } from "@/stores/editor-store";
 import { useProjectStore } from "@/stores/project-store";
 import { getEditorCore } from "@/core/editor-core";
 import { Play, Pause, RotateCcw, Maximize2, Copy, Check } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 export function PreviewPanel() {
+	const { messages: m } = useI18n();
 	const iframeRef = useRef<HTMLIFrameElement>(null);
 	const fps = useGameStore((s) => s.fps);
 	const isRunning = useGameStore((s) => s.isRunning);
@@ -122,24 +124,24 @@ export function PreviewPanel() {
 						<ControlButton
 							icon={<Pause className="h-3.5 w-3.5" />}
 							onClick={handlePause}
-							label="暂停"
+							label={m.preview.pause}
 						/>
 					) : (
 						<ControlButton
 							icon={<Play className="h-3.5 w-3.5" />}
 							onClick={handlePlay}
-							label="播放"
+							label={m.preview.play}
 						/>
 					)}
 					<ControlButton
 						icon={<RotateCcw className="h-3.5 w-3.5" />}
 						onClick={handleRestart}
-						label="重启"
+						label={m.preview.restart}
 					/>
 					<ControlButton
 						icon={<Maximize2 className="h-3.5 w-3.5" />}
 						onClick={handleFullscreen}
-						label="全屏"
+						label={m.preview.fullscreen}
 					/>
 				</div>
 
@@ -158,11 +160,11 @@ export function PreviewPanel() {
 					{errors.length > 0 && (
 						<span className="flex items-center gap-1.5 text-game-error">
 							<span className="max-w-[220px] truncate" title={lastError ?? ""}>
-								{errors.length} 个错误: {lastError}
+								{m.preview.errorCount.replace("{count}", String(errors.length))}: {lastError}
 							</span>
 							<button
 								type="button"
-								title="复制错误信息"
+								title={m.preview.copyErrors}
 								onClick={() => {
 									if (lastError) {
 										navigator.clipboard.writeText(lastError);
@@ -196,7 +198,7 @@ export function PreviewPanel() {
 					<div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80">
 						<Play className="mb-4 h-16 w-16 text-muted-foreground/30" />
 						<p className="text-sm text-muted-foreground">
-							创建游戏后，预览将在这里显示
+							{m.preview.emptyState}
 						</p>
 					</div>
 				)}

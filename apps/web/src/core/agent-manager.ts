@@ -9,6 +9,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { useGameStore } from "@/stores/game-store";
 import { ASSET_CATALOG, searchCatalog } from "@/lib/assets/asset-catalog";
 import { assetRegistry } from "@/lib/assets/asset-registry";
+import { getMessages, t } from "@/i18n";
 
 export class AgentManager {
 	private initialized = false;
@@ -73,27 +74,30 @@ export class AgentManager {
 			return null;
 		};
 
+		const dm = getMessages();
+
 		return [
 			{
 				name: "list_files",
-				description: "列出项目中的所有文件和目录结构",
+				description: dm.tools.listFiles.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "可选的子目录路径前缀，用于过滤",
+							description: dm.tools.listFiles.pathDesc,
 						},
 					},
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const projectId =
 							useProjectStore.getState().currentProject?.id;
 						if (!projectId)
 							return {
 								success: false,
-								message: "没有打开的项目",
+								message: m.agent.noProject,
 							};
 
 						const storage = pm().getStorage();
@@ -109,44 +113,47 @@ export class AgentManager {
 							.join("\n");
 						return {
 							success: true,
-							message: `项目包含 ${filtered.length} 个文件:\n${fileList}`,
+							message: `${t(m.tools.projectHasFiles, { count: filtered.length })}:\n${fileList}`,
 							data: {
 								files: filtered.map((f) => f.path),
 								count: filtered.length,
 							},
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `列出文件失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.listFilesFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
 			},
 			{
 				name: "read_file",
-				description: "读取项目中指定文件的内容",
+				description: dm.tools.readFile.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "文件路径，如 src/scenes/game-scene.ts",
+							description: dm.tools.readFile.pathDesc,
 						},
 					},
 					required: ["path"],
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const rawPath = args.path as string;
 						const path = (await resolveFilePath(rawPath)) ?? rawPath;
 						const content = await pm().readFile(path);
 						return {
 							success: true,
-							message: `文件 ${path} 内容:\n${content}`,
+							message: `${t(m.tools.fileContent, { path })}:\n${content}`,
 							data: { path, content },
 						};
 					} catch (e) {
+						const m = getMessages();
 						const path = args.path as string;
 						const fileName = path.split("/").pop() ?? path;
 						let suggestion = "";
@@ -159,37 +166,37 @@ export class AgentManager {
 									.map((f) => f.path)
 									.slice(0, 5);
 								if (similar.length > 0) {
-									suggestion = `\n\n建议：你是否要找以下文件？\n${similar.map((f) => `  - ${f}`).join("\n")}`;
+									suggestion = `\n\n${m.tools.readFileSuggestion}\n${similar.map((f) => `  - ${f}`).join("\n")}`;
 								}
 							}
 						} catch { /* ignore */ }
 						return {
 							success: false,
-							message: `读取文件失败: ${e instanceof Error ? e.message : String(e)}${suggestion}`,
+							message: `${m.tools.readFileFailed}: ${e instanceof Error ? e.message : String(e)}${suggestion}`,
 						};
 					}
 				},
 			},
 			{
 				name: "write_file",
-				description:
-					"写入或覆盖文件内容。这是修改游戏代码的主要工具。写入后会自动触发重新编译和预览刷新。",
+				description: dm.tools.writeFile.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "文件路径，如 src/scenes/game-scene.ts",
+							description: dm.tools.writeFile.pathDesc,
 						},
 						content: {
 							type: "string",
-							description: "完整的文件内容",
+							description: dm.tools.writeFile.contentDesc,
 						},
 					},
 					required: ["path", "content"],
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const path = args.path as string;
 						const content = args.content as string;
 
@@ -222,32 +229,34 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `成功写入文件: ${path}`,
+							message: t(m.tools.writeFileSuccess, { path }),
 							undoable: true,
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `写入文件失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.writeFileFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
 			},
 			{
 				name: "delete_file",
-				description: "删除项目中的指定文件",
+				description: dm.tools.deleteFile.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "要删除的文件路径",
+							description: dm.tools.deleteFile.pathDesc,
 						},
 					},
 					required: ["path"],
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const rawPath = args.path as string;
 						const path = (await resolveFilePath(rawPath)) ?? rawPath;
 						const oldContent = await pm().readFile(path);
@@ -270,10 +279,11 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `成功删除文件: ${path}`,
+							message: t(m.tools.deleteFileSuccess, { path }),
 							undoable: true,
 						};
 					} catch (e) {
+						const m = getMessages();
 						const path = args.path as string;
 						let suggestion = "";
 						try {
@@ -281,38 +291,37 @@ export class AgentManager {
 							if (projectId) {
 								const files = await pm().getStorage().listFiles(projectId);
 								const available = files.map((f) => f.path).slice(0, 10);
-								suggestion = "\n\n可删除的文件:\n" + available.map((f) => `  - ${f}`).join("\n");
+								suggestion = "\n\n" + m.tools.availableFiles + ":\n" + available.map((f) => `  - ${f}`).join("\n");
 							}
 						} catch { /* ignore */ }
 						return {
 							success: false,
-							message: `删除文件失败: ${e instanceof Error ? e.message : String(e)}${suggestion}`,
+							message: `${m.tools.deleteFileFailed}: ${e instanceof Error ? e.message : String(e)}${suggestion}`,
 						};
 					}
 				},
 			},
 			{
 				name: "create_scene",
-				description:
-					"创建新的 Phaser 场景文件，自动生成带有 preload/create/update 方法的骨架代码",
+				description: dm.tools.createScene.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						name: {
 							type: "string",
-							description:
-								"场景名称（英文，如 GameScene, BossScene）",
+							description: dm.tools.createScene.nameDesc,
 						},
 						type: {
 							type: "string",
 							enum: ["menu", "game", "ui", "gameover", "custom"],
-							description: "场景类型，影响生成的骨架代码",
+							description: dm.tools.createScene.typeDesc,
 						},
 					},
 					required: ["name"],
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const name = args.name as string;
 						const type = (args.type as string) || "game";
 						const className =
@@ -347,54 +356,57 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `成功创建场景 ${className} (${filePath})。注意：你还需要在 src/main.ts 中导入并注册此场景。`,
+							message: t(m.tools.createSceneSuccess, { className, path: filePath }),
 							undoable: true,
 							data: { path: filePath, className, sceneKey },
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `创建场景失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.createSceneFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
 			},
 			{
 				name: "restart_preview",
-				description: "重新编译项目代码并重启游戏预览",
+				description: dm.tools.restartPreview.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						sceneId: {
 							type: "string",
-							description: "指定启动场景（可选）",
+							description: dm.tools.restartPreview.sceneIdDesc,
 						},
 					},
 				},
 				async execute() {
 					try {
+						const m = getMessages();
 						preview().requestCompilation();
 						return {
 							success: true,
-							message: "游戏预览正在重新编译和重启...",
+							message: m.tools.restartPreviewSuccess,
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `重启预览失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.restartPreviewFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
 			},
 			{
 				name: "get_game_state",
-				description:
-					"获取当前游戏运行时状态，包括 FPS、错误日志等信息",
+				description: dm.tools.getGameState.desc,
 				parameters: {
 					type: "object",
 					properties: {},
 				},
 				async execute() {
+					const m = getMessages();
 					const gameState = useGameStore.getState();
 					const projectState = useProjectStore.getState();
 					const files = projectState.files.map((f) => f.path);
@@ -403,14 +415,14 @@ export class AgentManager {
 					return {
 						success: true,
 						message: [
-							`游戏状态:`,
-							`- 运行中: ${gameState.isRunning ? "是" : "否"}`,
+							`${m.tools.gameState}:`,
+							`- ${m.agent.running}: ${gameState.isRunning ? m.tools.gameRunning : m.tools.gameNotRunning}`,
 							`- FPS: ${gameState.fps}`,
-							`- 当前场景: ${gameState.activeSceneId ?? "无"}`,
-							`- 文件数: ${files.length}`,
+							`- ${m.tools.currentScene}: ${gameState.activeSceneId ?? m.tools.noScene}`,
+							`- ${m.tools.fileCount}: ${files.length}`,
 							errors.length > 0
-								? `- 最近错误:\n${errors.map((e) => `  · ${e}`).join("\n")}`
-								: "- 无错误",
+								? `- ${m.agent.recentErrors}:\n${errors.map((e) => `  · ${e}`).join("\n")}`
+								: `- ${m.tools.noErrors}`,
 						].join("\n"),
 						data: {
 							fps: gameState.fps,
@@ -425,79 +437,84 @@ export class AgentManager {
 			},
 			{
 				name: "undo",
-				description: "撤销上一步操作",
+				description: dm.tools.undo.desc,
 				parameters: { type: "object", properties: {} },
 				async execute() {
+					const m = getMessages();
 					const success = await cmd().undo();
 					if (success) {
 						preview().requestCompilation();
-						return { success: true, message: "已撤销上一步操作" };
+						return { success: true, message: m.tools.undoSuccess };
 					}
 					return {
 						success: false,
-						message: "没有可撤销的操作",
+						message: m.tools.undoNoOp,
 					};
 				},
 			},
 			{
 				name: "redo",
-				description: "重做上一步被撤销的操作",
+				description: dm.tools.redo.desc,
 				parameters: { type: "object", properties: {} },
 				async execute() {
+					const m = getMessages();
 					const success = await cmd().redo();
 					if (success) {
 						preview().requestCompilation();
-						return { success: true, message: "已重做操作" };
+						return { success: true, message: m.tools.redoSuccess };
 					}
 					return {
 						success: false,
-						message: "没有可重做的操作",
+						message: m.tools.redoNoOp,
 					};
 				},
 			},
 			{
 				name: "undo_all",
-				description: "撤销当前对话中 Agent 的所有文件操作，回到对话开始前的状态",
+				description: dm.tools.undoAll.desc,
 				parameters: { type: "object", properties: {} },
 				async execute() {
 					try {
+						const m = getMessages();
 						const checkpoint = cmd().getCheckpoint();
 						if (checkpoint <= 0) {
-							return { success: false, message: "没有可撤销的操作" };
+							return { success: false, message: m.tools.undoNoOp };
 						}
 						await cmd().undoToCheckpoint(0);
 						preview().requestCompilation();
 						return {
 							success: true,
-							message: `已撤销所有操作，回到初始状态`,
+							message: m.tools.undoAllSuccess,
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `撤销失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.undoAllFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
 			},
 			{
 				name: "rename_file",
-				description: "重命名或移动文件到新路径",
+				description: dm.tools.renameFile.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						oldPath: {
 							type: "string",
-							description: "原文件路径，如 src/scenes/old-name.ts",
+							description: dm.tools.renameFile.oldPathDesc,
 						},
 						newPath: {
 							type: "string",
-							description: "新文件路径，如 src/scenes/new-name.ts",
+							description: dm.tools.renameFile.newPathDesc,
 						},
 					},
 					required: ["oldPath", "newPath"],
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const oldPath = args.oldPath as string;
 						const newPath = args.newPath as string;
 						const content = await pm().readFile(oldPath);
@@ -522,40 +539,42 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `成功重命名: ${oldPath} → ${newPath}`,
+							message: t(m.tools.renameSuccess, { oldPath, newPath }),
 							undoable: true,
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `重命名文件失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.renameFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
 			},
 			{
 				name: "patch_file",
-				description: "对文件进行局部修改：搜索指定内容并替换为新内容。适用于小范围修改，无需重写整个文件。",
+				description: dm.tools.patchFile.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "文件路径",
+							description: dm.tools.patchFile.pathDesc,
 						},
 						search: {
 							type: "string",
-							description: "要搜索的原始内容（精确匹配）",
+							description: dm.tools.patchFile.searchDesc,
 						},
 						replace: {
 							type: "string",
-							description: "替换后的新内容",
+							description: dm.tools.patchFile.replaceDesc,
 						},
 					},
 					required: ["path", "search", "replace"],
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const rawPath = args.path as string;
 						const path = (await resolveFilePath(rawPath)) ?? rawPath;
 						const search = args.search as string;
@@ -569,11 +588,11 @@ export class AgentManager {
 								.map((line, i) => ({ line: line.trim(), lineNum: i + 1 }))
 								.filter((l) => l.line.includes(searchFirstLine.slice(0, 20)));
 							const hint = candidates.length > 0
-								? `\n\n建议：文件中第 ${candidates.slice(0, 3).map((c) => c.lineNum).join(", ")} 行附近有类似内容，请用 read_file 查看后重试。`
-								: "\n\n建议：请先用 read_file 查看该文件的最新内容，确认搜索内容完全匹配（注意空格和缩进）。";
+								? `\n\n${t(m.tools.patchHintLine, { lines: candidates.slice(0, 3).map((c) => c.lineNum).join(", ") })}`
+								: `\n\n${m.tools.patchHintRead}`;
 							return {
 								success: false,
-								message: `在 ${path} 中找不到要替换的内容。${hint}`,
+								message: `${t(m.tools.patchNotFound, { path })}${hint}`,
 							};
 						}
 
@@ -595,27 +614,29 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `成功修改文件: ${path}`,
+							message: t(m.tools.patchSuccess, { path }),
 							undoable: true,
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `修改文件失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.patchFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
 			},
 			{
 				name: "get_project_structure",
-				description: "获取项目的完整目录结构，包含文件大小信息",
+				description: dm.tools.getProjectStructure.desc,
 				parameters: { type: "object", properties: {} },
 				async execute() {
 					try {
+						const m = getMessages();
 						const projectId =
 							useProjectStore.getState().currentProject?.id;
 						if (!projectId)
-							return { success: false, message: "没有打开的项目" };
+							return { success: false, message: m.agent.noProject };
 
 						const storage = pm().getStorage();
 						const files = await storage.listFiles(projectId);
@@ -633,42 +654,44 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `项目结构 (${files.length} 个文件):\n${tree.join("\n")}`,
+							message: `${t(m.tools.projectStructure, { count: files.length })}:\n${tree.join("\n")}`,
 							data: { files: sorted.map((f) => f.path), count: files.length },
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `获取项目结构失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.getStructureFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
 			},
 			{
 				name: "search_in_files",
-				description: "在项目文件中搜索包含指定关键词的代码行",
+				description: dm.tools.searchInFiles.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						query: {
 							type: "string",
-							description: "要搜索的关键词或文本",
+							description: dm.tools.searchInFiles.queryDesc,
 						},
 						filePattern: {
 							type: "string",
-							description: "文件后缀过滤，如 .ts（可选，默认搜索所有文件）",
+							description: dm.tools.searchInFiles.filePatternDesc,
 						},
 					},
 					required: ["query"],
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const query = args.query as string;
 						const filePattern = (args.filePattern as string) || "";
 						const projectId =
 							useProjectStore.getState().currentProject?.id;
 						if (!projectId)
-							return { success: false, message: "没有打开的项目" };
+							return { success: false, message: m.agent.noProject };
 
 						const storage = pm().getStorage();
 						const files = await storage.listFiles(projectId);
@@ -699,62 +722,65 @@ export class AgentManager {
 						if (results.length === 0) {
 							return {
 								success: true,
-								message: `没有找到包含 "${query}" 的代码`,
+								message: t(m.tools.noSearchResults, { query }),
 							};
 						}
 
 						const limited = results.slice(0, 50);
 						return {
 							success: true,
-							message: `找到 ${results.length} 处匹配:\n${limited.join("\n")}${results.length > 50 ? `\n... 还有 ${results.length - 50} 处` : ""}`,
+							message: `${t(m.tools.searchResults, { count: results.length })}:\n${limited.join("\n")}${results.length > 50 ? `\n${t(m.tools.searchMore, { extra: results.length - 50 })}` : ""}`,
 							data: { matches: limited, total: results.length },
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `搜索失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.searchFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
 			},
 			{
 				name: "get_runtime_errors",
-				description: "获取游戏运行时的错误日志，用于诊断和修复问题",
+				description: dm.tools.getRuntimeErrors.desc,
 				parameters: { type: "object", properties: {} },
 				async execute() {
+					const m = getMessages();
 					const gameState = useGameStore.getState();
 					const errors = gameState.errors;
 
 					if (errors.length === 0) {
 						return {
 							success: true,
-							message: "没有运行时错误",
+							message: m.tools.noRuntimeErrors,
 							data: { errors: [], count: 0 },
 						};
 					}
 
 					return {
 						success: true,
-						message: `运行时错误 (${errors.length}):\n${errors.map((e, i) => `${i + 1}. ${e}`).join("\n")}`,
+						message: `${t(m.tools.runtimeErrorList, { count: errors.length })}:\n${errors.map((e, i) => `${i + 1}. ${e}`).join("\n")}`,
 						data: { errors, count: errors.length },
 					};
 				},
 			},
 			{
 				name: "list_project_assets",
-				description: "列出项目 assets/ 目录下的所有资源文件，自动检测文件类型（图片、音频、字体等）",
+				description: dm.tools.listProjectAssets.desc,
 				parameters: { type: "object", properties: {} },
 				async execute() {
 					try {
+						const m = getMessages();
 						const projectId = useProjectStore.getState().currentProject?.id;
-						if (!projectId) return { success: false, message: "没有打开的项目" };
+						if (!projectId) return { success: false, message: m.agent.noProject };
 
 						const storage = pm().getStorage();
 						const files = await storage.listFiles(projectId);
 						const assetFiles = files.filter((f) => f.path.startsWith("assets/"));
 
 						if (assetFiles.length === 0) {
-							return { success: true, message: "项目没有资源文件。assets/ 目录为空。", data: { assets: [], count: 0 } };
+							return { success: true, message: m.tools.noProjectAssets, data: { assets: [], count: 0 } };
 						}
 
 						const typeMap: Record<string, string> = {
@@ -781,41 +807,41 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `项目资源 (${assets.length} 个文件):\n${lines.join("\n")}`,
+							message: `${t(m.tools.projectAssets, { count: assets.length })}:\n${lines.join("\n")}`,
 							data: { assets, count: assets.length },
 						};
 					} catch (e) {
-						return { success: false, message: `列出资源失败: ${e instanceof Error ? e.message : String(e)}` };
+						const m = getMessages();
+						return { success: false, message: `${m.tools.listAssetsFailed}: ${e instanceof Error ? e.message : String(e)}` };
 					}
 				},
 			},
 			{
 				name: "search_assets",
-				description: "在项目 assets/ 目录和内置素材库中搜索资源。支持中英文关键词搜索。",
+				description: dm.tools.searchAssets.desc,
 				parameters: {
 					type: "object",
 					properties: {
-						query: { type: "string", description: "搜索关键词（文件名模糊匹配，支持中英文）" },
-						type: { type: "string", enum: ["image", "audio", "data", "font", "all"], description: "资源类型过滤（默认 all）" },
+						query: { type: "string", description: dm.tools.searchAssets.queryDesc },
+						type: { type: "string", enum: ["image", "audio", "data", "font", "all"], description: dm.tools.searchAssets.typeDesc },
 					},
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const projectId = useProjectStore.getState().currentProject?.id;
 						const query = ((args.query as string) || "").toLowerCase();
 						const filterType = (args.type as string) || "all";
 						const sections: string[] = [];
 
-						// 搜索内置素材库
 						const catalogResults = searchCatalog(query || "", filterType !== "all" ? filterType : undefined);
 						if (catalogResults.length > 0) {
 							const lines = catalogResults.map(
-								(a) => `  - ${a.nameZh} (${a.name}) [${a.category}]\n    生成代码:\n    ${a.generatorCode.split("\n").join("\n    ")}`,
+								(a) => `  - ${a.nameZh} (${a.name}) [${a.category}]\n    ${a.generatorCode.split("\n").join("\n    ")}`,
 							);
-							sections.push(`内置素材库 (${catalogResults.length} 个匹配):\n${lines.join("\n")}`);
+							sections.push(`${t(m.tools.builtinAssets, { count: catalogResults.length })}:\n${lines.join("\n")}`);
 						}
 
-						// 搜索项目资源
 						if (projectId) {
 							const storage = pm().getStorage();
 							const files = await storage.listFiles(projectId);
@@ -838,12 +864,12 @@ export class AgentManager {
 							}
 
 							if (assetFiles.length > 0) {
-								sections.push(`项目资源 (${assetFiles.length} 个):\n${assetFiles.map((f) => `  - ${f.path}`).join("\n")}`);
+								sections.push(`${t(m.tools.projectResources, { count: assetFiles.length })}:\n${assetFiles.map((f) => `  - ${f.path}`).join("\n")}`);
 							}
 						}
 
 						if (sections.length === 0) {
-							return { success: true, message: "没有找到匹配的资源。你可以使用 Graphics API 生成纹理作为替代。", data: { results: [], catalogResults: [], count: 0 } };
+							return { success: true, message: m.tools.noAssetResults, data: { results: [], catalogResults: [], count: 0 } };
 						}
 
 						return {
@@ -852,23 +878,24 @@ export class AgentManager {
 							data: { catalogResults, count: catalogResults.length },
 						};
 					} catch (e) {
-						return { success: false, message: `搜索资源失败: ${e instanceof Error ? e.message : String(e)}` };
+						const m = getMessages();
+						return { success: false, message: `${m.tools.searchAssetsFailed}: ${e instanceof Error ? e.message : String(e)}` };
 					}
 				},
 			},
 			{
 				name: "import_asset",
-				description: "将资源文件导入到项目 assets/ 目录，并生成对应的 Phaser preload 代码。支持通过 URL 下载或通过 base64 写入。",
+				description: dm.tools.importAsset.desc,
 				parameters: {
 					type: "object",
 					properties: {
-						url: { type: "string", description: "资源 URL（将下载到 assets/ 目录）" },
-						fileName: { type: "string", description: "保存的文件名（如 player.png）" },
-						assetKey: { type: "string", description: "Phaser 中使用的资源键名（如 player）" },
-						assetType: { type: "string", enum: ["image", "spritesheet", "audio", "atlas"], description: "资源类型，默认 image" },
+						url: { type: "string", description: "Resource URL" },
+						fileName: { type: "string", description: "Save filename (e.g. player.png)" },
+						assetKey: { type: "string", description: "Phaser asset key (e.g. player)" },
+						assetType: { type: "string", enum: ["image", "spritesheet", "audio", "atlas"], description: "Asset type (default: image)" },
 						frameConfig: {
 							type: "object",
-							description: "spritesheet 的帧配置",
+							description: "Spritesheet frame config",
 							properties: {
 								frameWidth: { type: "number" },
 								frameHeight: { type: "number" },
@@ -879,6 +906,7 @@ export class AgentManager {
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const fileName = args.fileName as string;
 						const assetKey = args.assetKey as string;
 						const assetType = (args.assetType as string) || "image";
@@ -902,32 +930,34 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `资源准备就绪。请在场景的 preload() 中添加:\n\`\`\`typescript\n${preloadCode}\n\`\`\`\n\n提示：如果需要用 URL 加载远程资源，可以直接在 preload 中使用完整 URL 替代路径。`,
+							message: `${m.tools.assetReady}\n\`\`\`typescript\n${preloadCode}\n\`\`\``,
 							data: { targetPath, assetKey, assetType, preloadCode },
 						};
 					} catch (e) {
-						return { success: false, message: `导入资源失败: ${e instanceof Error ? e.message : String(e)}` };
+						const m = getMessages();
+						return { success: false, message: `${m.tools.importAssetFailed}: ${e instanceof Error ? e.message : String(e)}` };
 					}
 				},
 			},
 			{
 				name: "create_animation",
-				description: "在指定场景文件中生成 Phaser 动画配置代码。动画基于 spritesheet 的帧范围定义。",
+				description: dm.tools.createAnimation.desc,
 				parameters: {
 					type: "object",
 					properties: {
-						scenePath: { type: "string", description: "目标场景文件路径，如 src/scenes/game-scene.ts" },
-						animKey: { type: "string", description: "动画名称，如 player-walk" },
-						textureKey: { type: "string", description: "spritesheet 的纹理键名" },
-						frameStart: { type: "number", description: "起始帧（默认 0）" },
-						frameEnd: { type: "number", description: "结束帧" },
-						frameRate: { type: "number", description: "帧率（默认 10）" },
-						repeat: { type: "number", description: "重复次数（-1 为无限循环，默认 -1）" },
+						scenePath: { type: "string", description: "Scene file path, e.g. src/scenes/game-scene.ts" },
+						animKey: { type: "string", description: "Animation name, e.g. player-walk" },
+						textureKey: { type: "string", description: "Spritesheet texture key" },
+						frameStart: { type: "number", description: "Start frame (default 0)" },
+						frameEnd: { type: "number", description: "End frame" },
+						frameRate: { type: "number", description: "Frame rate (default 10)" },
+						repeat: { type: "number", description: "Repeat count (-1 = infinite, default -1)" },
 					},
 					required: ["scenePath", "animKey", "textureKey", "frameEnd"],
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const scenePath = args.scenePath as string;
 						const animKey = args.animKey as string;
 						const textureKey = args.textureKey as string;
@@ -940,19 +970,19 @@ export class AgentManager {
 						try {
 							sceneContent = await pm().readFile(scenePath);
 						} catch {
-							return { success: false, message: `找不到场景文件: ${scenePath}` };
+							return { success: false, message: t(m.tools.sceneNotFound, { path: scenePath }) };
 						}
 
 						const animCode = `\n    this.anims.create({\n      key: "${animKey}",\n      frames: this.anims.generateFrameNumbers("${textureKey}", { start: ${frameStart}, end: ${frameEnd} }),\n      frameRate: ${frameRate},\n      repeat: ${repeat},\n    });\n`;
 
 						const createIdx = sceneContent.indexOf("create()");
 						if (createIdx === -1) {
-							return { success: false, message: `在 ${scenePath} 中找不到 create() 方法` };
+							return { success: false, message: t(m.tools.createMethodNotFound, { path: scenePath }) };
 						}
 
 						const braceIdx = sceneContent.indexOf("{", createIdx);
 						if (braceIdx === -1) {
-							return { success: false, message: `在 ${scenePath} 中 create() 方法格式异常` };
+							return { success: false, message: t(m.tools.createMethodBroken, { path: scenePath }) };
 						}
 
 						const newContent = sceneContent.slice(0, braceIdx + 1) + animCode + sceneContent.slice(braceIdx + 1);
@@ -974,36 +1004,38 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `已在 ${scenePath} 的 create() 中添加动画 "${animKey}"。使用 sprite.play("${animKey}") 播放。`,
+							message: t(m.tools.animCreated, { path: scenePath, key: animKey }),
 							undoable: true,
 							data: { animKey, textureKey, frameStart, frameEnd, frameRate, repeat },
 						};
 					} catch (e) {
-						return { success: false, message: `创建动画失败: ${e instanceof Error ? e.message : String(e)}` };
+						const m = getMessages();
+						return { success: false, message: `${m.tools.animFailed}: ${e instanceof Error ? e.message : String(e)}` };
 					}
 				},
 			},
 			{
 				name: "browse_asset_catalog",
-				description: "浏览内置素材库，按分类列出所有可用的程序化纹理素材及其生成代码。",
+				description: dm.tools.browseAssetCatalog.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						category: {
 							type: "string",
 							enum: ["character", "environment", "ui", "effect", "item", "shape", "background", "particle", "all"],
-							description: "素材分类（默认 all）",
+							description: "Asset category (default: all)",
 						},
 					},
 				},
 				async execute(args) {
+					const m = getMessages();
 					const category = (args.category as string) || "all";
 					const filtered = category === "all"
 						? ASSET_CATALOG
 						: ASSET_CATALOG.filter((a) => a.category === category);
 
 					if (filtered.length === 0) {
-						return { success: true, message: "该分类下没有素材" };
+						return { success: true, message: m.tools.noCatalogAssets };
 					}
 
 					const grouped: Record<string, typeof filtered> = {};
@@ -1011,10 +1043,18 @@ export class AgentManager {
 						(grouped[a.category] ??= []).push(a);
 					}
 
+					const catNames: Record<string, string> = {
+						character: m.tools.catCharacter,
+						environment: m.tools.catEnvironment,
+						ui: m.tools.catUI,
+						effect: m.tools.catEffect,
+						item: m.tools.catItem,
+						shape: m.tools.catShape,
+						background: m.tools.catBackground,
+						particle: m.tools.catParticle,
+					};
+
 					const sections = Object.entries(grouped).map(([cat, assets]) => {
-						const catNames: Record<string, string> = {
-							character: "角色", environment: "环境", ui: "UI", effect: "特效", item: "道具", shape: "形状", background: "背景", particle: "粒子",
-						};
 						const lines = assets.map(
 							(a) => `  - ${a.nameZh} (key: "${a.name}")\n    ${a.generatorCode.split("\n").join("\n    ")}`,
 						);
@@ -1023,44 +1063,45 @@ export class AgentManager {
 
 					return {
 						success: true,
-						message: `内置素材库 (${filtered.length} 个):\n\n${sections.join("\n\n")}\n\n使用方法: 在场景的 create() 开头调用生成代码，然后用 key 创建精灵即可。`,
+						message: `${t(m.tools.catalogHeader, { count: filtered.length })}:\n\n${sections.join("\n\n")}\n\n${m.tools.catalogUsage}`,
 						data: { assets: filtered, count: filtered.length },
 					};
 				},
 			},
 			{
 				name: "generate_asset",
-				description: "根据用户描述生成 Phaser 程序化纹理代码并保存到用户素材库。生成后用户可以在素材库的「我的」标签页中找到。",
+				description: dm.tools.generateAsset.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						name: {
 							type: "string",
-							description: "素材英文名（用作纹理 key，如 magic-sword）",
+							description: "Asset English name (used as texture key, e.g. magic-sword)",
 						},
 						nameZh: {
 							type: "string",
-							description: "素材中文名（如 魔法剑）",
+							description: "Asset Chinese name",
 						},
 						category: {
 							type: "string",
 							enum: ["character", "environment", "ui", "effect", "item", "shape", "background", "particle"],
-							description: "素材分类",
+							description: "Asset category",
 						},
 						generatorCode: {
 							type: "string",
-							description: "Phaser Graphics API 生成代码（完整的，包含 const g = this.add.graphics() 到 g.destroy()）",
+							description: "Phaser Graphics API generation code",
 						},
 						tags: {
 							type: "array",
 							items: { type: "string" },
-							description: "搜索标签（中英文）",
+							description: "Search tags",
 						},
 					},
 					required: ["name", "nameZh", "category", "generatorCode"],
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						const name = args.name as string;
 						const nameZh = args.nameZh as string;
 						const category = args.category as string;
@@ -1082,54 +1123,56 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `已生成素材「${nameZh}」并保存到素材库。\n\n使用方法：在场景 create() 中添加以下代码：\n\`\`\`typescript\n${generatorCode}\n\`\`\`\n然后用 this.add.sprite(x, y, "${name}") 创建精灵。\n\n用户可在素材库「我的」标签页中找到此素材。`,
+							message: `${t(m.tools.generateAssetSuccess, { nameZh })}\n\n${m.tools.generateAssetUsage}\n\`\`\`typescript\n${generatorCode}\n\`\`\`\n\n${m.tools.generateAssetTip}`,
 							data: { id, name, nameZh, category, generatorCode },
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `生成素材失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.generateAssetFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
 			},
 			{
 				name: "set_game_config",
-				description: "修改游戏配置，如画布尺寸、背景颜色、物理引擎设置等。会自动更新 src/main.ts 中的配置。",
+				description: dm.tools.setGameConfig.desc,
 				parameters: {
 					type: "object",
 					properties: {
 						width: {
 							type: "number",
-							description: "游戏画布宽度（像素）",
+							description: "Game canvas width (pixels)",
 						},
 						height: {
 							type: "number",
-							description: "游戏画布高度（像素）",
+							description: "Game canvas height (pixels)",
 						},
 						backgroundColor: {
 							type: "string",
-							description: "背景颜色（十六进制，如 #1a1a2e）",
+							description: "Background color (hex, e.g. #1a1a2e)",
 						},
 						gravity: {
 							type: "number",
-							description: "重力值（Y轴，如 300 表示向下的重力）",
+							description: "Gravity Y value (e.g. 300)",
 						},
 						debug: {
 							type: "boolean",
-							description: "是否开启物理调试模式",
+							description: "Enable physics debug mode",
 						},
 					},
 				},
 				async execute(args) {
 					try {
+						const m = getMessages();
 						let mainContent: string;
 						try {
 							mainContent = await pm().readFile("src/main.ts");
 						} catch {
 							return {
 								success: false,
-								message: "找不到 src/main.ts，请先创建主文件",
+								message: m.tools.mainTsNotFound,
 							};
 						}
 
@@ -1147,7 +1190,7 @@ export class AgentManager {
 								/height:\s*\d+/,
 								`height: ${h}`,
 							);
-							changes.push(`尺寸: ${w}x${h}`);
+							changes.push(`${m.tools.configSize}: ${w}x${h}`);
 						}
 
 						if (args.backgroundColor) {
@@ -1156,7 +1199,7 @@ export class AgentManager {
 								/backgroundColor:\s*["']#?[0-9a-fA-F]+["']/,
 								`backgroundColor: "${bg}"`,
 							);
-							changes.push(`背景色: ${bg}`);
+							changes.push(`${m.tools.configBg}: ${bg}`);
 						}
 
 						if (args.gravity !== undefined) {
@@ -1165,7 +1208,7 @@ export class AgentManager {
 								/gravity:\s*\{[^}]*\}/,
 								`gravity: { x: 0, y: ${g} }`,
 							);
-							changes.push(`重力: ${g}`);
+							changes.push(`${m.tools.configGravity}: ${g}`);
 						}
 
 						if (args.debug !== undefined) {
@@ -1174,13 +1217,13 @@ export class AgentManager {
 								/debug:\s*(true|false)/,
 								`debug: ${d}`,
 							);
-							changes.push(`调试模式: ${d ? "开" : "关"}`);
+							changes.push(d ? m.tools.configDebugOn : m.tools.configDebugOff);
 						}
 
 						if (mainContent === oldContent) {
 							return {
 								success: true,
-								message: "配置未发生变化",
+								message: m.tools.configNoChange,
 							};
 						}
 
@@ -1200,13 +1243,14 @@ export class AgentManager {
 
 						return {
 							success: true,
-							message: `已更新游戏配置: ${changes.join(", ")}`,
+							message: `${m.tools.configUpdated}: ${changes.join(", ")}`,
 							undoable: true,
 						};
 					} catch (e) {
+						const m = getMessages();
 						return {
 							success: false,
-							message: `修改配置失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `${m.tools.configFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},
@@ -1225,6 +1269,7 @@ function generateSceneTemplate(
 	sceneKey: string,
 	type: string,
 ): string {
+	const m = getMessages();
 	switch (type) {
 		case "menu":
 			return `import Phaser from "phaser";
@@ -1238,7 +1283,7 @@ export class ${className} extends Phaser.Scene {
 		const { width, height } = this.scale;
 
 		this.add
-			.text(width / 2, height / 3, "游戏标题", {
+			.text(width / 2, height / 3, "${m.sceneTemplate.gameTitle}", {
 				fontSize: "48px",
 				color: "#ffffff",
 				fontFamily: "Arial",
@@ -1246,7 +1291,7 @@ export class ${className} extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const startBtn = this.add
-			.text(width / 2, height * 0.6, "开始游戏", {
+			.text(width / 2, height * 0.6, "${m.sceneTemplate.startGame}", {
 				fontSize: "28px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -1275,7 +1320,7 @@ export class ${className} extends Phaser.Scene {
 		const { width, height } = this.scale;
 
 		this.add
-			.text(width / 2, height / 3, "游戏结束", {
+			.text(width / 2, height / 3, "${m.sceneTemplate.gameOver}", {
 				fontSize: "48px",
 				color: "#ef4444",
 				fontFamily: "Arial",
@@ -1283,7 +1328,7 @@ export class ${className} extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const retryBtn = this.add
-			.text(width / 2, height * 0.6, "再来一次", {
+			.text(width / 2, height * 0.6, "${m.sceneTemplate.retry}", {
 				fontSize: "28px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -1309,12 +1354,9 @@ export class ${className} extends Phaser.Scene {
 	}
 
 	create() {
-		// UI 场景通常叠加在游戏场景上方
-		// 用于显示分数、血条、按钮等 UI 元素
 	}
 
 	update() {
-		// 在这里更新 UI 状态
 	}
 }
 `;
@@ -1327,16 +1369,12 @@ export class ${className} extends Phaser.Scene {
 	}
 
 	preload() {
-		// 在这里加载游戏资源
-		// this.load.image("key", "assets/images/image.png");
 	}
 
 	create() {
-		// 在这里创建游戏对象
 	}
 
 	update() {
-		// 在这里编写每帧更新的游戏逻辑
 	}
 }
 `;

@@ -13,7 +13,7 @@ export default function RootLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<html lang="zh-CN">
+		<html lang="zh">
 			<body className="bg-background text-foreground antialiased">
 				{children}
 			</body>

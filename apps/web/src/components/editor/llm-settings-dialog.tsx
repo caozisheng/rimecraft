@@ -10,6 +10,8 @@ import {
 	DialogFooter,
 } from "@rimecraft/ui";
 import { Input, Button } from "@rimecraft/ui";
+import { useI18n } from "@/i18n";
+import type { Locale } from "@/i18n/locale";
 
 const KEYS = {
 	baseUrl: "rimecraft_llm_baseUrl",
@@ -24,6 +26,7 @@ export function LLMSettingsDialog({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
+	const { messages: m, locale, setLocale } = useI18n();
 	const [baseUrl, setBaseUrl] = useState("");
 	const [apiKey, setApiKey] = useState("");
 	const [model, setModel] = useState("");
@@ -53,20 +56,42 @@ export function LLMSettingsDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="border-border bg-card">
 				<DialogHeader>
-					<DialogTitle>AI Settings</DialogTitle>
+					<DialogTitle>{m.settings.title}</DialogTitle>
 					<DialogDescription>
-						Configure your LLM provider. Supports any
-						OpenAI-compatible API.
+						{m.settings.description}
 					</DialogDescription>
 				</DialogHeader>
 
 				<div className="grid gap-4 py-2">
+					{/* Language */}
+					<div className="grid gap-1.5">
+						<label className="text-sm font-medium">
+							{m.settings.language}
+						</label>
+						<div className="flex gap-2">
+							{(["zh", "en"] as Locale[]).map((l) => (
+								<button
+									key={l}
+									type="button"
+									onClick={() => setLocale(l)}
+									className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+										locale === l
+											? "bg-primary text-primary-foreground"
+											: "border border-border bg-card text-foreground hover:bg-accent"
+									}`}
+								>
+									{l === "zh" ? "中文" : "English"}
+								</button>
+							))}
+						</div>
+					</div>
+
 					<div className="grid gap-1.5">
 						<label
 							htmlFor="llm-base-url"
 							className="text-sm font-medium"
 						>
-							API Base URL
+							{m.settings.baseUrl}
 						</label>
 						<Input
 							id="llm-base-url"
@@ -75,7 +100,7 @@ export function LLMSettingsDialog({
 							placeholder="https://api.openai.com/v1"
 						/>
 						<p className="text-xs text-muted-foreground">
-							OpenAI / DeepSeek / Ollama (http://localhost:11434/v1)
+							{m.settings.baseUrlHint}
 						</p>
 					</div>
 
@@ -84,7 +109,7 @@ export function LLMSettingsDialog({
 							htmlFor="llm-api-key"
 							className="text-sm font-medium"
 						>
-							API Key
+							{m.settings.apiKey}
 						</label>
 						<Input
 							id="llm-api-key"
@@ -100,7 +125,7 @@ export function LLMSettingsDialog({
 							htmlFor="llm-model"
 							className="text-sm font-medium"
 						>
-							Model
+							{m.settings.model}
 						</label>
 						<Input
 							id="llm-model"
@@ -109,7 +134,7 @@ export function LLMSettingsDialog({
 							placeholder="gpt-4.1"
 						/>
 						<p className="text-xs text-muted-foreground">
-							e.g. gpt-4.1, deepseek-chat, claude-sonnet-4-20250514
+							{m.settings.modelHint}
 						</p>
 					</div>
 				</div>
@@ -119,10 +144,10 @@ export function LLMSettingsDialog({
 						variant="outline"
 						onClick={() => onOpenChange(false)}
 					>
-						Cancel
+						{m.common.cancel}
 					</Button>
 					<Button onClick={handleSave}>
-						{saved ? "Saved!" : "Save"}
+						{saved ? m.settings.saved : m.common.save}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

@@ -20,20 +20,8 @@ import {
 } from "@/lib/assets/asset-registry";
 import { renderAssetPreview } from "@/lib/assets/asset-previewer";
 import { useChatStore } from "@/stores/chat-store";
+import { useI18n } from "@/i18n";
 import { Check, Copy, Plus, Sparkles, Upload, X } from "lucide-react";
-
-const CATEGORIES = [
-	{ key: "all", label: "全部" },
-	{ key: "character", label: "角色" },
-	{ key: "environment", label: "环境" },
-	{ key: "item", label: "道具" },
-	{ key: "effect", label: "特效" },
-	{ key: "shape", label: "形状" },
-	{ key: "background", label: "背景" },
-	{ key: "particle", label: "粒子" },
-	{ key: "ui", label: "UI" },
-	{ key: "mine", label: "我的" },
-] as const;
 
 const CATEGORY_COLORS: Record<string, string> = {
 	character: "bg-cyan-500/20 text-cyan-400",
@@ -53,6 +41,20 @@ export function AssetLibraryDialog({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
+	const { messages: m, locale } = useI18n();
+	const categories = [
+		{ key: "all", label: m.assetLib.categories.all },
+		{ key: "character", label: m.assetLib.categories.character },
+		{ key: "environment", label: m.assetLib.categories.environment },
+		{ key: "item", label: m.assetLib.categories.item },
+		{ key: "effect", label: m.assetLib.categories.effect },
+		{ key: "shape", label: m.assetLib.categories.shape },
+		{ key: "background", label: m.assetLib.categories.background },
+		{ key: "particle", label: m.assetLib.categories.particle },
+		{ key: "ui", label: m.assetLib.categories.ui },
+		{ key: "mine", label: m.assetLib.categories.mine },
+	] as const;
+
 	const [query, setQuery] = useState("");
 	const [category, setCategory] = useState("all");
 	const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -133,9 +135,9 @@ export function AssetLibraryDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="border-border bg-card sm:max-w-3xl">
 				<DialogHeader>
-					<DialogTitle>素材库</DialogTitle>
+					<DialogTitle>{m.assetLib.title}</DialogTitle>
 					<DialogDescription>
-						浏览内置素材或添加自定义素材，点击卡片查看详情
+						{m.assetLib.subtitle}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -143,7 +145,7 @@ export function AssetLibraryDialog({
 					{/* Search + actions */}
 					<div className="flex gap-2">
 						<Input
-							placeholder="搜索素材... (支持中英文)"
+							placeholder={m.assetLib.searchPlaceholder}
 							value={query}
 							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
 								setQuery(e.target.value)
@@ -157,7 +159,7 @@ export function AssetLibraryDialog({
 							onClick={handleUpload}
 						>
 							<Upload className="h-3.5 w-3.5" />
-							上传
+							{m.common.upload}
 						</Button>
 						<Button
 							variant="outline"
@@ -174,7 +176,7 @@ export function AssetLibraryDialog({
 					{showAiInput && (
 						<div className="flex gap-2 rounded-lg border border-border bg-accent/30 p-2">
 							<Input
-								placeholder="描述你想要的素材，如：一个蓝色的宝石..."
+								placeholder={m.assetLib.aiPlaceholder}
 								value={aiPrompt}
 								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
 									setAiPrompt(e.target.value)
@@ -185,21 +187,21 @@ export function AssetLibraryDialog({
 								size="sm"
 								disabled={!aiPrompt.trim()}
 								onClick={() => {
-									const prompt = `请帮我生成素材：${aiPrompt}`;
+									const prompt = locale === "zh" ? `请帮我生成素材：${aiPrompt}` : `Please generate an asset: ${aiPrompt}`;
 									setAiPrompt("");
 									setShowAiInput(false);
 									onOpenChange(false);
 									useChatStore.getState().sendMessage(prompt);
 								}}
 							>
-								发送到对话
+								{m.assetLib.sendToChat}
 							</Button>
 						</div>
 					)}
 
 					{/* Categories */}
 					<div className="flex flex-wrap gap-1.5">
-						{CATEGORIES.map((cat) => (
+						{categories.map((cat) => (
 							<button
 								key={cat.key}
 								type="button"
@@ -224,7 +226,7 @@ export function AssetLibraryDialog({
 						<div className="flex-1 overflow-y-auto pr-1" style={{ maxHeight: 400 }}>
 							{filtered.length === 0 ? (
 								<p className="py-12 text-center text-sm text-muted-foreground">
-									未找到匹配的素材
+									{m.assetLib.noResults}
 								</p>
 							) : (
 								<div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
@@ -234,6 +236,7 @@ export function AssetLibraryDialog({
 											entry={entry}
 											selected={selectedAsset?.id === entry.id}
 											onSelect={() => setSelectedAsset(entry)}
+											locale={locale}
 										/>
 									))}
 								</div>
@@ -245,8 +248,8 @@ export function AssetLibraryDialog({
 							<div className="w-56 shrink-0 space-y-3 rounded-lg border border-border p-3">
 								<div className="flex items-start justify-between">
 									<div>
-										<p className="text-sm font-medium">{selectedAsset.nameZh}</p>
-										<p className="text-xs text-muted-foreground">{selectedAsset.name}</p>
+										<p className="text-sm font-medium">{locale === "en" ? selectedAsset.name : selectedAsset.nameZh}</p>
+										<p className="text-xs text-muted-foreground">{locale === "en" ? selectedAsset.nameZh : selectedAsset.name}</p>
 									</div>
 									<button
 										type="button"
@@ -265,7 +268,7 @@ export function AssetLibraryDialog({
 
 								{"source" in selectedAsset && selectedAsset.source !== "builtin" && (
 									<span className="ml-1 inline-block rounded bg-blue-500/20 px-1.5 py-0.5 text-[10px] text-blue-400">
-										{selectedAsset.source === "user" ? "用户" : "AI"}
+										{selectedAsset.source === "user" ? m.common.user : m.common.ai}
 									</span>
 								)}
 
@@ -285,12 +288,12 @@ export function AssetLibraryDialog({
 										{copiedId === selectedAsset.id ? (
 											<>
 												<Check className="h-3 w-3 text-green-400" />
-												已复制
+												{m.common.copied}
 											</>
 										) : (
 											<>
 												<Copy className="h-3 w-3" />
-												复制
+												{m.common.copy}
 											</>
 										)}
 									</Button>
@@ -308,10 +311,12 @@ function AssetCard({
 	entry,
 	selected,
 	onSelect,
+	locale,
 }: {
 	entry: AssetCatalogEntry | AssetEntry;
 	selected: boolean;
 	onSelect: () => void;
+	locale: string;
 }) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [rendered, setRendered] = useState(false);
@@ -364,7 +369,7 @@ function AssetCard({
 				)}
 			</div>
 			<span className="w-full truncate text-center text-[10px] text-muted-foreground">
-				{entry.nameZh}
+				{locale === "en" ? entry.name : entry.nameZh}
 			</span>
 		</button>
 	);

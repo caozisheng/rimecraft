@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { EXPERT_ROLES, type AgentMessage, type ExpertRole } from "@rimecraft/agent-engine";
 import Markdown from "react-markdown";
+import { useI18n } from "@/i18n";
 
 function ToolCallCard({ msg }: { msg: AgentMessage }) {
 	const [expanded, setExpanded] = useState(false);
@@ -67,6 +68,7 @@ function ToolCallCard({ msg }: { msg: AgentMessage }) {
 }
 
 function ToolResultMessage({ msg }: { msg: AgentMessage }) {
+	const { messages: m } = useI18n();
 	const [expanded, setExpanded] = useState(false);
 	const result = msg.toolResults?.[0];
 	if (!result) {
@@ -94,7 +96,7 @@ function ToolResultMessage({ msg }: { msg: AgentMessage }) {
 				</span>
 				{result.undoable && (
 					<span className="rounded bg-game-primary/20 px-1 py-0.5 text-[10px] text-game-primary">
-						可撤销
+						{m.common.undoable}
 					</span>
 				)}
 				{expanded ? (
@@ -171,6 +173,7 @@ const markdownComponents = {
 } as import("react-markdown").Components;
 
 export function ChatPanel() {
+	const { messages: m } = useI18n();
 	const messages = useChatStore((s) => s.messages);
 	const status = useChatStore((s) => s.status);
 	const streamingContent = useChatStore((s) => s.streamingContent);
@@ -214,7 +217,7 @@ export function ChatPanel() {
 			<div className="flex items-center gap-2 border-b border-border px-4 py-3">
 				<Sparkles className="h-4 w-4 text-game-primary" />
 				<span className="text-sm font-medium">
-					{roleInfo?.name ?? "AI 助手"}
+					{roleInfo?.name ?? m.chat.aiAssistant}
 				</span>
 				<span className="hidden text-xs text-muted-foreground sm:inline">
 					{roleInfo?.description}
@@ -227,7 +230,7 @@ export function ChatPanel() {
 						className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
 					>
 						<Users className="h-3 w-3" />
-						<span>切换角色</span>
+						<span>{m.chat.switchRole}</span>
 						<ChevronDown className="h-3 w-3" />
 					</button>
 					{showRoleMenu && (
@@ -258,17 +261,13 @@ export function ChatPanel() {
 					<div className="flex h-full flex-col items-center justify-center text-center">
 						<Sparkles className="mb-4 h-12 w-12 text-game-primary/50" />
 						<h3 className="mb-2 text-lg font-medium">
-							欢迎来到 RimeCraft!
+							{m.chat.welcomeTitle}
 						</h3>
 						<p className="max-w-sm text-sm text-muted-foreground">
-							告诉我你想做什么游戏吧！比如：
+							{m.chat.welcomeSubtitle}
 						</p>
 						<div className="mt-4 flex flex-col gap-2">
-							{[
-								"做一个小恐龙跑酷游戏",
-								"帮我做一个太空射击游戏",
-								"我想做一个像素风 RPG",
-							].map((suggestion) => (
+							{m.welcome.suggestions.map((suggestion) => (
 								<button
 									key={suggestion}
 									type="button"
@@ -320,7 +319,7 @@ export function ChatPanel() {
 								{msg.commandCheckpoint !== undefined && (
 									<div className="mb-2 flex items-center gap-1.5 border-b border-border pb-2">
 										<div className="h-1.5 w-1.5 rounded-full bg-game-primary" />
-										<span className="text-[10px] text-muted-foreground">检查点</span>
+										<span className="text-[10px] text-muted-foreground">{m.chat.checkpoint}</span>
 										<button
 											type="button"
 											disabled={status !== "idle"}
@@ -328,7 +327,7 @@ export function ChatPanel() {
 											className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
 										>
 											<RotateCcw className="h-3 w-3" />
-											回滚到此
+											{m.chat.rollback}
 										</button>
 									</div>
 								)}
@@ -363,8 +362,8 @@ export function ChatPanel() {
 								<span className="h-2 w-2 animate-bounce rounded-full bg-game-primary [animation-delay:300ms]" />
 							</div>
 							{currentIteration > 0
-								? `正在工作中... (${currentIteration}/${maxIterations})`
-								: "正在思考..."}
+								? m.chat.working.replace("{current}", String(currentIteration)).replace("{max}", String(maxIterations))
+								: m.chat.thinking}
 						</div>
 					</div>
 				)}
@@ -379,7 +378,7 @@ export function ChatPanel() {
 						value={input}
 						onChange={(e) => setInput(e.target.value)}
 						onKeyDown={handleKeyDown}
-						placeholder="描述你的游戏想法..."
+						placeholder={m.chat.inputPlaceholder}
 						rows={1}
 						className="flex-1 resize-none rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/50"
 					/>
