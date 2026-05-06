@@ -182,6 +182,7 @@ export function ChatPanel() {
 	const maxIterations = useChatStore((s) => s.maxIterations);
 	const setExpertRole = useChatStore((s) => s.setExpertRole);
 	const setActiveRoleId = useChatStore((s) => s.setActiveRoleId);
+	const undoTurn = useChatStore((s) => s.undoTurn);
 	const [input, setInput] = useState("");
 	const [showRoleMenu, setShowRoleMenu] = useState(false);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -323,17 +324,7 @@ export function ChatPanel() {
 										<button
 											type="button"
 											disabled={status !== "idle"}
-											onClick={async () => {
-												try {
-													const { getEditorCore } = await import("@/core/editor-core");
-													const core = getEditorCore();
-													await core.command.undoToCheckpoint(msg.commandCheckpoint!);
-													core.preview.requestCompilation();
-													useChatStore.getState().addMessage("system", `已回滚到此检查点`);
-												} catch {
-													useChatStore.getState().addMessage("system", "回滚失败");
-												}
-											}}
+											onClick={() => undoTurn(msg.id)}
 											className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
 										>
 											<RotateCcw className="h-3 w-3" />

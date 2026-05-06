@@ -54,6 +54,25 @@ export class AgentManager {
 			}
 		};
 
+		const resolveFilePath = async (input: string): Promise<string | null> => {
+			const projectId = useProjectStore.getState().currentProject?.id;
+			if (!projectId) return input;
+			const storage = pm().getStorage();
+			const files = await storage.listFiles(projectId);
+			const paths = files.map((f) => f.path);
+			if (paths.includes(input)) return input;
+			const inputLower = input.toLowerCase();
+			const exactCI = paths.find((p) => p.toLowerCase() === inputLower);
+			if (exactCI) return exactCI;
+			const fileName = input.split("/").pop() ?? input;
+			const fileNameLower = fileName.toLowerCase();
+			const byName = paths.find((p) => (p.split("/").pop() ?? p).toLowerCase() === fileNameLower);
+			if (byName) return byName;
+			const partial = paths.find((p) => p.toLowerCase().includes(fileNameLower));
+			if (partial) return partial;
+			return null;
+		};
+
 		return [
 			{
 				name: "list_files",
@@ -119,7 +138,8 @@ export class AgentManager {
 				},
 				async execute(args) {
 					try {
-						const path = args.path as string;
+						const rawPath = args.path as string;
+						const path = (await resolveFilePath(rawPath)) ?? rawPath;
 						const content = await pm().readFile(path);
 						return {
 							success: true,
@@ -127,9 +147,25 @@ export class AgentManager {
 							data: { path, content },
 						};
 					} catch (e) {
+						const path = args.path as string;
+						const fileName = path.split("/").pop() ?? path;
+						let suggestion = "";
+						try {
+							const projectId = useProjectStore.getState().currentProject?.id;
+							if (projectId) {
+								const files = await pm().getStorage().listFiles(projectId);
+								const similar = files
+									.filter((f) => f.path.includes(fileName.replace(/\.\w+$/, "")) || f.path.endsWith(fileName))
+									.map((f) => f.path)
+									.slice(0, 5);
+								if (similar.length > 0) {
+									suggestion = `\n\n建议：你是否要找以下文件？\n${similar.map((f) => `  - ${f}`).join("\n")}`;
+								}
+							}
+						} catch { /* ignore */ }
 						return {
 							success: false,
-							message: `读取文件失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `读取文件失败: ${e instanceof Error ? e.message : String(e)}${suggestion}`,
 						};
 					}
 				},
@@ -212,7 +248,8 @@ export class AgentManager {
 				},
 				async execute(args) {
 					try {
-						const path = args.path as string;
+						const rawPath = args.path as string;
+						const path = (await resolveFilePath(rawPath)) ?? rawPath;
 						const oldContent = await pm().readFile(path);
 
 						const deleteCmd: Command = {
@@ -237,9 +274,19 @@ export class AgentManager {
 							undoable: true,
 						};
 					} catch (e) {
+						const path = args.path as string;
+						let suggestion = "";
+						try {
+							const projectId = useProjectStore.getState().currentProject?.id;
+							if (projectId) {
+								const files = await pm().getStorage().listFiles(projectId);
+								const available = files.map((f) => f.path).slice(0, 10);
+								suggestion = "\n\n可删除的文件:\n" + available.map((f) => `  - ${f}`).join("\n");
+							}
+						} catch { /* ignore */ }
 						return {
 							success: false,
-							message: `删除文件失败: ${e instanceof Error ? e.message : String(e)}`,
+							message: `删除文件失败: ${e instanceof Error ? e.message : String(e)}${suggestion}`,
 						};
 					}
 				},
@@ -509,15 +556,24 @@ export class AgentManager {
 				},
 				async execute(args) {
 					try {
-						const path = args.path as string;
+						const rawPath = args.path as string;
+						const path = (await resolveFilePath(rawPath)) ?? rawPath;
 						const search = args.search as string;
 						const replace = args.replace as string;
 
 						const oldContent = await pm().readFile(path);
 						if (!oldContent.includes(search)) {
+							const lines = oldContent.split("\n");
+							const searchFirstLine = search.split("\n")[0].trim();
+							const candidates = lines
+								.map((line, i) => ({ line: line.trim(), lineNum: i + 1 }))
+								.filter((l) => l.line.includes(searchFirstLine.slice(0, 20)));
+							const hint = candidates.length > 0
+								? `\n\n建议：文件中第 ${candidates.slice(0, 3).map((c) => c.lineNum).join(", ")} 行附近有类似内容，请用 read_file 查看后重试。`
+								: "\n\n建议：请先用 read_file 查看该文件的最新内容，确认搜索内容完全匹配（注意空格和缩进）。";
 							return {
 								success: false,
-								message: `在 ${path} 中找不到要替换的内容。请确认搜索内容完全匹配。`,
+								message: `在 ${path} 中找不到要替换的内容。${hint}`,
 							};
 						}
 

@@ -86,6 +86,7 @@ export class CloudLLMBackend implements LLMBackend {
 			const decoder = new TextDecoder();
 			let buffer = "";
 			const toolCalls: ToolCallInfo[] = [];
+			let doneEmitted = false;
 
 			while (true) {
 				const { done, value } = await reader.read();
@@ -99,10 +100,15 @@ export class CloudLLMBackend implements LLMBackend {
 					const trimmed = line.trim();
 					if (!trimmed || trimmed.startsWith(":")) continue;
 					if (trimmed === "data: [DONE]") {
-						if (toolCalls.length > 0) {
-							yield { type: "tool_calls_complete", toolCalls };
+						if (!doneEmitted) {
+							if (toolCalls.length > 0) {
+								console.log("[LLM] tool_calls_complete fired (data:[DONE]), toolCalls count:", toolCalls.length, toolCalls.map(t => t.function.name));
+								yield { type: "tool_calls_complete", toolCalls: [...toolCalls] };
+								toolCalls.length = 0;
+							}
+							yield { type: "done" };
+							doneEmitted = true;
 						}
-						yield { type: "done" };
 						continue;
 					}
 					if (!trimmed.startsWith("data: ")) continue;
@@ -141,10 +147,14 @@ export class CloudLLMBackend implements LLMBackend {
 
 						const finishReason = data.choices?.[0]?.finish_reason;
 						if (finishReason) {
+							console.log("[LLM] finish_reason:", finishReason, "doneEmitted:", doneEmitted);
 							const usage = data.usage;
 							if (toolCalls.length > 0) {
-								yield { type: "tool_calls_complete", toolCalls };
+								console.log("[LLM] tool_calls_complete fired (finish_reason), toolCalls count:", toolCalls.length, toolCalls.map(t => t.function.name));
+								yield { type: "tool_calls_complete", toolCalls: [...toolCalls] };
+								toolCalls.length = 0;
 							}
+							doneEmitted = true;
 							yield {
 								type: "done",
 								usage: usage

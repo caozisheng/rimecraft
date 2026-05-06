@@ -32,6 +32,7 @@ interface ChatState {
 	setAbortController: (controller: AbortController | null) => void;
 	clearMessages: () => void;
 
+	undoTurn: (checkpointMessageId: string) => Promise<void>;
 	sendMessage: (content: string) => Promise<void>;
 	cancelRequest: () => void;
 }
@@ -89,6 +90,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
 	setAbortController: (abortController) => set({ abortController }),
 
 	clearMessages: () => set({ messages: [], streamingContent: "" }),
+
+	undoTurn: async (checkpointMessageId) => {
+		const state = get();
+		if (state.status !== "idle") return;
+
+		const msgIndex = state.messages.findIndex(
+			(m) => m.id === checkpointMessageId,
+		);
+		if (msgIndex < 0) return;
+
+		const checkpointMsg = state.messages[msgIndex];
+		if (checkpointMsg.commandCheckpoint === undefined) return;
+
+		try {
+			const { getEditorCore } = await import("@/core/editor-core");
+			const core = getEditorCore();
+			await core.command.undoToCheckpoint(checkpointMsg.commandCheckpoint);
+			core.preview.requestCompilation();
+
+			const kept = state.messages.slice(0, msgIndex);
+			set({
+				messages: [
+					...kept,
+					{
+						id: nanoid(),
+						role: "system",
+						content: "已回滚到此检查点，Agent 的所有操作已撤销",
+						createdAt: Date.now(),
+					},
+				],
+			});
+		} catch {
+			state.addMessage("system", "回滚失败");
+		}
+	},
 
 	sendMessage: async (content) => {
 		const state = get();
@@ -168,7 +204,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 				}
 			};
 
-			const gameContext = await buildGameContext();
+			let gameContext = await buildGameContext();
 
 			let ragContext: string | null = null;
 			try {
@@ -215,6 +251,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 				set({ currentIteration: iterations + 1 });
 
+				if (iterations > 0) {
+					try {
+						gameContext = await buildGameContext();
+					} catch { /* keep previous context */ }
+				}
+
 				const currentMessages = get().messages;
 				const events = runAgentLoop({
 					messages: currentMessages,
@@ -230,6 +272,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 				let hadToolCalls = false;
 				let shouldBreak = false;
 				let hadFileWrites = false;
+				let rafHandle: number | null = null;
+				const flushStreaming = () => {
+					rafHandle = null;
+					set({ streamingContent: fullContent });
+				};
 
 				for await (const event of events) {
 					if (abortController.signal.aborted) {
@@ -244,10 +291,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 						case "text_delta":
 							fullContent += event.content;
-							set({ streamingContent: fullContent });
+							if (rafHandle === null) {
+								rafHandle = requestAnimationFrame(flushStreaming);
+							}
 							break;
 
 						case "tool_calls_complete": {
+							console.log("[CHAT] tool_calls_complete received, iteration:", iterations, "tools:", event.toolCalls.map(t => t.function.name));
+							if (rafHandle !== null) {
+								cancelAnimationFrame(rafHandle);
+								rafHandle = null;
+							}
 							hadToolCalls = true;
 
 							const msgExtra: Partial<AgentMessage> = {
@@ -314,6 +368,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 						}
 
 						case "message_end":
+							if (rafHandle !== null) {
+								cancelAnimationFrame(rafHandle);
+								rafHandle = null;
+							}
 							if (fullContent) {
 								const endExtra: Partial<AgentMessage> = {};
 								if (iterations === 0 && agentCheckpoint !== undefined) {
