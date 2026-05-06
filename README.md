@@ -2,7 +2,8 @@
 
 RimeCraft is an agentic chat-style game craft based on [Phaser.js](https://github.com/phaserjs/phaser)
 
-<img width="956" height="784" alt="image" src="https://github.com/user-attachments/assets/ffed150f-f4fd-4aa1-93d8-0b2472b42157" />
+<img width="961" height="800" alt="image" src="https://github.com/user-attachments/assets/ae6b9477-857b-45ea-b79a-e2214d5fb38c" />
+
 
 ## Project Structure
 
