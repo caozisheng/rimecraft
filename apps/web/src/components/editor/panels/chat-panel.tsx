@@ -167,7 +167,19 @@ function CodeBlock({
 	);
 }
 
-const markdownComponents = {
+function extractText(node: React.ReactNode): string {
+	if (typeof node === "string") return node;
+	if (typeof node === "number") return String(node);
+	if (!node) return "";
+	if (Array.isArray(node)) return node.map(extractText).join("");
+	if (typeof node === "object" && "props" in node) {
+		const el = node as { props?: { children?: React.ReactNode } };
+		return extractText(el.props?.children);
+	}
+	return "";
+}
+
+const baseMarkdownComponents = {
 	pre: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 	code: CodeBlock,
 } as import("react-markdown").Components;
@@ -190,6 +202,29 @@ export function ChatPanel() {
 	const [showRoleMenu, setShowRoleMenu] = useState(false);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
+	const interactiveComponents = useCallback((): import("react-markdown").Components => ({
+		...baseMarkdownComponents,
+		li: ({ children, ...props }: React.ComponentPropsWithoutRef<"li"> & { children?: React.ReactNode }) => {
+			const text = extractText(children).trim();
+			const clean = text.replace(/^\d+[\.\)]\s*/, "");
+			return (
+				<li {...props}>
+					<button
+						type="button"
+						onClick={() => {
+							if (status !== "idle" || !clean) return;
+							sendMessage(clean);
+						}}
+						disabled={status !== "idle"}
+						className="w-full cursor-pointer text-left transition-colors hover:text-game-primary disabled:cursor-default disabled:opacity-70"
+					>
+						{children}
+					</button>
+				</li>
+			);
+		},
+	}), [sendMessage, status]);
+
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [messages, streamingContent]);
@@ -209,7 +244,6 @@ export function ChatPanel() {
 	};
 
 	const currentRole = activeRoleId ?? expertRole;
-	const roleInfo = EXPERT_ROLES[currentRole];
 
 	return (
 		<div className="flex h-full flex-col bg-background">
@@ -217,10 +251,10 @@ export function ChatPanel() {
 			<div className="flex items-center gap-2 border-b border-border px-4 py-3">
 				<Sparkles className="h-4 w-4 text-game-primary" />
 				<span className="text-sm font-medium">
-					{roleInfo?.name ?? m.chat.aiAssistant}
+					{m.roles[currentRole]?.name ?? m.chat.aiAssistant}
 				</span>
 				<span className="hidden text-xs text-muted-foreground sm:inline">
-					{roleInfo?.description}
+					{m.roles[currentRole]?.description}
 				</span>
 				<div className="relative ml-auto">
 					<button
@@ -235,7 +269,7 @@ export function ChatPanel() {
 					</button>
 					{showRoleMenu && (
 						<div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border bg-card py-1 shadow-lg">
-							{(Object.entries(EXPERT_ROLES) as [ExpertRole, typeof roleInfo][]).map(([id, role]) => (
+							{(Object.keys(EXPERT_ROLES) as ExpertRole[]).map((id) => (
 								<button
 									key={id}
 									type="button"
@@ -246,7 +280,7 @@ export function ChatPanel() {
 									}}
 									className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-accent ${currentRole === id ? "text-game-primary" : "text-foreground"}`}
 								>
-									<span className="font-medium">{role.name}</span>
+									<span className="font-medium">{m.roles[id]?.name}</span>
 									{currentRole === id && <Check className="ml-auto h-3 w-3 text-game-primary" />}
 								</button>
 							))}
@@ -332,7 +366,7 @@ export function ChatPanel() {
 									</div>
 								)}
 								{msg.content && (
-									<Markdown components={markdownComponents}>
+									<Markdown components={interactiveComponents()}>
 										{msg.content}
 									</Markdown>
 								)}
@@ -345,7 +379,7 @@ export function ChatPanel() {
 				{streamingContent && (
 					<div className="mb-4 flex justify-start">
 						<div className="max-w-[85%] rounded-2xl bg-card px-4 py-2.5 text-sm text-card-foreground">
-							<Markdown components={markdownComponents}>
+							<Markdown components={baseMarkdownComponents}>
 								{streamingContent}
 							</Markdown>
 							<span className="ml-1 inline-block h-4 w-1 animate-pulse bg-game-primary" />

@@ -249,6 +249,15 @@ const en: Messages = {
 		description: "AI-powered 2D game creation platform for young creators. Describe your ideas in natural language and AI generates playable Phaser.js games.",
 	},
 
+	roles: {
+		director: { name: "Director", description: "Entry point, parses requirements, coordinates roles" },
+		design: { name: "Level Designer", description: "World-building, level layout, difficulty curves" },
+		coding: { name: "Code Engineer", description: "Generate/modify Phaser.js code" },
+		asset: { name: "Asset Manager", description: "Search/import assets, spritesheet config" },
+		gameplay: { name: "Gameplay Planner", description: "Interaction logic, collision rules, scoring" },
+		debug: { name: "Debug Doctor", description: "Analyze runtime errors, fix code" },
+	},
+
 	sceneTemplate: {
 		gameTitle: "Game Title",
 		startGame: "Start Game",

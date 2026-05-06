@@ -248,6 +248,15 @@ const zh = {
 		description: "面向青少年的 AI 对话式 2D 游戏创作平台。用自然语言描述想法，AI 帮你生成可玩的 Phaser.js 游戏。",
 	},
 
+	roles: {
+		director: { name: "游戏导师", description: "对话入口，解析需求，协调其他角色" },
+		design: { name: "关卡设计师", description: "游戏世界观、关卡布局、难度曲线" },
+		coding: { name: "代码工程师", description: "生成/修改 Phaser.js 代码" },
+		asset: { name: "素材管家", description: "检索/导入素材，精灵图配置" },
+		gameplay: { name: "玩法策划", description: "交互逻辑、碰撞规则、得分系统" },
+		debug: { name: "调试医生", description: "分析运行时错误，修复代码" },
+	},
+
 	sceneTemplate: {
 		gameTitle: "游戏标题",
 		startGame: "开始游戏",
