@@ -235,6 +235,11 @@ export class IndexedDBStorageProvider implements StorageProvider {
 		await db.put(ASSETS_STORE, record);
 	}
 
+	async getAssetUrl(projectId: string, path: string): Promise<string> {
+		const blob = await this.readAsset(projectId, path);
+		return URL.createObjectURL(blob);
+	}
+
 	async exportProject(id: string): Promise<Blob> {
 		const { default: JSZip } = await import("jszip");
 		const zip = new JSZip();

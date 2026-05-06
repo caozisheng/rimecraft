@@ -371,7 +371,7 @@ export async function* runAgentLoop(
 
 	yield { type: "status", status: "thinking" };
 
-	const isBrowser = typeof window !== "undefined" && !("__TAURI__" in window);
+	const isBrowser = typeof window !== "undefined" && !("__TAURI_INTERNALS__" in window);
 
 	try {
 		let response: Response;

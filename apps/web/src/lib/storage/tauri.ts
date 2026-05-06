@@ -8,17 +8,20 @@ import type { StorageProvider } from "./types";
 import {
 	readTextFile,
 	writeTextFile,
+	readFile,
+	writeFile,
 	readDir,
 	mkdir,
 	remove,
 	exists,
 } from "@tauri-apps/plugin-fs";
 import { appDataDir, sep } from "@tauri-apps/api/path";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { generateTemplateFiles } from "../templates";
 
 async function getProjectRoot(): Promise<string> {
 	const base = await appDataDir();
-	return base + "projects";
+	return joinPath(base, "projects");
 }
 
 function joinPath(...parts: string[]): string {
@@ -205,16 +208,22 @@ export class TauriStorageProvider implements StorageProvider {
 		if (!(await exists(full))) {
 			throw new Error(`Asset not found: ${assetPath}`);
 		}
-		const content = await readTextFile(full);
-		return new Blob([content]);
+		const bytes = await readFile(full);
+		return new Blob([bytes]);
 	}
 
 	async writeAsset(projectId: string, assetPath: string, blob: Blob): Promise<void> {
 		const root = await this.getRoot();
 		const full = joinPath(root, projectId, "assets", ...assetPath.split("/"));
 		await ensureDir(parentDir(full));
-		const content = await blob.text();
-		await writeTextFile(full, content);
+		const buffer = await blob.arrayBuffer();
+		await writeFile(full, new Uint8Array(buffer));
+	}
+
+	async getAssetUrl(projectId: string, assetPath: string): Promise<string> {
+		const root = await this.getRoot();
+		const full = joinPath(root, projectId, "assets", ...assetPath.split("/"));
+		return convertFileSrc(full);
 	}
 
 	async exportProject(id: string): Promise<Blob> {

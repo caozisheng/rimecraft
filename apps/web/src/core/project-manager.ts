@@ -4,7 +4,7 @@ import type { StorageProvider } from "@/lib/storage/types";
 import { useProjectStore } from "@/stores/project-store";
 
 function isTauri(): boolean {
-	return typeof window !== "undefined" && !!(window as any).__TAURI__;
+	return typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
 }
 
 export class ProjectManager {

@@ -26,6 +26,8 @@ rimecraft/
 
 ## Get-started
 
+### Web
+
 ```bash
 # 1. Install requirements
 bun install
@@ -35,6 +37,17 @@ bun dev:web
 
 # Access http://localhost:3000
 ```
+
+### Desktop
+
+```bash
+# Debug
+bun run dev:tauri
+
+# Release
+bun run build:tauri
+```
+
 
 ## Commands
 

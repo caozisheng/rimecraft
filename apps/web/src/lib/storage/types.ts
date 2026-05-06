@@ -22,6 +22,7 @@ export interface StorageProvider {
 		path: string,
 		blob: Blob,
 	): Promise<void>;
+	getAssetUrl(projectId: string, path: string): Promise<string>;
 
 	exportProject(id: string): Promise<Blob>;
 	importProject(blob: Blob): Promise<Project>;
