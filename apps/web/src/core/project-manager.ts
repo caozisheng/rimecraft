@@ -18,10 +18,14 @@ export class ProjectManager {
 
 	private async initStorage(): Promise<void> {
 		if (isTauri()) {
-			const { TauriStorageProvider } = await import(
-				/* webpackIgnore: true */ "@/lib/storage/tauri"
-			);
-			this.storage = new TauriStorageProvider();
+			try {
+				const { TauriStorageProvider } = await import(
+					/* webpackIgnore: true */ "@/lib/storage/tauri"
+				);
+				this.storage = new TauriStorageProvider();
+			} catch (e) {
+				console.warn("Failed to init TauriStorageProvider, falling back to IndexedDB:", e);
+			}
 		}
 	}
 

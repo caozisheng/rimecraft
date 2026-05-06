@@ -12,19 +12,22 @@ import {
 	mkdir,
 	remove,
 	exists,
-	BaseDirectory,
 } from "@tauri-apps/plugin-fs";
-import { homeDir } from "@tauri-apps/api/path";
-
-const ROOT_DIR = "RimeCraft/projects";
+import { appDataDir, sep } from "@tauri-apps/api/path";
+import { generateTemplateFiles } from "../templates";
 
 async function getProjectRoot(): Promise<string> {
-	const home = await homeDir();
-	return `${home}${ROOT_DIR}`;
+	const base = await appDataDir();
+	return base + "projects";
 }
 
-function projectPath(base: string, projectId: string): string {
-	return `${base}/${projectId}`;
+function joinPath(...parts: string[]): string {
+	return parts.join(sep());
+}
+
+function parentDir(path: string): string {
+	const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+	return i > 0 ? path.substring(0, i) : path;
 }
 
 async function ensureDir(path: string): Promise<void> {
@@ -47,10 +50,10 @@ export class TauriStorageProvider implements StorageProvider {
 
 	async createProject(meta: ProjectMeta): Promise<Project> {
 		const root = await this.getRoot();
-		const projDir = projectPath(root, meta.id);
+		const projDir = joinPath(root, meta.id);
 		await ensureDir(projDir);
-		await ensureDir(`${projDir}/src`);
-		await ensureDir(`${projDir}/assets`);
+		await ensureDir(joinPath(projDir, "src"));
+		await ensureDir(joinPath(projDir, "assets"));
 
 		const manifest: RimecraftManifest = {
 			id: meta.id,
@@ -68,11 +71,11 @@ export class TauriStorageProvider implements StorageProvider {
 		};
 
 		await writeTextFile(
-			`${projDir}/rimecraft.json`,
+			joinPath(projDir, "rimecraft.json"),
 			JSON.stringify({ meta, manifest }, null, 2),
 		);
 
-		const defaultFiles = this.getDefaultProjectFiles(meta);
+		const defaultFiles = generateTemplateFiles(meta);
 		for (const file of defaultFiles) {
 			await this.writeFile(meta.id, file.path, file.content);
 		}
@@ -89,9 +92,9 @@ export class TauriStorageProvider implements StorageProvider {
 
 	async openProject(id: string): Promise<Project> {
 		const root = await this.getRoot();
-		const projDir = projectPath(root, id);
+		const projDir = joinPath(root, id);
 
-		const raw = await readTextFile(`${projDir}/rimecraft.json`);
+		const raw = await readTextFile(joinPath(projDir, "rimecraft.json"));
 		const record = JSON.parse(raw) as { meta: ProjectMeta; manifest: RimecraftManifest };
 
 		const files = await this.listFiles(id);
@@ -100,20 +103,20 @@ export class TauriStorageProvider implements StorageProvider {
 
 	async saveProject(project: Project): Promise<void> {
 		const root = await this.getRoot();
-		const projDir = projectPath(root, project.meta.id);
+		const projDir = joinPath(root, project.meta.id);
 
 		const updatedMeta = { ...project.meta, updatedAt: new Date().toISOString() };
 		const updatedManifest = { ...project.manifest, updatedAt: new Date().toISOString() };
 
 		await writeTextFile(
-			`${projDir}/rimecraft.json`,
+			joinPath(projDir, "rimecraft.json"),
 			JSON.stringify({ meta: updatedMeta, manifest: updatedManifest }, null, 2),
 		);
 	}
 
 	async deleteProject(id: string): Promise<void> {
 		const root = await this.getRoot();
-		const projDir = projectPath(root, id);
+		const projDir = joinPath(root, id);
 		if (await exists(projDir)) {
 			await remove(projDir, { recursive: true });
 		}
@@ -128,7 +131,7 @@ export class TauriStorageProvider implements StorageProvider {
 
 		for (const entry of entries) {
 			if (!entry.isDirectory) continue;
-			const manifestPath = `${root}/${entry.name}/rimecraft.json`;
+			const manifestPath = joinPath(root, entry.name, "rimecraft.json");
 			if (!(await exists(manifestPath))) continue;
 
 			try {
@@ -143,38 +146,34 @@ export class TauriStorageProvider implements StorageProvider {
 		return projects;
 	}
 
-	async readFile(projectId: string, path: string): Promise<string> {
+	async readFile(projectId: string, filePath: string): Promise<string> {
 		const root = await this.getRoot();
-		const filePath = `${projectPath(root, projectId)}/${path}`;
-		if (!(await exists(filePath))) {
-			throw new Error(`File not found: ${path}`);
+		const full = joinPath(root, projectId, ...filePath.split("/"));
+		if (!(await exists(full))) {
+			throw new Error(`File not found: ${filePath}`);
 		}
-		return readTextFile(filePath);
+		return readTextFile(full);
 	}
 
-	async writeFile(projectId: string, path: string, content: string): Promise<void> {
+	async writeFile(projectId: string, filePath: string, content: string): Promise<void> {
 		const root = await this.getRoot();
-		const filePath = `${projectPath(root, projectId)}/${path}`;
-
-		const dir = filePath.substring(0, filePath.lastIndexOf("/"));
-		await ensureDir(dir);
-
-		await writeTextFile(filePath, content);
+		const full = joinPath(root, projectId, ...filePath.split("/"));
+		await ensureDir(parentDir(full));
+		await writeTextFile(full, content);
 	}
 
-	async deleteFile(projectId: string, path: string): Promise<void> {
+	async deleteFile(projectId: string, filePath: string): Promise<void> {
 		const root = await this.getRoot();
-		const filePath = `${projectPath(root, projectId)}/${path}`;
-		if (await exists(filePath)) {
-			await remove(filePath);
+		const full = joinPath(root, projectId, ...filePath.split("/"));
+		if (await exists(full)) {
+			await remove(full);
 		}
 	}
 
 	async listFiles(projectId: string): Promise<FileEntry[]> {
 		const root = await this.getRoot();
-		const projDir = projectPath(root, projectId);
+		const projDir = joinPath(root, projectId);
 		const files: FileEntry[] = [];
-
 		await this.walkDir(projDir, projDir, files);
 		return files;
 	}
@@ -184,11 +183,13 @@ export class TauriStorageProvider implements StorageProvider {
 
 		const entries = await readDir(currentDir);
 		for (const entry of entries) {
-			const fullPath = `${currentDir}/${entry.name}`;
-			const relativePath = fullPath.substring(baseDir.length + 1);
+			const fullPath = joinPath(currentDir, entry.name);
+			const relativePath = fullPath
+				.substring(baseDir.length + 1)
+				.replace(/\\/g, "/");
 
 			if (relativePath === "rimecraft.json") continue;
-			if (relativePath.startsWith("assets/")) continue;
+			if (relativePath.startsWith("assets/") || relativePath.startsWith("assets\\")) continue;
 
 			if (entry.isDirectory) {
 				await this.walkDir(baseDir, fullPath, files);
@@ -198,25 +199,22 @@ export class TauriStorageProvider implements StorageProvider {
 		}
 	}
 
-	async readAsset(projectId: string, path: string): Promise<Blob> {
+	async readAsset(projectId: string, assetPath: string): Promise<Blob> {
 		const root = await this.getRoot();
-		const filePath = `${projectPath(root, projectId)}/assets/${path}`;
-		if (!(await exists(filePath))) {
-			throw new Error(`Asset not found: ${path}`);
+		const full = joinPath(root, projectId, "assets", ...assetPath.split("/"));
+		if (!(await exists(full))) {
+			throw new Error(`Asset not found: ${assetPath}`);
 		}
-		const content = await readTextFile(filePath);
+		const content = await readTextFile(full);
 		return new Blob([content]);
 	}
 
-	async writeAsset(projectId: string, path: string, blob: Blob): Promise<void> {
+	async writeAsset(projectId: string, assetPath: string, blob: Blob): Promise<void> {
 		const root = await this.getRoot();
-		const filePath = `${projectPath(root, projectId)}/assets/${path}`;
-
-		const dir = filePath.substring(0, filePath.lastIndexOf("/"));
-		await ensureDir(dir);
-
+		const full = joinPath(root, projectId, "assets", ...assetPath.split("/"));
+		await ensureDir(parentDir(full));
 		const content = await blob.text();
-		await writeTextFile(filePath, content);
+		await writeTextFile(full, content);
 	}
 
 	async exportProject(id: string): Promise<Blob> {
@@ -271,13 +269,13 @@ export class TauriStorageProvider implements StorageProvider {
 		};
 
 		const root = await this.getRoot();
-		const projDir = projectPath(root, newId);
+		const projDir = joinPath(root, newId);
 		await ensureDir(projDir);
-		await ensureDir(`${projDir}/src`);
-		await ensureDir(`${projDir}/assets`);
+		await ensureDir(joinPath(projDir, "src"));
+		await ensureDir(joinPath(projDir, "assets"));
 
 		await writeTextFile(
-			`${projDir}/rimecraft.json`,
+			joinPath(projDir, "rimecraft.json"),
 			JSON.stringify({ meta, manifest: newManifest }, null, 2),
 		);
 
@@ -291,119 +289,5 @@ export class TauriStorageProvider implements StorageProvider {
 		}
 
 		return { meta, manifest: newManifest, files };
-	}
-
-	private getDefaultProjectFiles(
-		meta: ProjectMeta,
-	): { path: string; content: string }[] {
-		return [
-			{
-				path: "src/main.ts",
-				content: `import Phaser from "phaser";
-import { GameScene } from "./scenes/game-scene";
-import { MenuScene } from "./scenes/menu-scene";
-
-const config: Phaser.Types.Core.GameConfig = {
-	type: Phaser.AUTO,
-	width: 800,
-	height: 600,
-	backgroundColor: "#1a1a2e",
-	physics: {
-		default: "arcade",
-		arcade: {
-			gravity: { x: 0, y: 300 },
-			debug: false,
-		},
-	},
-	scene: [MenuScene, GameScene],
-};
-
-new Phaser.Game(config);
-`,
-			},
-			{
-				path: "src/scenes/menu-scene.ts",
-				content: `import Phaser from "phaser";
-
-export class MenuScene extends Phaser.Scene {
-	constructor() {
-		super("MenuScene");
-	}
-
-	create() {
-		this.add
-			.text(400, 200, "${meta.name}", {
-				fontSize: "48px",
-				color: "#ffffff",
-				fontFamily: "Arial",
-			})
-			.setOrigin(0.5);
-
-		const startText = this.add
-			.text(400, 400, "点击开始游戏", {
-				fontSize: "24px",
-				color: "#06b6d4",
-				fontFamily: "Arial",
-			})
-			.setOrigin(0.5)
-			.setInteractive({ useHandCursor: true });
-
-		startText.on("pointerdown", () => {
-			this.scene.start("GameScene");
-		});
-
-		startText.on("pointerover", () => {
-			startText.setColor("#22c55e");
-		});
-
-		startText.on("pointerout", () => {
-			startText.setColor("#06b6d4");
-		});
-	}
-}
-`,
-			},
-			{
-				path: "src/scenes/game-scene.ts",
-				content: `import Phaser from "phaser";
-
-export class GameScene extends Phaser.Scene {
-	constructor() {
-		super("GameScene");
-	}
-
-	preload() {
-		// 在这里加载游戏资源
-	}
-
-	create() {
-		this.add
-			.text(400, 300, "游戏场景 - 开始创作吧!", {
-				fontSize: "24px",
-				color: "#ffffff",
-				fontFamily: "Arial",
-			})
-			.setOrigin(0.5);
-	}
-
-	update() {
-		// 在这里编写游戏逻辑
-	}
-}
-`,
-			},
-			{
-				path: "src/config/game-config.ts",
-				content: `export const GAME_CONFIG = {
-	title: "${meta.name}",
-	width: 800,
-	height: 600,
-	fps: 60,
-	gravity: 300,
-	debug: false,
-};
-`,
-			},
-		];
 	}
 }

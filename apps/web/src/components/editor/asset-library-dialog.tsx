@@ -19,6 +19,7 @@ import {
 	type AssetEntry,
 } from "@/lib/assets/asset-registry";
 import { renderAssetPreview } from "@/lib/assets/asset-previewer";
+import { useChatStore } from "@/stores/chat-store";
 import { Check, Copy, Plus, Sparkles, Upload, X } from "lucide-react";
 
 const CATEGORIES = [
@@ -184,12 +185,11 @@ export function AssetLibraryDialog({
 								size="sm"
 								disabled={!aiPrompt.trim()}
 								onClick={() => {
-									navigator.clipboard.writeText(
-										`请帮我生成素材：${aiPrompt}`,
-									);
+									const prompt = `请帮我生成素材：${aiPrompt}`;
 									setAiPrompt("");
 									setShowAiInput(false);
 									onOpenChange(false);
+									useChatStore.getState().sendMessage(prompt);
 								}}
 							>
 								发送到对话

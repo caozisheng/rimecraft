@@ -88,13 +88,7 @@ In `package.json` appends,
 
 ### AI Agent Config
 
-Web uses `localStorage` to conifg LLM providers：
-
-```
-rimecraft_llm_baseUrl  — API address（By-default https://api.openai.com/v1）
-rimecraft_llm_apiKey   — API Token
-rimecraft_llm_model    — Model name（By-default gpt-5.4）
-```
+Set BaseUrl/Key/ModelName via Settings dialog.
 
 Support OpenAI Compatible API（OpenAI / Claude / DeepSeek / Ollama ...）
 
