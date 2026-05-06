@@ -1,53 +1,35 @@
-import type { AgentLLMConfig } from "./types";
+import type { AgentLLMConfig, ToolDefinition } from "./types";
+import { CloudLLMBackend, type LLMBackend, type StreamChunk } from "./llm-backend";
 
-export class LLMClient {
-	private config: AgentLLMConfig;
+const defaultBackend = new CloudLLMBackend();
 
-	constructor(config: AgentLLMConfig) {
-		this.config = config;
-	}
+export function getLLMBackend(_config: AgentLLMConfig): LLMBackend {
+	return defaultBackend;
+}
 
-	getConfig(): AgentLLMConfig {
-		return { ...this.config };
-	}
+export function streamChatCompletion(
+	config: AgentLLMConfig,
+	messages: Record<string, unknown>[],
+	signal?: AbortSignal,
+	tools?: ToolDefinition[],
+): AsyncGenerator<StreamChunk> {
+	const backend = getLLMBackend(config);
+	return backend.streamChat(config, messages, signal, tools);
+}
 
-	updateConfig(updates: Partial<AgentLLMConfig>): void {
-		this.config = { ...this.config, ...updates };
-	}
-
-	async testConnection(): Promise<{ ok: boolean; error?: string }> {
-		try {
-			const response = await fetch(
-				`${this.config.baseUrl}/models`,
-				{
-					headers: {
-						Authorization: `Bearer ${this.config.apiKey}`,
-					},
-				},
-			);
-			if (response.ok) {
-				return { ok: true };
-			}
-			return {
-				ok: false,
-				error: `API returned ${response.status}`,
-			};
-		} catch (error) {
-			return {
-				ok: false,
-				error:
-					error instanceof Error
-						? error.message
-						: "Connection failed",
-			};
-		}
-	}
-
-	static defaultConfig(): AgentLLMConfig {
+export async function testLLMConnection(
+	config: AgentLLMConfig,
+): Promise<{ ok: boolean; error?: string }> {
+	try {
+		const response = await fetch(`${config.baseUrl}/models`, {
+			headers: { Authorization: `Bearer ${config.apiKey}` },
+		});
+		if (response.ok) return { ok: true };
+		return { ok: false, error: `API returned ${response.status}` };
+	} catch (error) {
 		return {
-			baseUrl: "https://api.openai.com/v1",
-			apiKey: "",
-			model: "gpt-4.1",
+			ok: false,
+			error: error instanceof Error ? error.message : "Connection failed",
 		};
 	}
 }

@@ -3,11 +3,11 @@ import type {
 	AgentMessage,
 	AgentEvent,
 	ToolDefinition,
-	ToolCallInfo,
 } from "./types";
 import type { ExpertRole } from "./expert-roles";
 import { getExpertRoleSystemPrompt, EXPERT_ROLES } from "./expert-roles";
 import { ToolRegistry } from "./tool-registry";
+import { streamChatCompletion } from "./llm-client";
 
 interface RunAgentLoopParams {
 	messages: AgentMessage[];
@@ -376,137 +376,34 @@ export async function* runAgentLoop(
 
 	yield { type: "status", status: "thinking" };
 
-	const isBrowser = typeof window !== "undefined" && !("__TAURI_INTERNALS__" in window);
-
 	try {
-		let response: Response;
+		const stream = streamChatCompletion(
+			params.llmConfig,
+			apiMessages,
+			params.signal,
+			tools.length > 0 ? tools : undefined,
+		);
 
-		if (isBrowser) {
-			response = await fetch("/api/ai/chat", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					baseUrl: params.llmConfig.baseUrl,
-					apiKey: params.llmConfig.apiKey,
-					model: params.llmConfig.model,
-					messages: apiMessages,
-					tools: tools.length > 0 ? tools : undefined,
-					stream: true,
-				}),
-				signal: params.signal,
-			});
-		} else {
-			response = await fetch(`${params.llmConfig.baseUrl}/chat/completions`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${params.llmConfig.apiKey}`,
-				},
-				body: JSON.stringify({
-					model: params.llmConfig.model,
-					messages: apiMessages,
-					tools: tools.length > 0 ? tools : undefined,
-					stream: true,
-				}),
-				signal: params.signal,
-			});
-		}
+		let started = false;
+		for await (const chunk of stream) {
+			if (!started) {
+				yield { type: "status", status: "streaming" };
+				started = true;
+			}
 
-		if (!response.ok) {
-			const errorText = await response.text();
-			yield {
-				type: "error",
-				message: `LLM API error (${response.status}): ${errorText}`,
-			};
-			return;
-		}
-
-		yield { type: "status", status: "streaming" };
-
-		const reader = response.body?.getReader();
-		if (!reader) {
-			yield { type: "error", message: "No response body" };
-			return;
-		}
-
-		const decoder = new TextDecoder();
-		let buffer = "";
-		const toolCalls: ToolCallInfo[] = [];
-
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-
-			buffer += decoder.decode(value, { stream: true });
-			const lines = buffer.split("\n");
-			buffer = lines.pop() ?? "";
-
-			for (const line of lines) {
-				const trimmed = line.trim();
-				if (!trimmed || trimmed === "data: [DONE]") continue;
-				if (!trimmed.startsWith("data: ")) continue;
-
-				try {
-					const data = JSON.parse(trimmed.slice(6));
-					const delta = data.choices?.[0]?.delta;
-					if (!delta) continue;
-
-					if (delta.content) {
-						yield { type: "text_delta", content: delta.content };
-					}
-
-					if (delta.tool_calls) {
-						for (const tc of delta.tool_calls) {
-							const idx = tc.index ?? 0;
-							if (!toolCalls[idx]) {
-								toolCalls[idx] = {
-									id: tc.id ?? "",
-									type: "function",
-									function: {
-										name: tc.function?.name ?? "",
-										arguments:
-											tc.function?.arguments ?? "",
-									},
-								};
-							} else {
-								if (tc.id) toolCalls[idx].id = tc.id;
-								if (tc.function?.name) {
-									toolCalls[idx].function.name =
-										tc.function.name;
-								}
-								if (tc.function?.arguments) {
-									toolCalls[idx].function.arguments +=
-										tc.function.arguments;
-								}
-							}
-						}
-					}
-
-					if (data.choices?.[0]?.finish_reason) {
-						const usage = data.usage;
-						if (toolCalls.length > 0) {
-							yield {
-								type: "tool_calls_complete",
-								toolCalls,
-							};
-						}
-						yield {
-							type: "message_end",
-							usage: usage
-								? {
-										promptTokens:
-											usage.prompt_tokens ?? 0,
-										completionTokens:
-											usage.completion_tokens ?? 0,
-										totalTokens:
-											usage.total_tokens ?? 0,
-									}
-								: undefined,
-						};
-					}
-				} catch {
-					// Skip malformed JSON chunks
-				}
+			switch (chunk.type) {
+				case "content_delta":
+					yield { type: "text_delta", content: chunk.delta };
+					break;
+				case "tool_calls_complete":
+					yield { type: "tool_calls_complete", toolCalls: chunk.toolCalls };
+					break;
+				case "done":
+					yield { type: "message_end", usage: chunk.usage };
+					break;
+				case "error":
+					yield { type: "error", message: chunk.message };
+					break;
 			}
 		}
 	} catch (error) {
