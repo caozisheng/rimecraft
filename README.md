@@ -1,115 +1,99 @@
 # RimeCraft
 
-RimeCraft is an agentic chat-style game craft based on [Phaser.js](https://github.com/phaserjs/phaser)
+RimeCraft is an agentic chat-style game craft based on [Phaser.js](https://github.com/phaserjs/phaser). Describe your game idea in natural language, and AI agents will collaboratively write, debug, and preview Phaser games in real time.
 
 <img width="951" height="825" alt="image" src="https://github.com/user-attachments/assets/5a15f58d-28a4-4f40-9ef3-1a6c4e862a94" />
 <img width="1279" height="915" alt="image" src="https://github.com/user-attachments/assets/c795e614-78d8-4b34-9531-4224e071f540" />
 
+## Features
 
-
-
+- **Chat-driven game creation** — Describe your game in natural language; multi-agent engine writes and iterates on the code
+- **Live preview** — Phaser games compile and run in a sandboxed iframe as you chat
+- **5 built-in templates** — Endless Runner, Platformer, Space Shooter, RPG, Puzzle (Sokoban), plus a blank starter
+- **Asset library** — 40+ built-in assets with preview, search, upload, and AI-generated asset support
+- **Turn-level undo** — Roll back any agent turn without losing context
+- **Clickable options** — Agent replies include interactive suggestions you can click to continue
+- **Auto error detection** — Runtime errors are caught and fed back to the agent for self-repair
+- **i18n** — Full Chinese / English UI and game template localization
+- **Desktop app** — Tauri-based native desktop build with export support
+- **OpenAI-compatible API** — Works with OpenAI, Claude, DeepSeek, Ollama, and any compatible provider
 
 ## Project Structure
 
 ```
 rimecraft/
 ├── apps/
-│   ├── web/          # Next.js Web App（main entrance）
-│   ├── tauri/        # Tauri desktop
-│   └── docs/         # documents
+│   ├── web/          # Next.js Web App (main entrance)
+│   ├── tauri/        # Tauri desktop app
+│   └── docs/         # Documentation
 ├── packages/
-│   ├── core/         # core and tools
-│   ├── agent-engine/ # AI Agent multi-agent chat engine
+│   ├── core/         # Core types, tools, and game compiler
+│   ├── agent-engine/ # AI multi-agent chat engine
 │   ├── phaser-runtime/ # Phaser.js runtime bridge
-│   ├── ui/           # Common UI（Radix UI）
+│   ├── ui/           # Shared UI components (Radix UI)
 │   └── code-editor/  # Monaco code editor
 ```
 
-## Environment
+## Prerequisites
 
 - **Node.js** >= 20
-- **Bun** >= 1.2（Package Manager）
-- **Rust tool-chain**（for Tauri desktop dev only）
+- **Bun** >= 1.2
+- **Rust toolchain** (for Tauri desktop only)
 
-## Get-started
+## Getting Started
 
 ### Web
 
 ```bash
-# 1. Install requirements
+# Install dependencies
 bun install
 
-# 2. Start Web Dev server
+# Start dev server
 bun dev:web
 
-# Access http://localhost:3000
+# Open http://localhost:3000
 ```
 
-### Desktop
+### Desktop (Tauri)
 
 ```bash
-# Debug
+# Dev
 bun run dev:tauri
 
-# Release
+# Release build
 bun run build:tauri
 ```
 
 ## Commands
 
-| Commands        | Explain                     |
+| Command         | Description                 |
 | --------------- | --------------------------- |
-| `bun dev`       | Start Dev server            |
-| `bun dev:web`   | Start Web                   |
-| `bun dev:tauri` | Start Tauri desktop         |
-| `bun build`     | Build all packages and Apps |
-| `bun build:web` | Build Web                   |
-| `bun lint`      | Code lints（Biome）           |
-| `bun lint:fix`  | Auto-fix                    |
-| `bun format`    | Code format                 |
-| `bun test`      | Test                        |
-| `bun clean`     | Clean builds                |
+| `bun dev`       | Start all dev servers       |
+| `bun dev:web`   | Start web dev server        |
+| `bun dev:tauri` | Start Tauri desktop dev     |
+| `bun build`     | Build all packages and apps |
+| `bun build:web` | Build web app               |
+| `bun lint`      | Lint with Biome             |
+| `bun lint:fix`  | Auto-fix lint issues        |
+| `bun format`    | Format code                 |
+| `bun test`      | Run tests                   |
+| `bun clean`     | Clean build artifacts       |
 
-## Contributors
+## Tech Stack
 
-### Technical Stack
+- **Monorepo**: Turborepo + Bun workspaces
+- **Frontend**: React 19 + Next.js 16 + TypeScript 5.8
+- **Styling**: TailwindCSS 4 + Radix UI
+- **State**: Zustand 5
+- **Game Engine**: Phaser 4
+- **Desktop**: Tauri 2
+- **Linting**: Biome
 
-- **Build**：Turborepo + Bun workspaces
-- **Front-end**：React 19 + Next.js 16 + TypeScript 5.8
-- **Style**：TailwindCSS 4 + Radix UI
-- **State Manager**：Zustand 5
-- **Game Engine**：Phaser 4
-- **Code Style**：Biome
+## AI Agent Configuration
 
-### Package Dependants
+Set BaseURL / API Key / Model Name via the in-app Settings dialog.
 
-```
-apps/web ──→ @rimecraft/core
-         ──→ @rimecraft/agent-engine
-         ──→ @rimecraft/phaser-runtime
-         ──→ @rimecraft/ui
-         ──→ @rimecraft/code-editor
-```
-
-### Add New Packages
-
-```bash
-mkdir packages/my-package
-cd packages/my-package
-bun init
-```
-
-In `package.json` appends, 
-
-```json
-"@rimecraft/my-package": "workspace:*"
-```
-
-### AI Agent Config
-
-Set BaseUrl/Key/ModelName via Settings dialog.
-
-Support OpenAI Compatible API（OpenAI / Claude / DeepSeek / Ollama ...）
+Supports any OpenAI-compatible API (OpenAI, Claude, DeepSeek, Ollama, etc.)
 
 ## License
 
