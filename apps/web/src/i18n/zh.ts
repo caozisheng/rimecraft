@@ -117,6 +117,11 @@ const zh = {
 		running: "运行中",
 		recentErrors: "最近错误",
 		ragHeader: "=== 相关参考代码和 API ===",
+		unnamed: "未命名",
+		truncated: "截断",
+		yes: "是",
+		no: "否",
+		debugFixPrompt: "{prefix}，请以调试医生身份分析并修复:\n{errors}{hint}",
 	},
 
 	tools: {
@@ -262,6 +267,66 @@ const zh = {
 		startGame: "开始游戏",
 		gameOver: "游戏结束",
 		retry: "再来一次",
+	},
+
+	gameText: {
+		common: {
+			startGame: "▶  开始游戏",
+			gameOver: "游戏结束",
+			restart: "🔄  重新开始",
+			backToMenu: "🏠  返回主菜单",
+			score: "分数",
+			finalScore: "最终得分",
+		},
+		blank: {
+			clickToStart: "点击开始游戏",
+			sceneHint: "游戏场景 - 开始创作吧!",
+		},
+		endlessRunner: {
+			subtitle: "🦕 无尽跑酷",
+			jumpHint: "按空格键或点击屏幕跳跃",
+		},
+		platformer: {
+			subtitle: "🍄 平台跳跃",
+			moveHint: "方向键移动  |  空格跳跃",
+			coins: "金币",
+			congratulations: "恭喜通关!",
+			tryAgain: "🔄  再来一次",
+		},
+		spaceShooter: {
+			subtitle: "🚀 太空射击",
+			startBattle: "▶  开始战斗",
+			moveHint: "方向键移动  |  空格射击",
+			missionFailed: "任务失败",
+			enemiesDestroyed: "击落敌机",
+			enemyUnit: "架",
+			totalScore: "总分",
+			retryBattle: "🔄  重新出击",
+		},
+		rpg: {
+			subtitle: "⚔️ RPG 冒险",
+			startAdventure: "▶  开始冒险",
+			moveHint: "方向键移动  |  靠近 NPC 自动对话",
+			chests: "宝箱",
+			clickContinue: "点击继续...",
+			allChestsFound: "恭喜！你找到了所有宝箱！冒险完成！",
+			npcDialog1a: "勇者你好！这里是新手村。",
+			npcDialog1b: "前面有宝箱，去找找看吧！",
+			npcDialog2a: "听说森林深处藏着一把传说之剑……",
+			npcDialog2b: "不过现在还太危险了。",
+			npcDialog3a: "我是村里的长老。",
+			npcDialog3b: "收集所有宝箱就能通关！",
+			npcDialog3c: "祝你好运！",
+		},
+		puzzle: {
+			subtitle: "🧩 推箱子",
+			startChallenge: "▶  开始挑战",
+			moveHint: "方向键移动  |  把箱子推到绿色目标点",
+			steps: "步数",
+			reset: "🔄 重置",
+			levelComplete: "🎉 通关！",
+			backToMenu: "返回主菜单",
+		},
 	},
 } as const;
 

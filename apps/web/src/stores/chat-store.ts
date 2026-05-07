@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
 import { getMessages, t } from "@/i18n";
+import { getStoredLocale } from "@/i18n/locale";
 import type {
 	AgentMessage,
 	AgentStatus,
@@ -177,12 +178,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 					const m = getMessages();
 					const parts: string[] = [];
-					parts.push(`${m.agent.project}: ${projectState.currentProject?.name ?? "未命名"}`);
+					parts.push(`${m.agent.project}: ${projectState.currentProject?.name ?? m.agent.unnamed}`);
 					parts.push(`${m.agent.files} (${srcFiles.length}):`);
 					for (const f of srcFiles) {
 						const fileContent = await storage.readFile(projectId, f.path);
 						if (fileContent.length > 10000) {
-							parts.push(`\n--- ${f.path} (${fileContent.length} chars, 截断) ---`);
+							parts.push(`\n--- ${f.path} (${fileContent.length} chars, ${m.agent.truncated}) ---`);
 							parts.push(fileContent.slice(0, 10000) + "\n... (truncated)");
 						} else {
 							parts.push(`\n--- ${f.path} ---`);
@@ -191,7 +192,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 					}
 
 					parts.push(`\n=== ${m.agent.runtimeState} ===`);
-					parts.push(`${m.agent.running}: ${gameState.isRunning ? "是" : "否"}`);
+					parts.push(`${m.agent.running}: ${gameState.isRunning ? m.agent.yes : m.agent.no}`);
 					parts.push(`FPS: ${gameState.fps}`);
 					if (gameState.errors.length > 0) {
 						parts.push(`${m.agent.recentErrors} (${gameState.errors.length}):`);
@@ -268,6 +269,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 					gameContext,
 					ragContext,
 					signal: abortController.signal,
+					locale: getStoredLocale(),
 				});
 
 				let fullContent = "";
@@ -428,7 +430,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 							state.addMessage(
 								"system",
-								`${prefix}，请以调试医生身份分析并修复:\n${errorList}${debugHint}`,
+								t(em.agent.debugFixPrompt, { prefix, errors: errorList, hint: debugHint }),
 							);
 							// Force another round regardless of hadToolCalls
 							set({ status: "thinking", streamingContent: "" });

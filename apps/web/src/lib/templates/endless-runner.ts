@@ -1,7 +1,9 @@
 import type { ProjectMeta } from "@rimecraft/core";
 import type { TemplateFile } from "./index";
+import { getMessages } from "@/i18n";
 
 export function endlessRunnerTemplate(meta: ProjectMeta): TemplateFile[] {
+	const g = getMessages().gameText;
 	return [
 		{
 			path: "src/main.ts",
@@ -59,7 +61,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 260, "🦕 无尽跑酷", {
+			.text(400, 260, "${g.endlessRunner.subtitle}", {
 				fontSize: "24px",
 				color: "#a3e635",
 				fontFamily: "Arial",
@@ -67,7 +69,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const startBtn = this.add
-			.text(400, 400, "▶  开始游戏", {
+			.text(400, 400, "${g.common.startGame}", {
 				fontSize: "28px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -80,7 +82,7 @@ export class MenuScene extends Phaser.Scene {
 		startBtn.on("pointerout", () => startBtn.setColor("#06b6d4"));
 
 		this.add
-			.text(400, 480, "按空格键或点击屏幕跳跃", {
+			.text(400, 480, "${g.endlessRunner.jumpHint}", {
 				fontSize: "16px",
 				color: "#94a3b8",
 				fontFamily: "Arial",
@@ -156,7 +158,7 @@ export class GameScene extends Phaser.Scene {
 
 		// 分数
 		this.scoreText = this.add
-			.text(16, 16, "分数: 0", {
+			.text(16, 16, "${g.common.score}: 0", {
 				fontSize: "28px",
 				color: "#ffffff",
 				fontFamily: "Arial",
@@ -174,7 +176,7 @@ export class GameScene extends Phaser.Scene {
 
 		// 加分
 		this.score += 1;
-		this.scoreText.setText("分数: " + this.score);
+		this.scoreText.setText("${g.common.score}: " + this.score);
 
 		// 回收出屏障碍物
 		this.obstacles.getChildren().forEach((obj) => {
@@ -240,7 +242,7 @@ export class GameOverScene extends Phaser.Scene {
 		const score = data.score ?? 0;
 
 		this.add
-			.text(400, 200, "游戏结束", {
+			.text(400, 200, "${g.common.gameOver}", {
 				fontSize: "48px",
 				color: "#ef4444",
 				fontFamily: "Arial",
@@ -248,7 +250,7 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 300, "最终得分: " + score, {
+			.text(400, 300, "${g.common.finalScore}: " + score, {
 				fontSize: "32px",
 				color: "#fbbf24",
 				fontFamily: "Arial",
@@ -256,7 +258,7 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const retryBtn = this.add
-			.text(400, 420, "🔄  重新开始", {
+			.text(400, 420, "${g.common.restart}", {
 				fontSize: "24px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -269,7 +271,7 @@ export class GameOverScene extends Phaser.Scene {
 		retryBtn.on("pointerout", () => retryBtn.setColor("#06b6d4"));
 
 		const menuBtn = this.add
-			.text(400, 480, "🏠  返回主菜单", {
+			.text(400, 480, "${g.common.backToMenu}", {
 				fontSize: "20px",
 				color: "#94a3b8",
 				fontFamily: "Arial",

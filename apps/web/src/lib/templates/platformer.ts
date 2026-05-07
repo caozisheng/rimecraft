@@ -1,7 +1,9 @@
 import type { ProjectMeta } from "@rimecraft/core";
 import type { TemplateFile } from "./index";
+import { getMessages } from "@/i18n";
 
 export function platformerTemplate(meta: ProjectMeta): TemplateFile[] {
+	const g = getMessages().gameText;
 	return [
 		{
 			path: "src/main.ts",
@@ -60,7 +62,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 260, "🍄 平台跳跃", {
+			.text(400, 260, "${g.platformer.subtitle}", {
 				fontSize: "24px",
 				color: "#a3e635",
 				fontFamily: "Arial",
@@ -68,7 +70,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const startBtn = this.add
-			.text(400, 400, "▶  开始游戏", {
+			.text(400, 400, "${g.common.startGame}", {
 				fontSize: "28px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -81,7 +83,7 @@ export class MenuScene extends Phaser.Scene {
 		startBtn.on("pointerout", () => startBtn.setColor("#06b6d4"));
 
 		this.add
-			.text(400, 480, "方向键移动  |  空格跳跃", {
+			.text(400, 480, "${g.platformer.moveHint}", {
 				fontSize: "16px",
 				color: "#94a3b8",
 				fontFamily: "Arial",
@@ -151,7 +153,7 @@ export class GameScene extends Phaser.Scene {
 
 		// 分数
 		this.scoreText = this.add
-			.text(16, 16, "金币: 0", {
+			.text(16, 16, "${g.platformer.coins}: 0", {
 				fontSize: "24px",
 				color: "#fbbf24",
 				fontFamily: "Arial",
@@ -209,7 +211,7 @@ export class GameScene extends Phaser.Scene {
 	private collectCoin(_player, coin) {
 		coin.disableBody(true, true);
 		this.score += 10;
-		this.scoreText.setText("金币: " + this.score);
+		this.scoreText.setText("${g.platformer.coins}: " + this.score);
 
 		if (this.coins.countActive(true) === 0) {
 			this.time.delayedCall(500, () => {
@@ -243,7 +245,7 @@ export class GameOverScene extends Phaser.Scene {
 		const win = data.win ?? false;
 
 		this.add
-			.text(400, 180, win ? "恭喜通关!" : "游戏结束", {
+			.text(400, 180, win ? "${g.platformer.congratulations}" : "${g.common.gameOver}", {
 				fontSize: "48px",
 				color: win ? "#22c55e" : "#ef4444",
 				fontFamily: "Arial",
@@ -251,7 +253,7 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 280, "金币: " + score, {
+			.text(400, 280, "${g.platformer.coins}: " + score, {
 				fontSize: "32px",
 				color: "#fbbf24",
 				fontFamily: "Arial",
@@ -259,7 +261,7 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const retryBtn = this.add
-			.text(400, 400, "🔄  再来一次", {
+			.text(400, 400, "${g.platformer.tryAgain}", {
 				fontSize: "24px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -272,7 +274,7 @@ export class GameOverScene extends Phaser.Scene {
 		retryBtn.on("pointerout", () => retryBtn.setColor("#06b6d4"));
 
 		const menuBtn = this.add
-			.text(400, 460, "🏠  返回主菜单", {
+			.text(400, 460, "${g.common.backToMenu}", {
 				fontSize: "20px",
 				color: "#94a3b8",
 				fontFamily: "Arial",

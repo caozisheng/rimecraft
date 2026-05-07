@@ -119,6 +119,11 @@ const en: Messages = {
 		running: "Running",
 		recentErrors: "Recent Errors",
 		ragHeader: "=== Related Reference Code and API ===",
+		unnamed: "Unnamed",
+		truncated: "truncated",
+		yes: "Yes",
+		no: "No",
+		debugFixPrompt: "{prefix}. Please analyze and fix as Debug Doctor:\n{errors}{hint}",
 	},
 
 	tools: {
@@ -263,6 +268,66 @@ const en: Messages = {
 		startGame: "Start Game",
 		gameOver: "Game Over",
 		retry: "Try Again",
+	},
+
+	gameText: {
+		common: {
+			startGame: "▶  Start Game",
+			gameOver: "Game Over",
+			restart: "🔄  Restart",
+			backToMenu: "🏠  Back to Menu",
+			score: "Score",
+			finalScore: "Final Score",
+		},
+		blank: {
+			clickToStart: "Click to Start",
+			sceneHint: "Game Scene - Start creating!",
+		},
+		endlessRunner: {
+			subtitle: "🦕 Endless Runner",
+			jumpHint: "Press SPACE or tap to jump",
+		},
+		platformer: {
+			subtitle: "🍄 Platformer",
+			moveHint: "Arrow keys to move  |  SPACE to jump",
+			coins: "Coins",
+			congratulations: "You Win!",
+			tryAgain: "🔄  Try Again",
+		},
+		spaceShooter: {
+			subtitle: "🚀 Space Shooter",
+			startBattle: "▶  Start Battle",
+			moveHint: "Arrow keys to move  |  SPACE to shoot",
+			missionFailed: "Mission Failed",
+			enemiesDestroyed: "Enemies destroyed",
+			enemyUnit: "",
+			totalScore: "Total Score",
+			retryBattle: "🔄  Retry Mission",
+		},
+		rpg: {
+			subtitle: "⚔️ RPG Adventure",
+			startAdventure: "▶  Start Adventure",
+			moveHint: "Arrow keys to move  |  Walk near NPCs to talk",
+			chests: "Chests",
+			clickContinue: "Click to continue...",
+			allChestsFound: "Congratulations! You found all the chests! Adventure complete!",
+			npcDialog1a: "Hello, hero! Welcome to the starter village.",
+			npcDialog1b: "There are treasure chests ahead, go find them!",
+			npcDialog2a: "I heard there's a legendary sword deep in the forest...",
+			npcDialog2b: "But it's too dangerous for now.",
+			npcDialog3a: "I am the village elder.",
+			npcDialog3b: "Collect all the chests to win!",
+			npcDialog3c: "Good luck!",
+		},
+		puzzle: {
+			subtitle: "🧩 Sokoban",
+			startChallenge: "▶  Start Challenge",
+			moveHint: "Arrow keys to move  |  Push boxes onto green targets",
+			steps: "Steps",
+			reset: "🔄 Reset",
+			levelComplete: "🎉 Level Complete!",
+			backToMenu: "Back to Menu",
+		},
 	},
 } as const;
 

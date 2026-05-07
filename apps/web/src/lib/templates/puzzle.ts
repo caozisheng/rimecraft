@@ -1,7 +1,9 @@
 import type { ProjectMeta } from "@rimecraft/core";
 import type { TemplateFile } from "./index";
+import { getMessages } from "@/i18n";
 
 export function puzzleTemplate(meta: ProjectMeta): TemplateFile[] {
+	const g = getMessages().gameText;
 	return [
 		{
 			path: "src/main.ts",
@@ -60,7 +62,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 260, "🧩 推箱子", {
+			.text(400, 260, "${g.puzzle.subtitle}", {
 				fontSize: "24px",
 				color: "#a3e635",
 				fontFamily: "Arial",
@@ -68,7 +70,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const startBtn = this.add
-			.text(400, 400, "▶  开始挑战", {
+			.text(400, 400, "${g.puzzle.startChallenge}", {
 				fontSize: "28px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -81,7 +83,7 @@ export class MenuScene extends Phaser.Scene {
 		startBtn.on("pointerout", () => startBtn.setColor("#06b6d4"));
 
 		this.add
-			.text(400, 480, "方向键移动  |  把箱子推到绿色目标点", {
+			.text(400, 480, "${g.puzzle.moveHint}", {
 				fontSize: "16px",
 				color: "#94a3b8",
 				fontFamily: "Arial",
@@ -137,7 +139,7 @@ export class GameScene extends Phaser.Scene {
 		this.loadLevel(this.level);
 
 		this.movesText = this.add
-			.text(16, 16, "步数: 0", {
+			.text(16, 16, "${g.puzzle.steps}: 0", {
 				fontSize: "22px",
 				color: "#fbbf24",
 				fontFamily: "Arial",
@@ -145,7 +147,7 @@ export class GameScene extends Phaser.Scene {
 			.setDepth(100);
 
 		const resetBtn = this.add
-			.text(784, 16, "🔄 重置", {
+			.text(784, 16, "${g.puzzle.reset}", {
 				fontSize: "18px",
 				color: "#94a3b8",
 				fontFamily: "Arial",
@@ -157,7 +159,7 @@ export class GameScene extends Phaser.Scene {
 		resetBtn.on("pointerdown", () => {
 			this.moves = 0;
 			this.loadLevel(this.level);
-			this.movesText.setText("步数: 0");
+			this.movesText.setText("${g.puzzle.steps}: 0");
 		});
 
 		this.input.keyboard.on("keydown-LEFT", () => this.tryMove(0, -1));
@@ -227,7 +229,7 @@ export class GameScene extends Phaser.Scene {
 
 		this.movePlayer(nr, nc);
 		this.moves++;
-		this.movesText.setText("步数: " + this.moves);
+		this.movesText.setText("${g.puzzle.steps}: " + this.moves);
 
 		this.time.delayedCall(120, () => this.checkWin());
 	}
@@ -283,20 +285,20 @@ export class GameScene extends Phaser.Scene {
 
 		this.time.delayedCall(200, () => {
 			this.add.rectangle(400, 300, 400, 200, 0x000000, 0.8).setDepth(200);
-			this.add.text(400, 270, "🎉 通关！", {
+			this.add.text(400, 270, "${g.puzzle.levelComplete}", {
 				fontSize: "36px",
 				color: "#22c55e",
 				fontFamily: "Arial",
 			}).setOrigin(0.5).setDepth(201);
 
-			this.add.text(400, 320, "步数: " + this.moves, {
+			this.add.text(400, 320, "${g.puzzle.steps}: " + this.moves, {
 				fontSize: "22px",
 				color: "#fbbf24",
 				fontFamily: "Arial",
 			}).setOrigin(0.5).setDepth(201);
 
 			const menuBtn = this.add
-				.text(400, 380, "返回主菜单", {
+				.text(400, 380, "${g.puzzle.backToMenu}", {
 					fontSize: "18px",
 					color: "#06b6d4",
 					fontFamily: "Arial",

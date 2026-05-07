@@ -1,4 +1,5 @@
 import type { ProjectMeta } from "@rimecraft/core";
+import { getMessages } from "@/i18n";
 import { endlessRunnerTemplate } from "./endless-runner";
 import { platformerTemplate } from "./platformer";
 import { spaceShooterTemplate } from "./space-shooter";
@@ -29,6 +30,7 @@ export function generateTemplateFiles(meta: ProjectMeta): TemplateFile[] {
 }
 
 function blankTemplate(meta: ProjectMeta): TemplateFile[] {
+	const g = getMessages().gameText;
 	return [
 		{
 			path: "src/main.ts",
@@ -73,7 +75,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const startText = this.add
-			.text(400, 400, "点击开始游戏", {
+			.text(400, 400, "${g.blank.clickToStart}", {
 				fontSize: "24px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -110,7 +112,7 @@ export class GameScene extends Phaser.Scene {
 
 	create() {
 		this.add
-			.text(400, 300, "游戏场景 - 开始创作吧!", {
+			.text(400, 300, "${g.blank.sceneHint}", {
 				fontSize: "24px",
 				color: "#ffffff",
 				fontFamily: "Arial",

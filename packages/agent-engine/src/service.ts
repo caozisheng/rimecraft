@@ -5,7 +5,7 @@ import type {
 	ToolDefinition,
 } from "./types";
 import type { ExpertRole } from "./expert-roles";
-import { getExpertRoleSystemPrompt, EXPERT_ROLES } from "./expert-roles";
+import { getExpertRoleSystemPrompt, EXPERT_ROLES, type Locale } from "./expert-roles";
 import { ToolRegistry } from "./tool-registry";
 import { streamChatCompletion } from "./llm-client";
 
@@ -18,9 +18,10 @@ interface RunAgentLoopParams {
 	ragContext?: string | null;
 	tools?: ToolDefinition[];
 	signal?: AbortSignal;
+	locale?: Locale;
 }
 
-const PHASER_KNOWLEDGE = `
+const PHASER_KNOWLEDGE_ZH = `
 ## Phaser 4 代码生成规则
 
 你生成的代码必须严格遵循以下规则。注意：本项目使用 **Phaser 4.0.0**，与 Phaser 3 有重大 API 差异。
@@ -255,18 +256,259 @@ makeTexture(this, "sky", 0x1e3a5f, 800, 600);
 - 使用 setDepth(n) 控制渲染层级, 数值越大越在前面
 `;
 
+const PHASER_KNOWLEDGE_EN = `
+## Phaser 4 Code Generation Rules
+
+Your generated code must strictly follow these rules. Note: This project uses **Phaser 4.0.0**, which has major API differences from Phaser 3.
+
+### Project Structure
+- Entry file: src/main.ts — creates Phaser.Game instance, registers all scenes
+- Scene files: src/scenes/<name>.ts — one file per scene, exports scene class
+- Config file: src/config/game-config.ts — game configuration constants
+
+### main.ts Standard Template
+\`\`\`typescript
+import Phaser from "phaser";
+import { GameScene } from "./scenes/game-scene";
+
+const config: Phaser.Types.Core.GameConfig = {
+  type: Phaser.AUTO,
+  width: 800,
+  height: 600,
+  backgroundColor: "#1a1a2e",
+  physics: {
+    default: "arcade",
+    arcade: { gravity: { x: 0, y: 0 }, debug: false }
+  },
+  scene: [GameScene]
+};
+
+new Phaser.Game(config);
+\`\`\`
+
+### Scene Standard Template
+\`\`\`typescript
+import Phaser from "phaser";
+
+export class GameScene extends Phaser.Scene {
+  constructor() { super("GameScene"); }
+  preload() { /* this.load.image("key", "url"); */ }
+  create() { /* this.add.sprite(x, y, "key"); */ }
+  update(time: number, delta: number) { /* per-frame logic */ }
+}
+\`\`\`
+
+### ⚠️ Phaser 4 vs Phaser 3 Key Differences (Must Read)
+
+These are the most error-prone API changes. **Never use Phaser 3 patterns**:
+
+#### Group (Object Groups / Object Pools)
+In Phaser 4, Group.children is a **Set**, not a custom collection.
+\`\`\`typescript
+// ❌ Phaser 3 (Wrong! Will throw "children.each is not a function")
+group.children.each((child) => { ... });
+group.children.iterate((child) => { ... });
+group.children.size;
+
+// ✅ Phaser 4 (Correct)
+group.getChildren().forEach((child) => { ... });   // iterate all children
+group.getChildren().length;                         // get child count
+group.getFirst(true);                               // get first active object
+group.getFirst(false);                              // get first inactive object (pool recycling)
+group.countActive(true);                            // active object count
+group.countActive(false);                           // inactive object count
+group.getMatching("active", true);                  // filter by property
+group.killAndHide(obj);                             // pool: recycle object (setActive(false) + setVisible(false))
+\`\`\`
+
+#### Physics Group
+\`\`\`typescript
+// Create physics group (object pool mode)
+this.bullets = this.physics.add.group({
+  classType: Phaser.Physics.Arcade.Sprite,
+  maxSize: 20,
+  runChildUpdate: true,
+  createCallback: (obj: Phaser.GameObjects.GameObject) => {
+    const bullet = obj as Phaser.Physics.Arcade.Sprite;
+    bullet.setActive(false).setVisible(false);
+  }
+});
+
+// Get/fire bullet from pool
+const bullet = this.bullets.getFirst(false, true, x, y, "bullet");
+if (bullet) {
+  bullet.setActive(true).setVisible(true);
+  bullet.body!.setVelocityY(-400);
+}
+
+// Recycle bullets (when off-screen)
+this.bullets.getChildren().forEach((b) => {
+  const bullet = b as Phaser.Physics.Arcade.Sprite;
+  if (bullet.active && bullet.y < -50) {
+    this.bullets.killAndHide(bullet);
+    bullet.body!.stop();
+  }
+});
+\`\`\`
+
+#### Static Group
+\`\`\`typescript
+const platforms = this.physics.add.staticGroup();
+platforms.create(400, 580, "ground").setScale(2).refreshBody();
+// refreshBody() must be called after setScale, otherwise physics body size won't match
+\`\`\`
+
+### Key API Quick Reference
+
+#### Creating Objects
+- Sprite: this.add.sprite(x, y, "key") / this.physics.add.sprite(x, y, "key")
+- Text: this.add.text(x, y, "text", { fontSize: "24px", color: "#fff" })
+- Graphics: this.add.graphics() → graphics.fillRect(x, y, w, h)
+- TileSprite (scrolling background): this.add.tileSprite(x, y, w, h, "key")
+- Image (static): this.add.image(x, y, "key")
+
+#### Physics System
+- Collision: this.physics.add.collider(objA, objB, callback, null, this)
+- Overlap: this.physics.add.overlap(objA, objB, callback, null, this)
+- Velocity: sprite.body!.setVelocity(vx, vy) / setVelocityX(v) / setVelocityY(v)
+- Gravity: sprite.body!.setGravityY(300)
+- Bounce: sprite.body!.setBounce(0.2)
+- Immovable: sprite.body!.setImmovable(true)
+- World bounds: sprite.body!.setCollideWorldBounds(true)
+- Size: sprite.body!.setSize(w, h) / setOffset(x, y)
+
+#### Input
+- Arrow keys: this.input.keyboard!.createCursorKeys() → cursors.left.isDown
+- Single key: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+- Mouse/touch: this.input.on("pointerdown", (pointer) => { ... })
+- Clickable: sprite.setInteractive(); sprite.on("pointerdown", callback)
+
+#### Scene Management
+- Switch scene: this.scene.start("SceneName", { score: 100 })
+- Receive data: create(data: { score: number }) { ... }
+- Parallel scene: this.scene.launch("UIScene") / this.scene.stop("UIScene")
+- Restart current: this.scene.restart()
+
+#### Animation & Effects
+- Tween: this.tweens.add({ targets: obj, x: 400, duration: 1000, ease: "Power2" })
+- Timer: this.time.addEvent({ delay: 1000, callback: fn, loop: true })
+- Delayed call: this.time.delayedCall(500, callback)
+- Particles: this.add.particles(x, y, "key", { speed: 100, lifespan: 500 })
+- Camera follow: this.cameras.main.startFollow(player)
+- Camera shake: this.cameras.main.shake(200, 0.01)
+- Camera flash: this.cameras.main.flash(300)
+
+#### Common Game Pattern Code
+
+##### Endless Runner — Obstacle Loop Spawning
+\`\`\`typescript
+this.time.addEvent({
+  delay: 1500,
+  loop: true,
+  callback: () => {
+    const x = this.scale.width + 50;
+    const y = this.scale.height - 60;
+    const obstacle = this.obstacles.getFirst(false, true, x, y, "obstacle");
+    if (obstacle) {
+      obstacle.setActive(true).setVisible(true);
+      obstacle.body!.setVelocityX(-300);
+    }
+  }
+});
+
+// Recycle off-screen obstacles in update()
+this.obstacles.getChildren().forEach((obj) => {
+  const o = obj as Phaser.Physics.Arcade.Sprite;
+  if (o.active && o.x < -50) {
+    this.obstacles.killAndHide(o);
+    o.body!.stop();
+  }
+});
+\`\`\`
+
+##### Scoring System
+\`\`\`typescript
+private score = 0;
+private scoreText!: Phaser.GameObjects.Text;
+
+create() {
+  this.scoreText = this.add.text(16, 16, "Score: 0", {
+    fontSize: "28px", color: "#fff", fontFamily: "Arial"
+  }).setScrollFactor(0).setDepth(100);
+}
+
+addScore(points: number) {
+  this.score += points;
+  this.scoreText.setText("Score: " + this.score);
+}
+\`\`\`
+
+##### Game Over Flow
+\`\`\`typescript
+gameOver() {
+  this.physics.pause();
+  this.scene.start("GameOverScene", { score: this.score });
+}
+\`\`\`
+
+### Alternative When No Image Assets
+If the project has no image assets, use Graphics to draw replacements:
+\`\`\`typescript
+const gfx = this.add.graphics();
+gfx.fillStyle(0x06b6d4, 1);
+gfx.fillRect(0, 0, 32, 48);
+gfx.generateTexture("player", 32, 48);
+gfx.destroy();
+const player = this.physics.add.sprite(100, 400, "player");
+\`\`\`
+
+Multiple textures with different colors:
+\`\`\`typescript
+function makeTexture(scene: Phaser.Scene, key: string, color: number, w: number, h: number) {
+  const g = scene.add.graphics();
+  g.fillStyle(color, 1);
+  g.fillRect(0, 0, w, h);
+  g.generateTexture(key, w, h);
+  g.destroy();
+}
+// Call at the start of preload() or create()
+makeTexture(this, "player", 0x06b6d4, 32, 48);
+makeTexture(this, "ground", 0x4ade80, 800, 40);
+makeTexture(this, "obstacle", 0xef4444, 30, 50);
+makeTexture(this, "bullet", 0xfbbf24, 8, 8);
+makeTexture(this, "sky", 0x1e3a5f, 800, 600);
+\`\`\`
+
+### Important Notes
+- All imports must use relative paths (./xxx), Phaser uses import Phaser from "phaser"
+- Use export class to export scene classes
+- Do not use async/await in preload(), Phaser has its own loading management
+- physics.add.sprite() returns a physics-enabled sprite, add.sprite() returns a regular sprite
+- The game auto-recompiles and refreshes the preview after code changes
+- collider/overlap callback signature: (objA, objB) => void; if you need "this", pass null as 4th param and this as 5th
+- Object pools (Group maxSize) are more efficient than repeated new; use pools for bullets/obstacles/particles
+- Use setScrollFactor(0) to prevent UI elements from scrolling with the camera (e.g. score text)
+- Use setDepth(n) to control render order, higher values render on top
+`;
+
 function buildSystemPrompt(params: RunAgentLoopParams): string {
+	const locale = params.locale ?? "zh";
+	const isEn = locale === "en";
 	const parts: string[] = [];
 
 	parts.push(
-		"你是 RimeCraft 的 AI 助手，一个面向青少年的 2D 游戏对话式开发工具。",
+		isEn
+			? "You are RimeCraft's AI assistant, an AI-powered conversational 2D game development tool for young creators."
+			: "你是 RimeCraft 的 AI 助手，一个面向青少年的 2D 游戏对话式开发工具。",
 	);
 	parts.push(
-		"用户通过自然语言描述想法，你帮助他们使用 Phaser.js 创建 2D 游戏。",
+		isEn
+			? "Users describe their ideas in natural language, and you help them create 2D games using Phaser.js."
+			: "用户通过自然语言描述想法，你帮助他们使用 Phaser.js 创建 2D 游戏。",
 	);
 	parts.push("");
 
-	const rolePrompt = getExpertRoleSystemPrompt(params.expertRole);
+	const rolePrompt = getExpertRoleSystemPrompt(params.expertRole, locale);
 	if (rolePrompt) {
 		parts.push(rolePrompt);
 		parts.push("");
@@ -276,22 +518,28 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 		const activeRole = EXPERT_ROLES[params.activeRoleId];
 		if (activeRole) {
 			parts.push(
-				`当前激活的专家角色：${activeRole.name}（${params.activeRoleId}）`,
+				isEn
+					? `Currently active expert role: ${params.activeRoleId}`
+					: `当前激活的专家角色：${activeRole.name}（${params.activeRoleId}）`,
 			);
 			parts.push(
-				"你现在必须以该专家角色的身份工作，使用对应的专业知识和工具来完成任务。",
+				isEn
+					? "You must now work as this expert role, using the corresponding professional knowledge and tools to complete the task."
+					: "你现在必须以该专家角色的身份工作，使用对应的专业知识和工具来完成任务。",
 			);
 			parts.push("");
-			parts.push(activeRole.systemPromptAddition);
+			parts.push(
+				isEn ? activeRole.systemPromptAdditionEn : activeRole.systemPromptAddition,
+			);
 			parts.push("");
 		}
 	}
 
-	parts.push(PHASER_KNOWLEDGE);
+	parts.push(isEn ? PHASER_KNOWLEDGE_EN : PHASER_KNOWLEDGE_ZH);
 	parts.push("");
 
 	if (params.gameContext) {
-		parts.push("=== 当前游戏项目状态 ===");
+		parts.push(isEn ? "=== Current Game Project State ===" : "=== 当前游戏项目状态 ===");
 		parts.push(params.gameContext);
 		parts.push("");
 	}
@@ -301,26 +549,49 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 		parts.push("");
 	}
 
-	parts.push("## 工作规则");
-	parts.push("- 使用中文回复，语言通俗易懂，避免过于专业的术语");
-	parts.push("- 生成代码时使用 TypeScript + Phaser 4 API");
-	parts.push("- 生成代码时自动附带简洁的中文注释，帮助用户理解关键逻辑，但不要过度注释");
-	parts.push("- 每次修改代码后，游戏预览会自动刷新");
-	parts.push("- 如果用户描述模糊，主动提问引导");
-	parts.push("- 出错时不要慌，分析原因后修复");
-	parts.push("- 使用 write_file 工具写入代码文件，路径以 src/ 开头");
-	parts.push("- 修改游戏时，先用 list_files 和 read_file 了解当前代码，再用 write_file 修改");
-	parts.push("- 生成完整可运行的代码，不要省略任何部分");
-	parts.push("- 对已有文件做小修改时，优先使用 patch_file 工具进行精确替换，避免重写整个文件");
-	parts.push("- 创建新游戏时，需要同时创建 src/main.ts（入口）和 src/scenes/ 下的场景文件");
-	parts.push("");
-	parts.push("## ⚠️ 运行时错误处理规则（最高优先级）");
-	parts.push("- 写完代码后，系统会自动编译并运行游戏预览，检测运行时错误");
-	parts.push("- 如果系统报告了运行时错误，你**必须**先用 read_file 阅读相关代码，分析原因，然后修复");
-	parts.push("- **绝对不要**在还有运行时错误的情况下结束对话或宣布任务完成");
-	parts.push("- 系统会在每次你修改代码后自动验证——如果错误仍然存在，会再次通知你");
-	parts.push("- 收到错误通知后，必须使用工具（read_file + write_file/patch_file）进行修复，不要只用文字回复");
-	parts.push("- 如果多次修复失败，尝试完全不同的实现方案，不要在同一个方向上反复尝试");
+	if (isEn) {
+		parts.push("## Work Rules");
+		parts.push("- Reply in English, use clear and accessible language, avoid overly technical jargon");
+		parts.push("- Generate code using TypeScript + Phaser 4 API");
+		parts.push("- Add concise English comments in generated code to help users understand key logic, but do not over-comment");
+		parts.push("- The game preview auto-refreshes after each code change");
+		parts.push("- If the user's description is vague, ask clarifying questions proactively");
+		parts.push("- When errors occur, stay calm, analyze the cause, and fix it");
+		parts.push("- Use the write_file tool to write code files, paths start with src/");
+		parts.push("- When modifying a game, first use list_files and read_file to understand the current code, then use write_file to modify");
+		parts.push("- Generate complete, runnable code — do not omit any parts");
+		parts.push("- For small changes to existing files, prefer the patch_file tool for precise replacements instead of rewriting the entire file");
+		parts.push("- When creating a new game, create both src/main.ts (entry point) and scene files under src/scenes/");
+		parts.push("");
+		parts.push("## ⚠️ Runtime Error Handling Rules (Highest Priority)");
+		parts.push("- After writing code, the system auto-compiles and runs the game preview, detecting runtime errors");
+		parts.push("- If the system reports runtime errors, you **must** first use read_file to read the related code, analyze the cause, then fix it");
+		parts.push("- **Never** end the conversation or declare the task complete while runtime errors exist");
+		parts.push("- The system auto-verifies after each code change — if errors persist, it will notify you again");
+		parts.push("- After receiving an error notification, you must use tools (read_file + write_file/patch_file) to fix it — do not reply with text only");
+		parts.push("- If multiple fixes fail, try a completely different implementation approach instead of repeating the same direction");
+	} else {
+		parts.push("## 工作规则");
+		parts.push("- 使用中文回复，语言通俗易懂，避免过于专业的术语");
+		parts.push("- 生成代码时使用 TypeScript + Phaser 4 API");
+		parts.push("- 生成代码时自动附带简洁的中文注释，帮助用户理解关键逻辑，但不要过度注释");
+		parts.push("- 每次修改代码后，游戏预览会自动刷新");
+		parts.push("- 如果用户描述模糊，主动提问引导");
+		parts.push("- 出错时不要慌，分析原因后修复");
+		parts.push("- 使用 write_file 工具写入代码文件，路径以 src/ 开头");
+		parts.push("- 修改游戏时，先用 list_files 和 read_file 了解当前代码，再用 write_file 修改");
+		parts.push("- 生成完整可运行的代码，不要省略任何部分");
+		parts.push("- 对已有文件做小修改时，优先使用 patch_file 工具进行精确替换，避免重写整个文件");
+		parts.push("- 创建新游戏时，需要同时创建 src/main.ts（入口）和 src/scenes/ 下的场景文件");
+		parts.push("");
+		parts.push("## ⚠️ 运行时错误处理规则（最高优先级）");
+		parts.push("- 写完代码后，系统会自动编译并运行游戏预览，检测运行时错误");
+		parts.push("- 如果系统报告了运行时错误，你**必须**先用 read_file 阅读相关代码，分析原因，然后修复");
+		parts.push("- **绝对不要**在还有运行时错误的情况下结束对话或宣布任务完成");
+		parts.push("- 系统会在每次你修改代码后自动验证——如果错误仍然存在，会再次通知你");
+		parts.push("- 收到错误通知后，必须使用工具（read_file + write_file/patch_file）进行修复，不要只用文字回复");
+		parts.push("- 如果多次修复失败，尝试完全不同的实现方案，不要在同一个方向上反复尝试");
+	}
 
 	return parts.join("\n");
 }
@@ -328,6 +599,7 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 export async function* runAgentLoop(
 	params: RunAgentLoopParams,
 ): AsyncGenerator<AgentEvent> {
+	const locale = params.locale ?? "zh";
 	const systemPrompt = buildSystemPrompt(params);
 
 	const apiMessages = [
@@ -352,7 +624,9 @@ export async function* runAgentLoop(
 			type: "function",
 			function: {
 				name: "switch_expert_role",
-				description: "切换到指定的专家角色",
+				description: locale === "en"
+					? "Switch to a specified expert role"
+					: "切换到指定的专家角色",
 				parameters: {
 					type: "object",
 					properties: {
@@ -365,7 +639,9 @@ export async function* runAgentLoop(
 								"gameplay",
 								"debug",
 							],
-							description: "目标角色 ID",
+							description: locale === "en"
+								? "Target role ID"
+								: "目标角色 ID",
 						},
 					},
 					required: ["role"],

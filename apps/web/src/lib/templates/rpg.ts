@@ -1,7 +1,9 @@
 import type { ProjectMeta } from "@rimecraft/core";
 import type { TemplateFile } from "./index";
+import { getMessages } from "@/i18n";
 
 export function rpgTemplate(meta: ProjectMeta): TemplateFile[] {
+	const g = getMessages().gameText;
 	return [
 		{
 			path: "src/main.ts",
@@ -60,7 +62,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 260, "⚔️ RPG 冒险", {
+			.text(400, 260, "${g.rpg.subtitle}", {
 				fontSize: "24px",
 				color: "#a3e635",
 				fontFamily: "Arial",
@@ -68,7 +70,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const startBtn = this.add
-			.text(400, 400, "▶  开始冒险", {
+			.text(400, 400, "${g.rpg.startAdventure}", {
 				fontSize: "28px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -81,7 +83,7 @@ export class MenuScene extends Phaser.Scene {
 		startBtn.on("pointerout", () => startBtn.setColor("#06b6d4"));
 
 		this.add
-			.text(400, 480, "方向键移动  |  靠近 NPC 自动对话", {
+			.text(400, 480, "${g.rpg.moveHint}", {
 				fontSize: "16px",
 				color: "#94a3b8",
 				fontFamily: "Arial",
@@ -117,9 +119,9 @@ const MAP = [
 ];
 
 const NPC_DIALOGS = [
-	["勇者你好！这里是新手村。", "前面有宝箱，去找找看吧！"],
-	["听说森林深处藏着一把传说之剑……", "不过现在还太危险了。"],
-	["我是村里的长老。", "收集所有宝箱就能通关！", "祝你好运！"],
+	["${g.rpg.npcDialog1a}", "${g.rpg.npcDialog1b}"],
+	["${g.rpg.npcDialog2a}", "${g.rpg.npcDialog2b}"],
+	["${g.rpg.npcDialog3a}", "${g.rpg.npcDialog3b}", "${g.rpg.npcDialog3c}"],
 ];
 
 export class GameScene extends Phaser.Scene {
@@ -218,7 +220,7 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private getStatusStr() {
-		return "宝箱: " + this.chestsCollected + " / " + this.totalChests;
+		return "${g.rpg.chests}: " + this.chestsCollected + " / " + this.totalChests;
 	}
 
 	private talkToNpc(_heroObj, npcObj) {
@@ -248,7 +250,7 @@ export class GameScene extends Phaser.Scene {
 			wordWrap: { width: 560 },
 		}).setOrigin(0.5);
 
-		const hint = this.add.text(0, 25, "点击继续...", {
+		const hint = this.add.text(0, 25, "${g.rpg.clickContinue}", {
 			fontSize: "13px",
 			color: "#94a3b8",
 			fontFamily: "Arial",
@@ -281,7 +283,7 @@ export class GameScene extends Phaser.Scene {
 
 		if (this.chestsCollected >= this.totalChests) {
 			this.time.delayedCall(300, () => {
-				this.dialogTexts = ["恭喜！你找到了所有宝箱！冒险完成！"];
+				this.dialogTexts = ["${g.rpg.allChestsFound}"];
 				this.dialogIndex = 0;
 				this.showDialog();
 			});

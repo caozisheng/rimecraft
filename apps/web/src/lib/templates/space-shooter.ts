@@ -1,7 +1,9 @@
 import type { ProjectMeta } from "@rimecraft/core";
 import type { TemplateFile } from "./index";
+import { getMessages } from "@/i18n";
 
 export function spaceShooterTemplate(meta: ProjectMeta): TemplateFile[] {
+	const g = getMessages().gameText;
 	return [
 		{
 			path: "src/main.ts",
@@ -59,7 +61,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 260, "🚀 太空射击", {
+			.text(400, 260, "${g.spaceShooter.subtitle}", {
 				fontSize: "24px",
 				color: "#a3e635",
 				fontFamily: "Arial",
@@ -67,7 +69,7 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const startBtn = this.add
-			.text(400, 400, "▶  开始战斗", {
+			.text(400, 400, "${g.spaceShooter.startBattle}", {
 				fontSize: "28px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -80,7 +82,7 @@ export class MenuScene extends Phaser.Scene {
 		startBtn.on("pointerout", () => startBtn.setColor("#06b6d4"));
 
 		this.add
-			.text(400, 480, "方向键移动  |  空格射击", {
+			.text(400, 480, "${g.spaceShooter.moveHint}", {
 				fontSize: "16px",
 				color: "#94a3b8",
 				fontFamily: "Arial",
@@ -155,7 +157,7 @@ export class GameScene extends Phaser.Scene {
 
 		// UI
 		this.scoreText = this.add
-			.text(16, 16, "分数: 0", {
+			.text(16, 16, "${g.common.score}: 0", {
 				fontSize: "24px",
 				color: "#ffffff",
 				fontFamily: "Arial",
@@ -248,7 +250,7 @@ export class GameScene extends Phaser.Scene {
 		enemyObj.body.stop();
 
 		this.score += 100;
-		this.scoreText.setText("分数: " + this.score);
+		this.scoreText.setText("${g.common.score}: " + this.score);
 	}
 
 	private hitShip(_shipObj, enemyObj) {
@@ -284,7 +286,7 @@ export class GameOverScene extends Phaser.Scene {
 		const score = data.score ?? 0;
 
 		this.add
-			.text(400, 180, "任务失败", {
+			.text(400, 180, "${g.spaceShooter.missionFailed}", {
 				fontSize: "48px",
 				color: "#ef4444",
 				fontFamily: "Arial",
@@ -292,7 +294,7 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 280, "击落敌机: " + Math.floor(score / 100) + " 架", {
+			.text(400, 280, "${g.spaceShooter.enemiesDestroyed}: " + Math.floor(score / 100) + "${g.spaceShooter.enemyUnit ? " " + g.spaceShooter.enemyUnit : ""}", {
 				fontSize: "28px",
 				color: "#fbbf24",
 				fontFamily: "Arial",
@@ -300,7 +302,7 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 330, "总分: " + score, {
+			.text(400, 330, "${g.spaceShooter.totalScore}: " + score, {
 				fontSize: "24px",
 				color: "#94a3b8",
 				fontFamily: "Arial",
@@ -308,7 +310,7 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		const retryBtn = this.add
-			.text(400, 430, "🔄  重新出击", {
+			.text(400, 430, "${g.spaceShooter.retryBattle}", {
 				fontSize: "24px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -321,7 +323,7 @@ export class GameOverScene extends Phaser.Scene {
 		retryBtn.on("pointerout", () => retryBtn.setColor("#06b6d4"));
 
 		const menuBtn = this.add
-			.text(400, 490, "🏠  返回主菜单", {
+			.text(400, 490, "${g.common.backToMenu}", {
 				fontSize: "20px",
 				color: "#94a3b8",
 				fontFamily: "Arial",

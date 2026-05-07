@@ -372,8 +372,10 @@ canvas { display: block; }
 			// Resize canvas when iframe resizes
 			const game = this;
 			window.addEventListener("resize", function() {
-				if (game && game.scale) {
-					game.scale.resize(config.scale.width || config.width || 800, config.scale.height || config.height || 600);
+				if (game && game.scale && game.isBooted) {
+					try {
+						game.scale.resize(config.scale.width || config.width || 800, config.scale.height || config.height || 600);
+					} catch(e) {}
 				}
 			});
 		}
