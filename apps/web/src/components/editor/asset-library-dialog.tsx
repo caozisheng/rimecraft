@@ -78,7 +78,7 @@ export function AssetLibraryDialog({
 	}, [query, category, registryLoaded]);
 
 	const handleCopy = useCallback((entry: AssetCatalogEntry | AssetEntry) => {
-		const code = entry.generatorCode ?? "";
+		const code = ("preloadCode" in entry && entry.preloadCode) ? entry.preloadCode : (entry.generatorCode ?? "");
 		navigator.clipboard.writeText(code);
 		setCopiedId(entry.id);
 		setTimeout(() => setCopiedId(null), 1500);
@@ -272,9 +272,9 @@ export function AssetLibraryDialog({
 									</span>
 								)}
 
-								{selectedAsset.generatorCode && (
+								{(("preloadCode" in selectedAsset && selectedAsset.preloadCode) || selectedAsset.generatorCode) && (
 									<pre className="max-h-[140px] overflow-auto whitespace-pre-wrap rounded bg-accent/50 p-2 text-[10px] leading-relaxed text-muted-foreground">
-										{selectedAsset.generatorCode}
+										{("preloadCode" in selectedAsset && selectedAsset.preloadCode) || selectedAsset.generatorCode}
 									</pre>
 								)}
 
@@ -322,10 +322,10 @@ function AssetCard({
 	const [rendered, setRendered] = useState(false);
 
 	useEffect(() => {
-		if (!entry.generatorCode) return;
+		if (!entry.generatorCode && !entry.url) return;
 
 		let cancelled = false;
-		renderAssetPreview(entry.generatorCode, 56).then((dataUrl) => {
+		renderAssetPreview(entry.generatorCode || "", 56, entry.url).then((dataUrl) => {
 			if (cancelled || !canvasRef.current) return;
 			const img = new Image();
 			img.onload = () => {
@@ -338,7 +338,7 @@ function AssetCard({
 			img.src = dataUrl;
 		});
 		return () => { cancelled = true; };
-	}, [entry.generatorCode]);
+	}, [entry.generatorCode, entry.url]);
 
 	const hasThumbnail = "thumbnailDataUrl" in entry && entry.thumbnailDataUrl;
 

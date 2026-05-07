@@ -3,10 +3,15 @@ const PREVIEW_CACHE = new Map<string, string>();
 export async function renderAssetPreview(
 	generatorCode: string,
 	size = 64,
+	url?: string,
 ): Promise<string> {
-	const cacheKey = `${generatorCode}:${size}`;
+	const cacheKey = url ? `url:${url}:${size}` : `${generatorCode}:${size}`;
 	const cached = PREVIEW_CACHE.get(cacheKey);
 	if (cached) return cached;
+
+	if (url) {
+		return loadImagePreview(url, size, cacheKey);
+	}
 
 	const sizeMatch = generatorCode.match(
 		/generateTexture\(\s*["'][^"']+["']\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/,
@@ -61,6 +66,47 @@ export async function renderAssetPreview(
 
 export function clearPreviewCache() {
 	PREVIEW_CACHE.clear();
+}
+
+async function loadImagePreview(url: string, size: number, cacheKey: string): Promise<string> {
+	return new Promise((resolve) => {
+		const img = new Image();
+		img.crossOrigin = "anonymous";
+		img.onload = () => {
+			const out = document.createElement("canvas");
+			out.width = size;
+			out.height = size;
+			const ctx = out.getContext("2d")!;
+			ctx.imageSmoothingEnabled = true;
+			ctx.imageSmoothingQuality = "high";
+			const scale = Math.min(size / img.width, size / img.height);
+			const dw = img.width * scale;
+			const dh = img.height * scale;
+			const dx = (size - dw) / 2;
+			const dy = (size - dh) / 2;
+			ctx.drawImage(img, dx, dy, dw, dh);
+			const dataUrl = out.toDataURL("image/png");
+			PREVIEW_CACHE.set(cacheKey, dataUrl);
+			resolve(dataUrl);
+		};
+		img.onerror = () => {
+			const out = document.createElement("canvas");
+			out.width = size;
+			out.height = size;
+			const ctx = out.getContext("2d")!;
+			ctx.fillStyle = "#334155";
+			ctx.fillRect(0, 0, size, size);
+			ctx.fillStyle = "#94a3b8";
+			ctx.font = `${Math.max(10, size / 4)}px sans-serif`;
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.fillText("🌐", size / 2, size / 2);
+			const dataUrl = out.toDataURL("image/png");
+			PREVIEW_CACHE.set(cacheKey, dataUrl);
+			resolve(dataUrl);
+		};
+		img.src = url;
+	});
 }
 
 function hexToCSS(hex: number, alpha = 1): string {

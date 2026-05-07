@@ -1056,7 +1056,9 @@ export class AgentManager {
 
 					const sections = Object.entries(grouped).map(([cat, assets]) => {
 						const lines = assets.map(
-							(a) => `  - ${a.nameZh} (key: "${a.name}")\n    ${a.generatorCode.split("\n").join("\n    ")}`,
+							(a) => a.preloadCode
+								? `  - ${a.nameZh} (key: "${a.name}"${a.url ? ", CDN image" : ""})\n    ${a.preloadCode}`
+								: `  - ${a.nameZh} (key: "${a.name}")\n    ${a.generatorCode.split("\n").join("\n    ")}`,
 						);
 						return `【${catNames[cat] ?? cat}】(${assets.length})\n${lines.join("\n")}`;
 					});

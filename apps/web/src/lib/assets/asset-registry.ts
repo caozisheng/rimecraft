@@ -17,6 +17,9 @@ export interface AssetEntry {
 	tags: string[];
 	source: AssetSource;
 	generatorCode?: string;
+	url?: string;
+	preloadCode?: string;
+	frameConfig?: { frameWidth: number; frameHeight: number };
 	blobPath?: string;
 	thumbnailDataUrl?: string;
 	width?: number;
