@@ -9,6 +9,7 @@ import {
 	Download,
 	Home,
 	Palette,
+	Pencil,
 	Settings,
 	Upload,
 } from "lucide-react";
@@ -22,6 +23,8 @@ export function EditorToolbar() {
 	const closeProject = useProjectStore((s) => s.closeProject);
 	const toggleCodePanel = useEditorStore((s) => s.toggleCodePanel);
 	const codePanelVisible = useEditorStore((s) => s.codePanelVisible);
+	const visualMode = useEditorStore((s) => s.visualEditorMode);
+	const toggleVisual = useEditorStore((s) => s.toggleVisualEditorMode);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [assetLibOpen, setAssetLibOpen] = useState(false);
 	const [exporting, setExporting] = useState(false);
@@ -94,6 +97,12 @@ export function EditorToolbar() {
 						label={m.toolbar.code}
 						active={codePanelVisible}
 						onClick={toggleCodePanel}
+					/>
+					<ToolbarButton
+						icon={<Pencil className="h-4 w-4" />}
+						label={m.toolbar.visualEditor}
+						active={visualMode}
+						onClick={toggleVisual}
 					/>
 					<ToolbarButton
 						icon={<Palette className="h-4 w-4" />}

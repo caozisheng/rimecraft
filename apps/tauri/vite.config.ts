@@ -7,6 +7,8 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig({
 	plugins: [react()],
 
+	publicDir: "../web/public",
+
 	clearScreen: false,
 
 	envPrefix: ["VITE_", "TAURI_ENV_*"],

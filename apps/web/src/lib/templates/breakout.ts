@@ -40,8 +40,8 @@ export class MenuScene extends Phaser.Scene {
 	}
 
 	preload() {
-		this.load.image("ball", "https://labs.phaser.io/assets/games/breakout/ball1.png");
-		this.load.image("block", "https://labs.phaser.io/assets/sprites/block.png");
+		this.load.image("ball", "/assets/games/breakout/ball1.png");
+		this.load.image("block", "/assets/sprites/block.png");
 	}
 
 	create() {

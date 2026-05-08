@@ -8,6 +8,7 @@ interface EditorState {
 	previewMode: "play" | "pause" | "stop";
 	currentFilePath: string | null;
 	showFileTree: boolean;
+	visualEditorMode: boolean;
 
 	setActivePanel: (panel: "chat" | "code" | "preview") => void;
 	setChatPanelWidth: (width: number) => void;
@@ -16,6 +17,8 @@ interface EditorState {
 	setPreviewMode: (mode: "play" | "pause" | "stop") => void;
 	setCurrentFilePath: (path: string | null) => void;
 	toggleFileTree: () => void;
+	setVisualEditorMode: (enabled: boolean) => void;
+	toggleVisualEditorMode: () => void;
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -26,6 +29,7 @@ export const useEditorStore = create<EditorState>((set) => ({
 	previewMode: "stop",
 	currentFilePath: null,
 	showFileTree: false,
+	visualEditorMode: false,
 
 	setActivePanel: (activePanel) => set({ activePanel }),
 	setChatPanelWidth: (chatPanelWidth) => set({ chatPanelWidth }),
@@ -38,4 +42,8 @@ export const useEditorStore = create<EditorState>((set) => ({
 		set({ currentFilePath }),
 	toggleFileTree: () =>
 		set((s) => ({ showFileTree: !s.showFileTree })),
+	setVisualEditorMode: (visualEditorMode) =>
+		set({ visualEditorMode }),
+	toggleVisualEditorMode: () =>
+		set((s) => ({ visualEditorMode: !s.visualEditorMode })),
 }));

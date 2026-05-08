@@ -19,9 +19,10 @@ import {
 	type AssetEntry,
 } from "@/lib/assets/asset-registry";
 import { renderAssetPreview } from "@/lib/assets/asset-previewer";
+import { cssToGeneratorCode } from "@/lib/assets/css-to-canvas";
 import { useChatStore } from "@/stores/chat-store";
 import { useI18n } from "@/i18n";
-import { Check, Copy, Plus, Sparkles, Upload, X } from "lucide-react";
+import { Check, Copy, Plus, Sparkles, Upload, X, Trash2, Code } from "lucide-react";
 
 const CATEGORY_COLORS: Record<string, string> = {
 	character: "bg-cyan-500/20 text-cyan-400",
@@ -37,9 +38,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 export function AssetLibraryDialog({
 	open,
 	onOpenChange,
+	onPickAsset,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	onPickAsset?: (assetName: string, assetUrl: string, generatorCode: string) => void;
 }) {
 	const { messages: m, locale } = useI18n();
 	const categories = [
@@ -62,12 +65,18 @@ export function AssetLibraryDialog({
 	const [selectedAsset, setSelectedAsset] = useState<AssetCatalogEntry | AssetEntry | null>(null);
 	const [showAiInput, setShowAiInput] = useState(false);
 	const [aiPrompt, setAiPrompt] = useState("");
+	const [showCssEditor, setShowCssEditor] = useState(false);
+	const [cssCode, setCssCode] = useState("");
+	const [cssWidth, setCssWidth] = useState(64);
+	const [cssHeight, setCssHeight] = useState(64);
+	const [cssName, setCssName] = useState("");
+	const cssPreviewRef = useRef<HTMLCanvasElement>(null);
 
 	useEffect(() => {
-		if (open && !registryLoaded) {
-			assetRegistry.load().then(() => setRegistryLoaded(true));
+		if (open) {
+			assetRegistry.load().then(() => setRegistryLoaded((v) => !v));
 		}
-	}, [open, registryLoaded]);
+	}, [open]);
 
 	const filtered = useMemo(() => {
 		const all = assetRegistry.getAll({
@@ -109,6 +118,7 @@ export function AssetLibraryDialog({
 				thumbnailDataUrl = canvas.toDataURL("image/png");
 			} catch { /* ignore */ }
 
+			const uploadCategory = category !== "all" && category !== "mine" ? category : "item";
 			const loadCode = `this.load.image("${name}", "assets/${file.name}");`;
 
 			await assetRegistry.addUserAsset(
@@ -117,7 +127,7 @@ export function AssetLibraryDialog({
 					name,
 					nameZh: name,
 					type: "texture",
-					category: "item",
+					category: uploadCategory,
 					tags: [name],
 					source: "user",
 					generatorCode: loadCode,
@@ -129,7 +139,58 @@ export function AssetLibraryDialog({
 			setRegistryLoaded(false);
 		};
 		input.click();
-	}, []);
+	}, [category]);
+
+	const handleDelete = useCallback(async (entry: AssetEntry) => {
+		if (!confirm(m.assetLib.deleteConfirm)) return;
+		await assetRegistry.removeUserAsset(entry.id);
+		setSelectedAsset(null);
+		setRegistryLoaded(false);
+	}, [m]);
+
+	useEffect(() => {
+		if (!showCssEditor || !cssCode.trim() || !cssPreviewRef.current) return;
+		const timer = setTimeout(() => {
+			const gen = cssToGeneratorCode(cssCode, cssWidth, cssHeight, "preview");
+			renderAssetPreview(gen, 120).then((dataUrl) => {
+				if (!cssPreviewRef.current) return;
+				const img = new Image();
+				img.onload = () => {
+					const ctx = cssPreviewRef.current?.getContext("2d");
+					if (!ctx) return;
+					ctx.clearRect(0, 0, 120, 120);
+					ctx.drawImage(img, 0, 0);
+				};
+				img.src = dataUrl;
+			});
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [cssCode, cssWidth, cssHeight, showCssEditor]);
+
+	const handleSaveCss = useCallback(async () => {
+		const name = cssName.trim() || `css-${Date.now().toString(36)}`;
+		const id = `css-${Date.now().toString(36)}`;
+		const gen = cssToGeneratorCode(cssCode, cssWidth, cssHeight, name);
+		await assetRegistry.addUserAsset({
+			id,
+			name,
+			nameZh: name,
+			type: "css",
+			category: "shape",
+			tags: [name, "css"],
+			source: "user",
+			generatorCode: gen,
+			cssCode,
+			cssWidth,
+			cssHeight,
+			width: cssWidth,
+			height: cssHeight,
+		});
+		setCssCode("");
+		setCssName("");
+		setShowCssEditor(false);
+		setRegistryLoaded(false);
+	}, [cssCode, cssWidth, cssHeight, cssName]);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -170,6 +231,15 @@ export function AssetLibraryDialog({
 							<Sparkles className="h-3.5 w-3.5" />
 							AI
 						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							className="shrink-0 gap-1.5"
+							onClick={() => setShowCssEditor(!showCssEditor)}
+						>
+							<Code className="h-3.5 w-3.5" />
+							CSS
+						</Button>
 					</div>
 
 					{/* AI prompt input */}
@@ -196,6 +266,58 @@ export function AssetLibraryDialog({
 							>
 								{m.assetLib.sendToChat}
 							</Button>
+						</div>
+					)}
+
+					{/* CSS editor panel */}
+					{showCssEditor && (
+						<div className="space-y-2 rounded-lg border border-border bg-accent/30 p-3">
+							<div className="flex gap-3">
+								<div className="flex-1 space-y-2">
+									<Input
+										placeholder={m.assetLib.cssName}
+										value={cssName}
+										onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCssName(e.target.value)}
+									/>
+									<textarea
+										placeholder={m.assetLib.cssPlaceholder}
+										value={cssCode}
+										onChange={(e) => setCssCode(e.target.value)}
+										className="h-24 w-full rounded-md border border-border bg-background p-2 font-mono text-xs"
+									/>
+									<div className="flex gap-2">
+										<div className="flex items-center gap-1">
+											<span className="text-xs text-muted-foreground">{m.assetLib.cssWidth}</span>
+											<Input
+												type="number"
+												value={cssWidth}
+												onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCssWidth(Number(e.target.value) || 64)}
+												className="w-16"
+											/>
+										</div>
+										<div className="flex items-center gap-1">
+											<span className="text-xs text-muted-foreground">{m.assetLib.cssHeight}</span>
+											<Input
+												type="number"
+												value={cssHeight}
+												onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCssHeight(Number(e.target.value) || 64)}
+												className="w-16"
+											/>
+										</div>
+										<Button
+											size="sm"
+											disabled={!cssCode.trim()}
+											onClick={handleSaveCss}
+											className="ml-auto"
+										>
+											{m.assetLib.cssSave}
+										</Button>
+									</div>
+								</div>
+								<div className="flex h-[120px] w-[120px] shrink-0 items-center justify-center rounded border border-border bg-background">
+									<canvas ref={cssPreviewRef} width={120} height={120} />
+								</div>
+							</div>
 						</div>
 					)}
 
@@ -279,6 +401,22 @@ export function AssetLibraryDialog({
 								)}
 
 								<div className="flex gap-1.5">
+									{onPickAsset && (
+										<Button
+											size="sm"
+											className="flex-1 gap-1"
+											onClick={() => {
+										const url = selectedAsset.url
+											|| ("blobPath" in selectedAsset ? selectedAsset.blobPath : undefined)
+											|| "";
+										const genCode = selectedAsset.generatorCode || "";
+										onPickAsset(selectedAsset.name, url, genCode);
+									}}
+										>
+											<Check className="h-3 w-3" />
+											{m.visualEditor.pickAsset}
+										</Button>
+									)}
 									<Button
 										size="sm"
 										variant="outline"
@@ -297,6 +435,17 @@ export function AssetLibraryDialog({
 											</>
 										)}
 									</Button>
+									{"source" in selectedAsset && selectedAsset.source !== "builtin" && (
+										<Button
+											size="sm"
+											variant="outline"
+											className="gap-1 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+											onClick={() => handleDelete(selectedAsset as AssetEntry)}
+										>
+											<Trash2 className="h-3 w-3" />
+											{m.assetLib.delete}
+										</Button>
+									)}
 								</div>
 							</div>
 						)}

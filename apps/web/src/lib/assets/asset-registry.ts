@@ -12,7 +12,7 @@ export interface AssetEntry {
 	id: string;
 	name: string;
 	nameZh: string;
-	type: "texture" | "spritesheet" | "audio" | "particle-config" | "tileset";
+	type: "texture" | "spritesheet" | "audio" | "particle-config" | "tileset" | "css";
 	category: string;
 	tags: string[];
 	source: AssetSource;
@@ -26,6 +26,9 @@ export interface AssetEntry {
 	height?: number;
 	createdAt?: number;
 	prompt?: string;
+	cssCode?: string;
+	cssWidth?: number;
+	cssHeight?: number;
 }
 
 function catalogToEntry(e: AssetCatalogEntry): AssetEntry {

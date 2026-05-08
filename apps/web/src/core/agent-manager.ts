@@ -10,6 +10,10 @@ import { useGameStore } from "@/stores/game-store";
 import { ASSET_CATALOG, searchCatalog } from "@/lib/assets/asset-catalog";
 import { assetRegistry } from "@/lib/assets/asset-registry";
 import { getMessages, t } from "@/i18n";
+import { sceneBridge } from "./scene-bridge";
+import { useVisualEditorStore } from "@/stores/visual-editor-store";
+import { generateObjectId } from "./scene-graph";
+import type { SceneObject, SceneObjectBounds } from "./scene-graph";
 
 export class AgentManager {
 	private initialized = false;
@@ -1253,6 +1257,244 @@ export class AgentManager {
 						return {
 							success: false,
 							message: `${m.tools.configFailed}: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
+				},
+			},
+			{
+				name: "inspect_scene",
+				description: dm.tools.inspectScene.desc,
+				parameters: {
+					type: "object",
+					properties: {},
+				},
+				async execute() {
+					const m = getMessages();
+					try {
+						const result = await new Promise<{
+							objects: SceneObjectBounds[];
+							settings: { width: number; height: number };
+						} | null>((resolve) => {
+							const timeout = setTimeout(() => {
+								unsub();
+								resolve(null);
+							}, 3000);
+							const unsub = sceneBridge.onMessage((msg) => {
+								if (msg.type === "scene_tree") {
+									clearTimeout(timeout);
+									unsub();
+									resolve({ objects: msg.objects, settings: msg.settings });
+								}
+							});
+							sceneBridge.requestSceneTree();
+						});
+
+						if (!result) {
+							return { success: false, message: m.tools.inspectSceneTimeout };
+						}
+
+						const { objects, settings } = result;
+						if (objects.length === 0) {
+							return {
+								success: true,
+								message: m.tools.inspectSceneEmpty,
+								data: { objects: [], settings },
+							};
+						}
+
+						return {
+							success: true,
+							message: m.tools.inspectSceneSuccess
+								.replace("{count}", String(objects.length))
+								.replace("{width}", String(settings.width))
+								.replace("{height}", String(settings.height)),
+							data: { objects, settings },
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `${m.tools.inspectSceneTimeout}: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
+				},
+			},
+			{
+				name: "place_object",
+				description: dm.tools.placeObject.desc,
+				parameters: {
+					type: "object",
+					properties: {
+						type: {
+							type: "string",
+							description: dm.tools.placeObject.typeDesc,
+							enum: ["sprite", "image", "text", "graphics"],
+						},
+						name: {
+							type: "string",
+							description: dm.tools.placeObject.nameDesc,
+						},
+						x: {
+							type: "number",
+							description: dm.tools.placeObject.xDesc,
+						},
+						y: {
+							type: "number",
+							description: dm.tools.placeObject.yDesc,
+						},
+						texture: {
+							type: "string",
+							description: dm.tools.placeObject.textureDesc,
+						},
+						text: {
+							type: "string",
+							description: dm.tools.placeObject.textDesc,
+						},
+					},
+					required: ["type", "name", "x", "y"],
+				},
+				async execute(args) {
+					const m = getMessages();
+					try {
+						const objType = args.type as SceneObject["type"];
+						const name = args.name as string;
+						const x = args.x as number;
+						const y = args.y as number;
+
+						const obj: SceneObject = {
+							id: generateObjectId(),
+							type: objType,
+							name,
+							x,
+							y,
+						};
+
+						if (args.texture) obj.texture = args.texture as string;
+						if (args.text) obj.text = args.text as string;
+
+						sceneBridge.createObject(obj);
+						useVisualEditorStore.getState().addObject(obj);
+
+						return {
+							success: true,
+							message: m.tools.placeObjectSuccess
+								.replace("{name}", name)
+								.replace("{x}", String(x))
+								.replace("{y}", String(y)),
+							data: { id: obj.id, type: objType, name, x, y },
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `${m.tools.placeObjectFailed}: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
+				},
+			},
+			{
+				name: "update_object",
+				description: dm.tools.updateObject.desc,
+				parameters: {
+					type: "object",
+					properties: {
+						id: {
+							type: "string",
+							description: dm.tools.updateObject.idDesc,
+						},
+						x: {
+							type: "number",
+							description: dm.tools.updateObject.xDesc,
+						},
+						y: {
+							type: "number",
+							description: dm.tools.updateObject.yDesc,
+						},
+						rotation: {
+							type: "number",
+							description: dm.tools.updateObject.rotationDesc,
+						},
+						scaleX: {
+							type: "number",
+							description: dm.tools.updateObject.scaleXDesc,
+						},
+						scaleY: {
+							type: "number",
+							description: dm.tools.updateObject.scaleYDesc,
+						},
+						alpha: {
+							type: "number",
+							description: dm.tools.updateObject.alphaDesc,
+						},
+						visible: {
+							type: "boolean",
+							description: dm.tools.updateObject.visibleDesc,
+						},
+						depth: {
+							type: "number",
+							description: dm.tools.updateObject.depthDesc,
+						},
+					},
+					required: ["id"],
+				},
+				async execute(args) {
+					const m = getMessages();
+					try {
+						const id = args.id as string;
+						const props: Partial<SceneObject> = {};
+						if (args.x !== undefined) props.x = args.x as number;
+						if (args.y !== undefined) props.y = args.y as number;
+						if (args.rotation !== undefined) props.rotation = args.rotation as number;
+						if (args.scaleX !== undefined) props.scaleX = args.scaleX as number;
+						if (args.scaleY !== undefined) props.scaleY = args.scaleY as number;
+						if (args.alpha !== undefined) props.alpha = args.alpha as number;
+						if (args.visible !== undefined) props.visible = args.visible as boolean;
+						if (args.depth !== undefined) props.depth = args.depth as number;
+
+						sceneBridge.updateObject(id, props);
+						useVisualEditorStore.getState().updateObject(id, props);
+
+						return {
+							success: true,
+							message: m.tools.updateObjectSuccess.replace("{id}", id),
+							data: { id, updatedProps: Object.keys(props) },
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `${m.tools.updateObjectFailed}: ${e instanceof Error ? e.message : String(e)}`,
+						};
+					}
+				},
+			},
+			{
+				name: "remove_object",
+				description: dm.tools.removeObject.desc,
+				parameters: {
+					type: "object",
+					properties: {
+						id: {
+							type: "string",
+							description: dm.tools.removeObject.idDesc,
+						},
+					},
+					required: ["id"],
+				},
+				async execute(args) {
+					const m = getMessages();
+					try {
+						const id = args.id as string;
+
+						sceneBridge.deleteObject(id);
+						useVisualEditorStore.getState().removeObject(id);
+
+						return {
+							success: true,
+							message: m.tools.removeObjectSuccess.replace("{id}", id),
+							data: { id },
+						};
+					} catch (e) {
+						return {
+							success: false,
+							message: `${m.tools.removeObjectFailed}: ${e instanceof Error ? e.message : String(e)}`,
 						};
 					}
 				},

@@ -40,11 +40,11 @@ export class MenuScene extends Phaser.Scene {
 	}
 
 	preload() {
-		this.load.spritesheet("dude", "https://labs.phaser.io/assets/sprites/dude.png", { frameWidth: 32, frameHeight: 48 });
-		this.load.image("skull", "https://labs.phaser.io/assets/sprites/skull.png");
-		this.load.image("ghost", "https://labs.phaser.io/assets/sprites/ghost.png");
-		this.load.image("gem", "https://labs.phaser.io/assets/sprites/gem.png");
-		this.load.image("firstaid", "https://labs.phaser.io/assets/sprites/firstaid.png");
+		this.load.spritesheet("dude", "/assets/sprites/dude.png", { frameWidth: 32, frameHeight: 48 });
+		this.load.image("skull", "/assets/sprites/skull.png");
+		this.load.image("ghost", "/assets/sprites/ghost.png");
+		this.load.image("gem", "/assets/sprites/gem.png");
+		this.load.image("firstaid", "/assets/sprites/firstaid.png");
 	}
 
 	create() {

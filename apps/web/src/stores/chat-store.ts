@@ -402,15 +402,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
 				if (shouldBreak) break;
 
-				// When the LLM responded with text only (no tool calls),
-				// it thinks the task is done. Verify by running the game.
-				if (!hadToolCalls || hadFileWrites) {
+				// After each round, check for runtime errors.
+				// If the agent wrote files, recompile and wait for fresh errors.
+				// If text-only response (agent thinks it's done), still check
+				// existing errors without recompiling — don't let agent declare
+				// "done" while errors remain.
+				if (hadFileWrites) {
 					try {
 						const { all: allErrors, fresh: freshErrors } = await waitForRuntimeErrors();
 						if (allErrors.length > 0 && !abortController.signal.aborted) {
 							consecutiveErrorRounds++;
 
-							// Auto-switch to debug role for specialized fixing
 							if (state.expertRole === "director" && get().activeRoleId !== "debug") {
 								set({ activeRoleId: "debug" });
 							}
@@ -432,20 +434,45 @@ export const useChatStore = create<ChatState>((set, get) => ({
 								"system",
 								t(em.agent.debugFixPrompt, { prefix, errors: errorList, hint: debugHint }),
 							);
-							// Force another round regardless of hadToolCalls
 							set({ status: "thinking", streamingContent: "" });
 							continue;
 						} else {
 							consecutiveErrorRounds = 0;
-							if (!hadToolCalls) {
-								// No errors, LLM is done — exit loop
-								break;
-							}
+							if (!hadToolCalls) break;
 						}
 					} catch {
 						if (!hadToolCalls) break;
 					}
 				} else if (!hadToolCalls) {
+					// Text-only response — agent thinks it's done.
+					// Check existing errors without recompiling.
+					try {
+						const { useGameStore } = await import("@/stores/game-store");
+						const existingErrors = useGameStore.getState().errors;
+						if (existingErrors.length > 0 && !abortController.signal.aborted) {
+							consecutiveErrorRounds++;
+
+							if (state.expertRole === "director" && get().activeRoleId !== "debug") {
+								set({ activeRoleId: "debug" });
+							}
+
+							const em = getMessages();
+							const errorList = existingErrors.slice(-5).map((e) => `- ${e}`).join("\n");
+							const prefix = t(em.agent.stillErrors, { count: existingErrors.length });
+
+							let debugHint = "\n\n" + em.agent.debugHint;
+							if (consecutiveErrorRounds >= 3) {
+								debugHint = "\n\n" + em.agent.debugHintAlt;
+							}
+
+							state.addMessage(
+								"system",
+								t(em.agent.debugFixPrompt, { prefix, errors: errorList, hint: debugHint }),
+							);
+							set({ status: "thinking", streamingContent: "" });
+							continue;
+						}
+					} catch { /* ignore */ }
 					break;
 				}
 

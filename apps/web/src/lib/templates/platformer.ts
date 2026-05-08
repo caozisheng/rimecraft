@@ -40,12 +40,12 @@ export class MenuScene extends Phaser.Scene {
 	}
 
 	preload() {
-		this.load.spritesheet("dude", "https://labs.phaser.io/assets/sprites/dude.png", { frameWidth: 32, frameHeight: 48 });
-		this.load.image("platform", "https://labs.phaser.io/assets/sprites/platform.png");
-		this.load.image("sky", "https://labs.phaser.io/assets/skies/sky1.png");
-		this.load.image("star", "https://labs.phaser.io/assets/demoscene/star.png");
-		this.load.image("bomb", "https://labs.phaser.io/assets/sprites/bomb.png");
-		this.load.image("wasp", "https://labs.phaser.io/assets/sprites/wasp.png");
+		this.load.spritesheet("dude", "/assets/sprites/dude.png", { frameWidth: 32, frameHeight: 48 });
+		this.load.image("platform", "/assets/sprites/platform.png");
+		this.load.image("sky", "/assets/skies/sky1.png");
+		this.load.image("star", "/assets/demoscene/star.png");
+		this.load.image("bomb", "/assets/sprites/bomb.png");
+		this.load.image("wasp", "/assets/sprites/wasp.png");
 	}
 
 	create() {

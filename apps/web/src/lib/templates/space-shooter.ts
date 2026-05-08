@@ -40,15 +40,15 @@ export class MenuScene extends Phaser.Scene {
 	}
 
 	preload() {
-		this.load.image("ship", "https://labs.phaser.io/assets/sprites/shmup-ship.png");
-		this.load.image("invader", "https://labs.phaser.io/assets/sprites/space-baddie.png");
-		this.load.image("ufo", "https://labs.phaser.io/assets/sprites/ufo.png");
-		this.load.image("bullet", "https://labs.phaser.io/assets/sprites/shmup-bullet.png");
-		this.load.image("enemy-bullet", "https://labs.phaser.io/assets/sprites/bullets/bullet7.png");
-		this.load.image("starfield", "https://labs.phaser.io/assets/skies/starfield.png");
-		this.load.spritesheet("explosion", "https://labs.phaser.io/assets/sprites/explosion.png", { frameWidth: 64, frameHeight: 64 });
-		this.load.image("firstaid", "https://labs.phaser.io/assets/sprites/firstaid.png");
-		this.load.image("shinyball", "https://labs.phaser.io/assets/sprites/shinyball.png");
+		this.load.image("ship", "/assets/sprites/shmup-ship.png");
+		this.load.image("invader", "/assets/sprites/space-baddie.png");
+		this.load.image("ufo", "/assets/sprites/ufo.png");
+		this.load.image("bullet", "/assets/sprites/shmup-bullet.png");
+		this.load.image("enemy-bullet", "/assets/sprites/bullets/bullet7.png");
+		this.load.image("starfield", "/assets/skies/starfield.png");
+		this.load.spritesheet("explosion", "/assets/sprites/explosion.png", { frameWidth: 64, frameHeight: 64 });
+		this.load.image("firstaid", "/assets/sprites/firstaid.png");
+		this.load.image("shinyball", "/assets/sprites/shinyball.png");
 	}
 
 	create() {

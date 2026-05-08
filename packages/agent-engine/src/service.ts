@@ -570,6 +570,7 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 		parts.push("- The system auto-verifies after each code change — if errors persist, it will notify you again");
 		parts.push("- After receiving an error notification, you must use tools (read_file + write_file/patch_file) to fix it — do not reply with text only");
 		parts.push("- If multiple fixes fail, try a completely different implementation approach instead of repeating the same direction");
+		parts.push("- Before declaring a task complete, call get_runtime_errors to verify zero errors remain. If errors exist, fix them first.");
 	} else {
 		parts.push("## 工作规则");
 		parts.push("- 使用中文回复，语言通俗易懂，避免过于专业的术语");
@@ -591,6 +592,7 @@ function buildSystemPrompt(params: RunAgentLoopParams): string {
 		parts.push("- 系统会在每次你修改代码后自动验证——如果错误仍然存在，会再次通知你");
 		parts.push("- 收到错误通知后，必须使用工具（read_file + write_file/patch_file）进行修复，不要只用文字回复");
 		parts.push("- 如果多次修复失败，尝试完全不同的实现方案，不要在同一个方向上反复尝试");
+		parts.push("- 在宣布任务完成之前，先调用 get_runtime_errors 确认没有错误。如果有错误，先修复再回复。");
 	}
 
 	return parts.join("\n");
