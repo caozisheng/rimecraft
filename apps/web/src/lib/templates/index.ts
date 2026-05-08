@@ -5,6 +5,7 @@ import { platformerTemplate } from "./platformer";
 import { spaceShooterTemplate } from "./space-shooter";
 import { rpgTemplate } from "./rpg";
 import { puzzleTemplate } from "./puzzle";
+import { breakoutTemplate } from "./breakout";
 
 export interface TemplateFile {
 	path: string;
@@ -19,6 +20,7 @@ const TEMPLATE_MAP: Record<string, TemplateGenerator> = {
 	"space-shooter": spaceShooterTemplate,
 	rpg: rpgTemplate,
 	puzzle: puzzleTemplate,
+	breakout: breakoutTemplate,
 };
 
 export function generateTemplateFiles(meta: ProjectMeta): TemplateFile[] {

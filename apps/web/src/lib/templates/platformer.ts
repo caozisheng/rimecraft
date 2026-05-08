@@ -34,27 +34,29 @@ new Phaser.Game(config);
 			path: "src/scenes/menu-scene.ts",
 			content: `import Phaser from "phaser";
 
-function makeTexture(scene, key, color, w, h) {
-	const g = scene.add.graphics();
-	g.fillStyle(color, 1);
-	g.fillRect(0, 0, w, h);
-	g.generateTexture(key, w, h);
-	g.destroy();
-}
-
 export class MenuScene extends Phaser.Scene {
 	constructor() {
 		super("MenuScene");
 	}
 
+	preload() {
+		this.load.spritesheet("dude", "https://labs.phaser.io/assets/sprites/dude.png", { frameWidth: 32, frameHeight: 48 });
+		this.load.image("platform", "https://labs.phaser.io/assets/sprites/platform.png");
+		this.load.image("sky", "https://labs.phaser.io/assets/skies/sky1.png");
+		this.load.image("star", "https://labs.phaser.io/assets/demoscene/star.png");
+		this.load.image("bomb", "https://labs.phaser.io/assets/sprites/bomb.png");
+		this.load.image("wasp", "https://labs.phaser.io/assets/sprites/wasp.png");
+	}
+
 	create() {
-		makeTexture(this, "player", 0x06b6d4, 32, 48);
-		makeTexture(this, "ground", 0x4ade80, 200, 32);
-		makeTexture(this, "coin", 0xfbbf24, 16, 16);
-		makeTexture(this, "spike", 0xef4444, 32, 20);
+		this.anims.create({ key: "left", frames: this.anims.generateFrameNumbers("dude", { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
+		this.anims.create({ key: "turn", frames: [{ key: "dude", frame: 4 }], frameRate: 20 });
+		this.anims.create({ key: "right", frames: this.anims.generateFrameNumbers("dude", { start: 5, end: 8 }), frameRate: 10, repeat: -1 });
+
+		this.add.rectangle(400, 300, 800, 600, 0x0f172a);
 
 		this.add
-			.text(400, 180, "${meta.name}", {
+			.text(400, 160, "${meta.name}", {
 				fontSize: "48px",
 				color: "#ffffff",
 				fontFamily: "Arial",
@@ -62,15 +64,19 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 260, "${g.platformer.subtitle}", {
+			.text(400, 240, "${g.platformer.subtitle}", {
 				fontSize: "24px",
 				color: "#a3e635",
 				fontFamily: "Arial",
 			})
 			.setOrigin(0.5);
 
+		const dude = this.add.sprite(400, 350, "dude").setScale(2);
+		dude.play("right");
+		this.tweens.add({ targets: dude, x: 500, duration: 1200, yoyo: true, repeat: -1, onYoyo: () => dude.play("left"), onRepeat: () => dude.play("right") });
+
 		const startBtn = this.add
-			.text(400, 400, "${g.common.startGame}", {
+			.text(400, 440, "${g.common.startGame}", {
 				fontSize: "28px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -78,12 +84,12 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5)
 			.setInteractive({ useHandCursor: true });
 
-		startBtn.on("pointerdown", () => this.scene.start("GameScene"));
+		startBtn.on("pointerdown", () => this.scene.start("GameScene", { level: 1 }));
 		startBtn.on("pointerover", () => startBtn.setColor("#22c55e"));
 		startBtn.on("pointerout", () => startBtn.setColor("#06b6d4"));
 
 		this.add
-			.text(400, 480, "${g.platformer.moveHint}", {
+			.text(400, 520, "${g.platformer.moveHint}", {
 				fontSize: "16px",
 				color: "#94a3b8",
 				fontFamily: "Arial",
@@ -97,135 +103,192 @@ export class MenuScene extends Phaser.Scene {
 			path: "src/scenes/game-scene.ts",
 			content: `import Phaser from "phaser";
 
+const LEVELS = [
+	{
+		platforms: [
+			{ x: 400, y: 584, scaleX: 2 },
+			{ x: 100, y: 460, scaleX: 0.5 },
+			{ x: 400, y: 380, scaleX: 0.7 },
+			{ x: 700, y: 300, scaleX: 0.5 },
+			{ x: 250, y: 220, scaleX: 0.6 },
+			{ x: 550, y: 140, scaleX: 0.5 },
+		],
+		movingPlatforms: [
+			{ x: 550, y: 460, scaleX: 0.5, moveX: 150, speed: 2000 },
+		],
+		stars: [
+			{ x: 100, y: 420 }, { x: 400, y: 340 }, { x: 700, y: 260 },
+			{ x: 250, y: 180 }, { x: 550, y: 100 }, { x: 300, y: 540 }, { x: 600, y: 540 },
+		],
+		enemies: [
+			{ x: 350, y: 354, minX: 310, maxX: 490 },
+		],
+		bombs: [{ x: 500, y: 360 }, { x: 150, y: 200 }],
+		playerStart: { x: 100, y: 520 },
+	},
+	{
+		platforms: [
+			{ x: 400, y: 584, scaleX: 2 },
+			{ x: 700, y: 480, scaleX: 0.5 },
+			{ x: 300, y: 400, scaleX: 0.6 },
+			{ x: 100, y: 300, scaleX: 0.5 },
+			{ x: 500, y: 240, scaleX: 0.7 },
+			{ x: 700, y: 160, scaleX: 0.5 },
+			{ x: 300, y: 100, scaleX: 0.5 },
+		],
+		movingPlatforms: [
+			{ x: 200, y: 480, scaleX: 0.5, moveX: 200, speed: 2500 },
+			{ x: 400, y: 160, scaleX: 0.4, moveX: 100, speed: 1800 },
+		],
+		stars: [
+			{ x: 700, y: 440 }, { x: 300, y: 360 }, { x: 100, y: 260 },
+			{ x: 500, y: 200 }, { x: 700, y: 120 }, { x: 300, y: 60 },
+			{ x: 200, y: 540 }, { x: 500, y: 540 },
+		],
+		enemies: [
+			{ x: 250, y: 374, minX: 200, maxX: 400 },
+			{ x: 500, y: 214, minX: 400, maxX: 600 },
+		],
+		bombs: [{ x: 650, y: 140 }],
+		playerStart: { x: 100, y: 520 },
+	},
+];
+
 export class GameScene extends Phaser.Scene {
-	private player;
-	private platforms;
-	private coins;
-	private spikes;
-	private cursors;
+	private player!: Phaser.Physics.Arcade.Sprite;
+	private platforms!: Phaser.Physics.Arcade.StaticGroup;
+	private movingPlatforms!: Phaser.Physics.Arcade.Group;
+	private stars!: Phaser.Physics.Arcade.Group;
+	private enemies!: Phaser.Physics.Arcade.Group;
+	private bombs!: Phaser.Physics.Arcade.StaticGroup;
+	private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
 	private score = 0;
-	private scoreText;
+	private level = 1;
+	private scoreText!: Phaser.GameObjects.Text;
+	private levelText!: Phaser.GameObjects.Text;
 
 	constructor() {
 		super("GameScene");
 	}
 
+	init(data: any) {
+		this.level = data.level || 1;
+	}
+
 	create() {
 		this.score = 0;
 
-		// 平台布局
+		this.add.image(400, 300, "sky");
+
+		const lvl = LEVELS[(this.level - 1) % LEVELS.length];
+
 		this.platforms = this.physics.add.staticGroup();
-		this.createPlatform(400, 580, 4);
-		this.createPlatform(100, 460, 1);
-		this.createPlatform(400, 380, 1.5);
-		this.createPlatform(700, 300, 1);
-		this.createPlatform(200, 220, 1.2);
-		this.createPlatform(550, 150, 1);
+		for (const p of lvl.platforms) {
+			this.platforms.create(p.x, p.y, "platform").setScale(p.scaleX, 0.5).refreshBody();
+		}
 
-		// 金币
-		this.coins = this.physics.add.group({ allowGravity: false });
-		this.addCoin(100, 420);
-		this.addCoin(400, 340);
-		this.addCoin(700, 260);
-		this.addCoin(200, 180);
-		this.addCoin(550, 110);
-		this.addCoin(300, 540);
-		this.addCoin(600, 540);
+		this.movingPlatforms = this.physics.add.group({ allowGravity: false, immovable: true });
+		for (const mp of lvl.movingPlatforms) {
+			const plat = this.movingPlatforms.create(mp.x, mp.y, "platform") as Phaser.Physics.Arcade.Sprite;
+			plat.setScale(mp.scaleX, 0.5).refreshBody();
+			(plat.body as Phaser.Physics.Arcade.Body).setImmovable(true);
+			this.tweens.add({ targets: plat, x: mp.x + mp.moveX, duration: mp.speed, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+		}
 
-		// 尖刺障碍
-		this.spikes = this.physics.add.staticGroup();
-		this.addSpike(500, 368);
-		this.addSpike(150, 208);
+		this.stars = this.physics.add.group({ allowGravity: false });
+		for (const s of lvl.stars) {
+			const star = this.stars.create(s.x, s.y, "star") as Phaser.Physics.Arcade.Sprite;
+			star.setScale(0.5);
+			this.tweens.add({ targets: star, y: s.y - 10, duration: 800, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+		}
 
-		// 玩家
-		this.player = this.physics.add.sprite(100, 520, "player");
-		this.player.body.setCollideWorldBounds(true);
-		this.player.body.setBounce(0.1);
+		this.enemies = this.physics.add.group({ allowGravity: false });
+		for (const e of lvl.enemies) {
+			const wasp = this.enemies.create(e.x, e.y, "wasp") as Phaser.Physics.Arcade.Sprite;
+			wasp.setScale(0.8);
+			this.tweens.add({ targets: wasp, x: e.maxX, duration: 2000, yoyo: true, repeat: -1, ease: "Linear" });
+		}
 
-		// 碰撞
+		this.bombs = this.physics.add.staticGroup();
+		for (const b of lvl.bombs) {
+			this.bombs.create(b.x, b.y, "bomb").refreshBody();
+		}
+
+		this.player = this.physics.add.sprite(lvl.playerStart.x, lvl.playerStart.y, "dude");
+		this.player.setBounce(0.1);
+		this.player.setCollideWorldBounds(true);
+
 		this.physics.add.collider(this.player, this.platforms);
-		this.physics.add.overlap(this.player, this.coins, this.collectCoin, undefined, this);
-		this.physics.add.overlap(this.player, this.spikes, this.hitSpike, undefined, this);
+		this.physics.add.collider(this.player, this.movingPlatforms);
+		this.physics.add.overlap(this.player, this.stars, this.collectStar, undefined, this);
+		this.physics.add.overlap(this.player, this.enemies, this.hitDanger, undefined, this);
+		this.physics.add.overlap(this.player, this.bombs, this.hitDanger, undefined, this);
 
-		// 输入
-		this.cursors = this.input.keyboard.createCursorKeys();
-		this.input.keyboard.addKey("SPACE").on("down", () => this.jump());
+		this.cursors = this.input.keyboard!.createCursorKeys();
+		this.input.keyboard!.addKey("SPACE").on("down", () => this.jump());
 
-		// 分数
-		this.scoreText = this.add
-			.text(16, 16, "${g.platformer.coins}: 0", {
-				fontSize: "24px",
-				color: "#fbbf24",
-				fontFamily: "Arial",
-			})
-			.setScrollFactor(0)
-			.setDepth(100);
+		this.scoreText = this.add.text(16, 16, "${g.platformer.coins}: 0", { fontSize: "24px", color: "#fbbf24", fontFamily: "Arial" }).setScrollFactor(0).setDepth(100);
+		this.levelText = this.add.text(784, 16, "Lv." + this.level, { fontSize: "22px", color: "#a3e635", fontFamily: "Arial" }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
 	}
 
 	update() {
+		const body = this.player.body as Phaser.Physics.Arcade.Body;
 		if (this.cursors.left.isDown) {
-			this.player.body.setVelocityX(-200);
+			body.setVelocityX(-200);
+			this.player.anims.play("left", true);
 		} else if (this.cursors.right.isDown) {
-			this.player.body.setVelocityX(200);
+			body.setVelocityX(200);
+			this.player.anims.play("right", true);
 		} else {
-			this.player.body.setVelocityX(0);
+			body.setVelocityX(0);
+			this.player.anims.play("turn");
 		}
 
-		if (this.cursors.up.isDown && this.player.body.blocked.down) {
+		if (this.cursors.up.isDown && body.blocked.down) {
 			this.jump();
 		}
 
 		if (this.player.y > 620) {
-			this.scene.start("GameOverScene", { score: this.score });
+			this.scene.start("GameOverScene", { score: this.score, level: this.level });
 		}
-	}
 
-	private jump() {
-		if (this.player.body.blocked.down) {
-			this.player.body.setVelocityY(-400);
-		}
-	}
-
-	private createPlatform(x, y, scaleX) {
-		const p = this.platforms.create(x, y, "ground");
-		p.setScale(scaleX, 1).refreshBody();
-	}
-
-	private addCoin(x, y) {
-		const coin = this.coins.create(x, y, "coin");
-		coin.body.setAllowGravity(false);
-		this.tweens.add({
-			targets: coin,
-			y: y - 10,
-			duration: 800,
-			yoyo: true,
-			repeat: -1,
-			ease: "Sine.easeInOut",
+		this.movingPlatforms.getChildren().forEach((p: any) => {
+			(p.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
 		});
 	}
 
-	private addSpike(x, y) {
-		this.spikes.create(x, y, "spike").refreshBody();
-	}
-
-	private collectCoin(_player, coin) {
-		coin.disableBody(true, true);
-		this.score += 10;
-		this.scoreText.setText("${g.platformer.coins}: " + this.score);
-
-		if (this.coins.countActive(true) === 0) {
-			this.time.delayedCall(500, () => {
-				this.scene.start("GameOverScene", { score: this.score, win: true });
-			});
+	private jump() {
+		const body = this.player.body as Phaser.Physics.Arcade.Body;
+		if (body.blocked.down) {
+			body.setVelocityY(-420);
 		}
 	}
 
-	private hitSpike() {
+	private collectStar(_player: any, star: any) {
+		star.disableBody(true, true);
+		this.score += 10;
+		this.scoreText.setText("${g.platformer.coins}: " + this.score);
+
+		if (this.stars.countActive(true) === 0) {
+			if (this.level < LEVELS.length) {
+				this.time.delayedCall(500, () => {
+					this.scene.start("GameScene", { level: this.level + 1 });
+				});
+			} else {
+				this.time.delayedCall(500, () => {
+					this.scene.start("GameOverScene", { score: this.score, level: this.level, win: true });
+				});
+			}
+		}
+	}
+
+	private hitDanger() {
 		this.physics.pause();
 		this.player.setTint(0xff0000);
+		this.player.anims.play("turn");
 		this.cameras.main.shake(200, 0.01);
 		this.time.delayedCall(600, () => {
-			this.scene.start("GameOverScene", { score: this.score });
+			this.scene.start("GameOverScene", { score: this.score, level: this.level });
 		});
 	}
 }
@@ -240,7 +303,7 @@ export class GameOverScene extends Phaser.Scene {
 		super("GameOverScene");
 	}
 
-	create(data) {
+	create(data: any) {
 		const score = data.score ?? 0;
 		const win = data.win ?? false;
 
@@ -253,12 +316,22 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 280, "${g.platformer.coins}: " + score, {
+			.text(400, 260, "${g.platformer.coins}: " + score, {
 				fontSize: "32px",
 				color: "#fbbf24",
 				fontFamily: "Arial",
 			})
 			.setOrigin(0.5);
+
+		if (!win) {
+			this.add
+				.text(400, 310, "Lv." + (data.level ?? 1), {
+					fontSize: "22px",
+					color: "#94a3b8",
+					fontFamily: "Arial",
+				})
+				.setOrigin(0.5);
+		}
 
 		const retryBtn = this.add
 			.text(400, 400, "${g.platformer.tryAgain}", {
@@ -269,7 +342,7 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5)
 			.setInteractive({ useHandCursor: true });
 
-		retryBtn.on("pointerdown", () => this.scene.start("GameScene"));
+		retryBtn.on("pointerdown", () => this.scene.start("GameScene", { level: 1 }));
 		retryBtn.on("pointerover", () => retryBtn.setColor("#22c55e"));
 		retryBtn.on("pointerout", () => retryBtn.setColor("#06b6d4"));
 

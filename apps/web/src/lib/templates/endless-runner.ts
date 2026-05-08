@@ -16,7 +16,7 @@ const config = {
 	type: Phaser.AUTO,
 	width: 800,
 	height: 600,
-	backgroundColor: "#1a1a2e",
+	backgroundColor: "#87ceeb",
 	physics: {
 		default: "arcade",
 		arcade: {
@@ -34,26 +34,28 @@ new Phaser.Game(config);
 			path: "src/scenes/menu-scene.ts",
 			content: `import Phaser from "phaser";
 
-function makeTexture(scene, key, color, w, h) {
-	const g = scene.add.graphics();
-	g.fillStyle(color, 1);
-	g.fillRect(0, 0, w, h);
-	g.generateTexture(key, w, h);
-	g.destroy();
-}
-
 export class MenuScene extends Phaser.Scene {
 	constructor() {
 		super("MenuScene");
 	}
 
+	preload() {
+		this.load.spritesheet("dude", "https://labs.phaser.io/assets/sprites/dude.png", { frameWidth: 32, frameHeight: 48 });
+		this.load.image("platform", "https://labs.phaser.io/assets/sprites/platform.png");
+		this.load.image("sky", "https://labs.phaser.io/assets/skies/sky1.png");
+		this.load.image("star", "https://labs.phaser.io/assets/demoscene/star.png");
+		this.load.image("bomb", "https://labs.phaser.io/assets/sprites/bomb.png");
+		this.load.image("saw", "https://labs.phaser.io/assets/sprites/saw.png");
+	}
+
 	create() {
-		makeTexture(this, "ground", 0x4ade80, 800, 40);
-		makeTexture(this, "player", 0x06b6d4, 40, 40);
-		makeTexture(this, "obstacle", 0xef4444, 30, 50);
+		this.anims.create({ key: "run", frames: this.anims.generateFrameNumbers("dude", { start: 5, end: 8 }), frameRate: 10, repeat: -1 });
+		this.anims.create({ key: "turn", frames: [{ key: "dude", frame: 4 }], frameRate: 20 });
+
+		this.add.rectangle(400, 300, 800, 600, 0x0f172a);
 
 		this.add
-			.text(400, 180, "${meta.name}", {
+			.text(400, 150, "${meta.name}", {
 				fontSize: "48px",
 				color: "#ffffff",
 				fontFamily: "Arial",
@@ -61,15 +63,18 @@ export class MenuScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 260, "${g.endlessRunner.subtitle}", {
+			.text(400, 230, "${g.endlessRunner.subtitle}", {
 				fontSize: "24px",
 				color: "#a3e635",
 				fontFamily: "Arial",
 			})
 			.setOrigin(0.5);
 
+		const dude = this.add.sprite(400, 340, "dude").setScale(2);
+		dude.play("run");
+
 		const startBtn = this.add
-			.text(400, 400, "${g.common.startGame}", {
+			.text(400, 420, "${g.common.startGame}", {
 				fontSize: "28px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -82,7 +87,7 @@ export class MenuScene extends Phaser.Scene {
 		startBtn.on("pointerout", () => startBtn.setColor("#06b6d4"));
 
 		this.add
-			.text(400, 480, "${g.endlessRunner.jumpHint}", {
+			.text(400, 500, "${g.endlessRunner.jumpHint}", {
 				fontSize: "16px",
 				color: "#94a3b8",
 				fontFamily: "Arial",
@@ -97,14 +102,19 @@ export class MenuScene extends Phaser.Scene {
 			content: `import Phaser from "phaser";
 
 export class GameScene extends Phaser.Scene {
-	private player;
-	private ground;
-	private obstacles;
+	private player!: Phaser.Physics.Arcade.Sprite;
+	private ground!: Phaser.Physics.Arcade.StaticGroup;
+	private obstacles!: Phaser.Physics.Arcade.Group;
+	private coins!: Phaser.Physics.Arcade.Group;
+	private clouds: Phaser.GameObjects.Image[] = [];
+	private mountains: Phaser.GameObjects.Rectangle[] = [];
 	private score = 0;
-	private scoreText;
+	private coinCount = 0;
 	private speed = 300;
-	private spawnTimer;
-	private speedTimer;
+	private scoreText!: Phaser.GameObjects.Text;
+	private coinText!: Phaser.GameObjects.Text;
+	private spawnTimer!: Phaser.Time.TimerEvent;
+	private coinTimer!: Phaser.Time.TimerEvent;
 	private isGameOver = false;
 
 	constructor() {
@@ -113,102 +123,134 @@ export class GameScene extends Phaser.Scene {
 
 	create() {
 		this.score = 0;
+		this.coinCount = 0;
 		this.speed = 300;
 		this.isGameOver = false;
 
-		// 地面
-		this.ground = this.physics.add.staticGroup();
-		this.ground.create(400, 590, "ground").refreshBody();
+		this.add.image(400, 300, "sky");
 
-		// 玩家
-		this.player = this.physics.add.sprite(150, 500, "player");
-		this.player.body.setCollideWorldBounds(true);
+		this.mountains = [];
+		for (let i = 0; i < 6; i++) {
+			const h = Phaser.Math.Between(80, 160);
+			const m = this.add.rectangle(i * 180, 560 - h / 2, Phaser.Math.Between(120, 200), h, 0x475569, 0.4);
+			this.mountains.push(m);
+		}
+
+		this.clouds = [];
+		for (let i = 0; i < 5; i++) {
+			const cloud = this.add.image(Phaser.Math.Between(0, 900), Phaser.Math.Between(50, 200), "platform");
+			cloud.setScale(0.3, 0.15).setAlpha(0.5).setTint(0xffffff);
+			this.clouds.push(cloud);
+		}
+
+		this.ground = this.physics.add.staticGroup();
+		const g1 = this.ground.create(400, 584, "platform") as Phaser.Physics.Arcade.Sprite;
+		g1.setScale(2, 0.5).refreshBody();
+
+		this.player = this.physics.add.sprite(150, 500, "dude");
+		this.player.setBounce(0.1);
+		this.player.setCollideWorldBounds(true);
+		this.player.play("run");
 		this.physics.add.collider(this.player, this.ground);
 
-		// 障碍物对象池
-		this.obstacles = this.physics.add.group({
-			maxSize: 15,
-			runChildUpdate: false,
-		});
+		this.obstacles = this.physics.add.group({ maxSize: 20 });
+		this.coins = this.physics.add.group({ maxSize: 15, allowGravity: false });
 
-		this.physics.add.overlap(
-			this.player,
-			this.obstacles,
-			this.hitObstacle,
-			undefined,
-			this,
-		);
+		this.physics.add.overlap(this.player, this.obstacles, this.hitObstacle, undefined, this);
+		this.physics.add.overlap(this.player, this.coins, this.collectCoin, undefined, this);
 
-		// 定时生成障碍物
-		this.spawnTimer = this.time.addEvent({
-			delay: 1500,
-			loop: true,
-			callback: this.spawnObstacle,
-			callbackScope: this,
-		});
+		this.spawnTimer = this.time.addEvent({ delay: 1800, loop: true, callback: this.spawnObstacle, callbackScope: this });
+		this.coinTimer = this.time.addEvent({ delay: 2500, loop: true, callback: this.spawnCoin, callbackScope: this });
+		this.time.addEvent({ delay: 5000, loop: true, callback: () => { this.speed = Math.min(this.speed + 25, 550); } });
 
-		// 逐渐加速
-		this.speedTimer = this.time.addEvent({
-			delay: 5000,
-			loop: true,
-			callback: () => {
-				this.speed = Math.min(this.speed + 30, 600);
-			},
-		});
-
-		// 分数
-		this.scoreText = this.add
-			.text(16, 16, "${g.common.score}: 0", {
-				fontSize: "28px",
-				color: "#ffffff",
-				fontFamily: "Arial",
-			})
-			.setScrollFactor(0)
-			.setDepth(100);
-
-		// 输入：空格 / 点击 / 触摸
-		this.input.keyboard.addKey("SPACE").on("down", () => this.jump());
+		this.input.keyboard!.addKey("SPACE").on("down", () => this.jump());
 		this.input.on("pointerdown", () => this.jump());
+
+		this.scoreText = this.add.text(16, 16, "${g.common.score}: 0", { fontSize: "26px", color: "#ffffff", fontFamily: "Arial", stroke: "#000", strokeThickness: 3 }).setScrollFactor(0).setDepth(100);
+		this.coinText = this.add.text(16, 50, "⭐ 0", { fontSize: "22px", color: "#fbbf24", fontFamily: "Arial", stroke: "#000", strokeThickness: 2 }).setScrollFactor(0).setDepth(100);
 	}
 
 	update() {
 		if (this.isGameOver) return;
 
-		// 加分
 		this.score += 1;
 		this.scoreText.setText("${g.common.score}: " + this.score);
 
-		// 回收出屏障碍物
-		this.obstacles.getChildren().forEach((obj) => {
-			const o = obj;
-			if (o.active && o.x < -60) {
-				this.obstacles.killAndHide(o);
-				o.body.stop();
+		for (const cloud of this.clouds) {
+			cloud.x -= 0.5;
+			if (cloud.x < -100) cloud.x = 900;
+		}
+		for (const m of this.mountains) {
+			m.x -= 1;
+			if (m.x < -120) m.x = 900;
+		}
+
+		this.obstacles.getChildren().forEach((obj: any) => {
+			if (obj.active && obj.x < -60) {
+				this.obstacles.killAndHide(obj);
+				(obj.body as Phaser.Physics.Arcade.Body).stop();
+			}
+		});
+
+		this.coins.getChildren().forEach((obj: any) => {
+			if (obj.active && obj.x < -30) {
+				this.coins.killAndHide(obj);
+				(obj.body as Phaser.Physics.Arcade.Body).stop();
 			}
 		});
 	}
 
 	private jump() {
 		if (this.isGameOver) return;
-		const onGround = this.player.body.blocked.down;
-		if (onGround) {
-			this.player.body.setVelocityY(-450);
+		const body = this.player.body as Phaser.Physics.Arcade.Body;
+		if (body.blocked.down) {
+			body.setVelocityY(-460);
 		}
 	}
 
 	private spawnObstacle() {
 		if (this.isGameOver) return;
 
-		const x = 850;
-		const y = 560;
-		const obs = this.obstacles.getFirst(false, true, x, y, "obstacle");
+		const isAir = Math.random() < 0.3;
+		const y = isAir ? Phaser.Math.Between(380, 440) : 552;
+		const key = isAir ? "saw" : "bomb";
+		const obs = this.obstacles.getFirst(false, true, 860, y, key);
 
 		if (obs) {
 			obs.setActive(true).setVisible(true);
-			obs.body.setVelocityX(-this.speed);
-			obs.body.setAllowGravity(false);
-			obs.body.setImmovable(true);
+			const body = obs.body as Phaser.Physics.Arcade.Body;
+			body.setVelocityX(-this.speed);
+			body.setAllowGravity(false);
+			body.setImmovable(true);
+			if (isAir) {
+				obs.setScale(0.7);
+				this.tweens.add({ targets: obs, angle: 360, duration: 1000, repeat: -1 });
+			} else {
+				obs.setScale(1.5);
+			}
 		}
+	}
+
+	private spawnCoin() {
+		if (this.isGameOver) return;
+
+		const y = Phaser.Math.Between(350, 520);
+		const coin = this.coins.getFirst(false, true, 860, y, "star");
+		if (coin) {
+			coin.setActive(true).setVisible(true);
+			coin.setScale(0.4);
+			const body = coin.body as Phaser.Physics.Arcade.Body;
+			body.setVelocityX(-this.speed * 0.9);
+			body.setAllowGravity(false);
+		}
+	}
+
+	private collectCoin(_player: any, coin: any) {
+		this.coins.killAndHide(coin);
+		(coin.body as Phaser.Physics.Arcade.Body).stop();
+		this.coinCount++;
+		this.coinText.setText("⭐ " + this.coinCount);
+		this.score += 50;
 	}
 
 	private hitObstacle() {
@@ -217,13 +259,13 @@ export class GameScene extends Phaser.Scene {
 
 		this.physics.pause();
 		this.player.setTint(0xff0000);
+		this.player.anims.play("turn");
 		this.spawnTimer.remove();
-		this.speedTimer.remove();
-
+		this.coinTimer.remove();
 		this.cameras.main.shake(200, 0.01);
 
 		this.time.delayedCall(800, () => {
-			this.scene.start("GameOverScene", { score: this.score });
+			this.scene.start("GameOverScene", { score: this.score, coins: this.coinCount });
 		});
 	}
 }
@@ -238,11 +280,12 @@ export class GameOverScene extends Phaser.Scene {
 		super("GameOverScene");
 	}
 
-	create(data) {
+	create(data: any) {
 		const score = data.score ?? 0;
+		const coins = data.coins ?? 0;
 
 		this.add
-			.text(400, 200, "${g.common.gameOver}", {
+			.text(400, 180, "${g.common.gameOver}", {
 				fontSize: "48px",
 				color: "#ef4444",
 				fontFamily: "Arial",
@@ -250,8 +293,16 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 300, "${g.common.finalScore}: " + score, {
+			.text(400, 270, "${g.common.finalScore}: " + score, {
 				fontSize: "32px",
+				color: "#fbbf24",
+				fontFamily: "Arial",
+			})
+			.setOrigin(0.5);
+
+		this.add
+			.text(400, 320, "⭐ " + coins, {
+				fontSize: "24px",
 				color: "#fbbf24",
 				fontFamily: "Arial",
 			})

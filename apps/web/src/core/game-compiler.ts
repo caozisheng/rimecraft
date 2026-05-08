@@ -119,8 +119,9 @@ ${sorted.map((id) => `	__define("${id}", function(exports, require) {\n${modules
 
 		// Remove type annotations from variable declarations (with initializer)
 		// let x: Type = ... → let x = ...
+		// Allow ; inside type (e.g. { r: number; c: number }[])
 		result = result.replace(
-			/((?:const|let|var)\s+\w+)\s*:\s*[^=\n;]+(\s*=)/g,
+			/((?:const|let|var)\s+\w+)\s*:\s*[^=\n]+(\s*=)/g,
 			"$1$2",
 		);
 
@@ -134,14 +135,15 @@ ${sorted.map((id) => `	__define("${id}", function(exports, require) {\n${modules
 		// Remove class field type annotations (without initializer)
 		// Handles: fieldName: Type; / fieldName!: Type; / fieldName?: Type;
 		result = result.replace(
-			/^(\s+\w+)[?!]?\s*:\s*[^=\n;{(]+;/gm,
+			/^(\s+\w+)[?!]?\s*:\s*[^=\n;{]+;/gm,
 			"$1;",
 		);
 
 		// Remove class field type annotations (with initializer)
 		// fieldName: Type = value → fieldName = value
+		// (?!>) prevents matching => (arrow functions in object literals)
 		result = result.replace(
-			/^(\s+\w+)[?!]?\s*:\s*[^=\n;{(]+(\s*=)/gm,
+			/^(\s+\w+)[?!]?\s*:\s*[^=\n;{]+(\s*=(?!>))/gm,
 			"$1$2",
 		);
 
@@ -160,9 +162,10 @@ ${sorted.map((id) => `	__define("${id}", function(exports, require) {\n${modules
 
 		// Remove type annotations from function parameters
 		// Only matches after ( or , to avoid mangling object literal properties
+		// PascalCase types required (not ALL_CAPS like TWEEN_MS)
 		// (x: number, scene: Phaser.Scene, items: Item[]) → (x, scene, items)
 		result = result.replace(
-			/([(,]\s*)(\w+)\??\s*:\s*(?:string|number|boolean|void|any|unknown|never|null|undefined|[A-Z][\w.]*(?:<[^>]*>)?(?:\[\])?)(?=\s*[,)=])/g,
+			/([(,]\s*)(\w+)\??\s*:\s*(?:string|number|boolean|void|any|unknown|never|null|undefined|[A-Z][a-z][\w.]*(?:<[^>]*>)?(?:\[\])?)(?=\s*[,)=])/g,
 			"$1$2",
 		);
 

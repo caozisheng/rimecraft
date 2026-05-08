@@ -12,6 +12,7 @@ const TEMPLATES = [
 	{ id: "space-shooter" as const, icon: "🚀" },
 	{ id: "rpg" as const, icon: "⚔️" },
 	{ id: "puzzle" as const, icon: "🧩" },
+	{ id: "breakout" as const, icon: "🧱" },
 	{ id: "blank" as const, icon: "✨" },
 ];
 

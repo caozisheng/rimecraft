@@ -13,16 +13,9 @@ import { GameScene } from "./scenes/game-scene";
 
 const config = {
 	type: Phaser.AUTO,
-	width: 800,
+	width: 500,
 	height: 600,
 	backgroundColor: "#1e1b4b",
-	physics: {
-		default: "arcade",
-		arcade: {
-			gravity: { x: 0, y: 0 },
-			debug: false,
-		},
-	},
 	scene: [MenuScene, GameScene],
 };
 
@@ -33,44 +26,40 @@ new Phaser.Game(config);
 			path: "src/scenes/menu-scene.ts",
 			content: `import Phaser from "phaser";
 
-function makeTexture(scene, key, color, w, h) {
-	const g = scene.add.graphics();
-	g.fillStyle(color, 1);
-	g.fillRect(0, 0, w, h);
-	g.generateTexture(key, w, h);
-	g.destroy();
-}
-
 export class MenuScene extends Phaser.Scene {
 	constructor() {
 		super("MenuScene");
 	}
 
 	create() {
-		makeTexture(this, "block", 0x06b6d4, 48, 48);
-		makeTexture(this, "wall", 0x64748b, 48, 48);
-		makeTexture(this, "target", 0x22c55e, 48, 48);
-		makeTexture(this, "player", 0xfbbf24, 40, 40);
-		makeTexture(this, "floor", 0x1e293b, 48, 48);
-
 		this.add
-			.text(400, 180, "${meta.name}", {
-				fontSize: "48px",
+			.text(250, 140, "${meta.name}", {
+				fontSize: "44px",
 				color: "#ffffff",
 				fontFamily: "Arial",
 			})
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 260, "${g.puzzle.subtitle}", {
+			.text(250, 220, "${g.puzzle.subtitle}", {
 				fontSize: "24px",
 				color: "#a3e635",
 				fontFamily: "Arial",
 			})
 			.setOrigin(0.5);
 
+		const preview = this.add.graphics();
+		const colors = [0x6366f1, 0x8b5cf6, 0xa78bfa, 0xc4b5fd];
+		const nums = [2, 4, 8, 16];
+		for (let i = 0; i < 4; i++) {
+			const x = 130 + i * 65;
+			preview.fillStyle(colors[i], 1);
+			preview.fillRoundedRect(x, 280, 55, 55, 8);
+			this.add.text(x + 27, 307, nums[i].toString(), { fontSize: "22px", color: "#ffffff", fontFamily: "Arial", fontStyle: "bold" }).setOrigin(0.5);
+		}
+
 		const startBtn = this.add
-			.text(400, 400, "${g.puzzle.startChallenge}", {
+			.text(250, 400, "${g.puzzle.startChallenge}", {
 				fontSize: "28px",
 				color: "#06b6d4",
 				fontFamily: "Arial",
@@ -83,8 +72,8 @@ export class MenuScene extends Phaser.Scene {
 		startBtn.on("pointerout", () => startBtn.setColor("#06b6d4"));
 
 		this.add
-			.text(400, 480, "${g.puzzle.moveHint}", {
-				fontSize: "16px",
+			.text(250, 480, "${g.puzzle.moveHint}", {
+				fontSize: "15px",
 				color: "#94a3b8",
 				fontFamily: "Arial",
 			})
@@ -97,218 +86,262 @@ export class MenuScene extends Phaser.Scene {
 			path: "src/scenes/game-scene.ts",
 			content: `import Phaser from "phaser";
 
-const TILE = 48;
-const OFFSET_X = 160;
-const OFFSET_Y = 84;
+const GRID = 4;
+const TILE = 100;
+const GAP = 12;
+const BOARD_X = 18;
+const BOARD_Y = 130;
+const TWEEN_MS = 100;
+const STORAGE_KEY = "rimecraft_2048_best";
 
-// 0=地面 1=墙壁 2=玩家 3=箱子 4=目标 5=箱子在目标上 6=玩家在目标上
-const LEVELS = [
-	[
-		[1,1,1,1,1,1,1,1,1,1],
-		[1,0,0,1,0,0,0,0,0,1],
-		[1,0,3,0,0,0,4,0,0,1],
-		[1,0,0,1,0,1,1,0,0,1],
-		[1,1,0,1,4,0,1,0,0,1],
-		[1,0,0,0,3,0,0,0,0,1],
-		[1,0,0,0,0,1,0,0,0,1],
-		[1,0,2,0,0,0,0,0,0,1],
-		[1,1,1,1,1,1,1,1,1,1],
-	],
-];
+const TILE_COLORS: Record<number, number> = {
+	2: 0x6366f1, 4: 0x8b5cf6, 8: 0xa78bfa, 16: 0xc4b5fd,
+	32: 0xf472b6, 64: 0xec4899, 128: 0xfbbf24, 256: 0xf59e0b,
+	512: 0xf97316, 1024: 0xef4444, 2048: 0x22c55e,
+};
 
 export class GameScene extends Phaser.Scene {
-	private grid = [];
-	private playerPos = { r: 0, c: 0 };
-	private tiles = new Map();
-	private blocks = new Map();
-	private playerSprite;
-	private moves = 0;
-	private movesText;
-	private isMoving = false;
-	private level = 0;
+	private grid: number[][] = [];
+	private tileSprites: (Phaser.GameObjects.Container | null)[][] = [];
+	private score = 0;
+	private bestScore = 0;
+	private scoreText!: Phaser.GameObjects.Text;
+	private bestText!: Phaser.GameObjects.Text;
+	private canMove = true;
+	private movingCount = 0;
 
 	constructor() {
 		super("GameScene");
 	}
 
 	create() {
-		this.moves = 0;
-		this.level = 0;
-		this.tiles.clear();
-		this.blocks.clear();
-		this.loadLevel(this.level);
+		this.score = 0;
+		this.bestScore = parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10);
+		this.canMove = true;
+		this.movingCount = 0;
 
-		this.movesText = this.add
-			.text(16, 16, "${g.puzzle.steps}: 0", {
-				fontSize: "22px",
-				color: "#fbbf24",
-				fontFamily: "Arial",
-			})
-			.setDepth(100);
+		this.grid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
+		this.tileSprites = Array.from({ length: GRID }, () => Array(GRID).fill(null));
 
-		const resetBtn = this.add
-			.text(784, 16, "${g.puzzle.reset}", {
-				fontSize: "18px",
-				color: "#94a3b8",
-				fontFamily: "Arial",
-			})
-			.setOrigin(1, 0)
-			.setInteractive({ useHandCursor: true })
-			.setDepth(100);
+		this.add.text(20, 20, "${meta.name}", { fontSize: "28px", color: "#ffffff", fontFamily: "Arial", fontStyle: "bold" });
 
-		resetBtn.on("pointerdown", () => {
-			this.moves = 0;
-			this.loadLevel(this.level);
-			this.movesText.setText("${g.puzzle.steps}: 0");
-		});
+		this.scoreText = this.add.text(20, 65, "${g.common.score}: 0", { fontSize: "20px", color: "#fbbf24", fontFamily: "Arial" });
+		this.bestText = this.add.text(480, 65, "${g.puzzle.bestScore}: " + this.bestScore, { fontSize: "20px", color: "#94a3b8", fontFamily: "Arial" }).setOrigin(1, 0);
 
-		this.input.keyboard.on("keydown-LEFT", () => this.tryMove(0, -1));
-		this.input.keyboard.on("keydown-RIGHT", () => this.tryMove(0, 1));
-		this.input.keyboard.on("keydown-UP", () => this.tryMove(-1, 0));
-		this.input.keyboard.on("keydown-DOWN", () => this.tryMove(1, 0));
-	}
+		const boardBg = this.add.graphics();
+		boardBg.fillStyle(0x1e293b, 1);
+		boardBg.fillRoundedRect(BOARD_X - GAP, BOARD_Y - GAP, GRID * TILE + (GRID + 1) * GAP, GRID * TILE + (GRID + 1) * GAP, 12);
 
-	private loadLevel(idx) {
-		this.isMoving = false;
-
-		this.tiles.forEach((s) => s.destroy());
-		this.blocks.forEach((s) => s.destroy());
-		this.tiles.clear();
-		this.blocks.clear();
-		if (this.playerSprite) this.playerSprite.destroy();
-
-		const src = LEVELS[idx % LEVELS.length];
-		this.grid = src.map((row) => [...row]);
-
-		for (let r = 0; r < this.grid.length; r++) {
-			for (let c = 0; c < this.grid[r].length; c++) {
-				const x = OFFSET_X + c * TILE + TILE / 2;
-				const y = OFFSET_Y + r * TILE + TILE / 2;
-				const cell = this.grid[r][c];
-
-				if (cell === 1) {
-					this.tiles.set(r + "," + c, this.add.image(x, y, "wall"));
-				} else {
-					this.tiles.set(r + "," + c, this.add.image(x, y, "floor"));
-				}
-
-				if (cell === 4 || cell === 5 || cell === 6) {
-					this.add.image(x, y, "target").setAlpha(0.5).setDepth(1);
-				}
-				if (cell === 3 || cell === 5) {
-					this.blocks.set(r + "," + c, this.add.image(x, y, "block").setDepth(2));
-				}
-				if (cell === 2 || cell === 6) {
-					this.playerPos = { r: r, c: c };
-					this.playerSprite = this.add.image(x, y, "player").setDepth(3);
-				}
+		for (let r = 0; r < GRID; r++) {
+			for (let c = 0; c < GRID; c++) {
+				const { x, y } = this.tilePos(r, c);
+				const g = this.add.graphics();
+				g.fillStyle(0x334155, 1);
+				g.fillRoundedRect(x, y, TILE, TILE, 8);
 			}
 		}
+
+		this.addRandomTile();
+		this.addRandomTile();
+
+		this.input.keyboard!.on("keydown-LEFT", () => this.handleMove(0, -1));
+		this.input.keyboard!.on("keydown-RIGHT", () => this.handleMove(0, 1));
+		this.input.keyboard!.on("keydown-UP", () => this.handleMove(-1, 0));
+		this.input.keyboard!.on("keydown-DOWN", () => this.handleMove(1, 0));
+		this.input.keyboard!.on("keydown-A", () => this.handleMove(0, -1));
+		this.input.keyboard!.on("keydown-D", () => this.handleMove(0, 1));
+		this.input.keyboard!.on("keydown-W", () => this.handleMove(-1, 0));
+		this.input.keyboard!.on("keydown-S", () => this.handleMove(1, 0));
+
+		this.input.on("pointerup", (e: Phaser.Input.Pointer) => {
+			const dx = e.upX - e.downX;
+			const dy = e.upY - e.downY;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist < 30) return;
+			if (Math.abs(dx) > Math.abs(dy)) {
+				this.handleMove(0, dx > 0 ? 1 : -1);
+			} else {
+				this.handleMove(dy > 0 ? 1 : -1, 0);
+			}
+		});
+
+		const restartBtn = this.add.text(480, 20, "↻", { fontSize: "28px", color: "#94a3b8", fontFamily: "Arial" }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+		restartBtn.on("pointerdown", () => this.scene.restart());
 	}
 
-	private tryMove(dr, dc) {
-		if (this.isMoving) return;
+	private tilePos(r: number, c: number) {
+		return {
+			x: BOARD_X + c * (TILE + GAP),
+			y: BOARD_Y + r * (TILE + GAP),
+		};
+	}
 
-		const nr = this.playerPos.r + dr;
-		const nc = this.playerPos.c + dc;
+	private createTileSprite(r: number, c: number, value: number): Phaser.GameObjects.Container {
+		const { x, y } = this.tilePos(r, c);
+		const color = TILE_COLORS[value] || 0x22c55e;
+		const bg = this.add.graphics();
+		bg.fillStyle(color, 1);
+		bg.fillRoundedRect(-TILE / 2, -TILE / 2, TILE, TILE, 8);
 
-		if (!this.inBounds(nr, nc)) return;
-		const next = this.grid[nr][nc];
+		const fontSize = value >= 1024 ? "24px" : value >= 128 ? "28px" : "34px";
+		const txt = this.add.text(0, 0, value.toString(), { fontSize, color: "#ffffff", fontFamily: "Arial", fontStyle: "bold" }).setOrigin(0.5);
 
-		if (next === 1) return;
+		const container = this.add.container(x + TILE / 2, y + TILE / 2, [bg, txt]);
+		container.setDepth(10);
+		return container;
+	}
 
-		if (next === 3 || next === 5) {
-			const br = nr + dr;
-			const bc = nc + dc;
-			if (!this.inBounds(br, bc)) return;
-			const behind = this.grid[br][bc];
-			if (behind === 1 || behind === 3 || behind === 5) return;
+	private addRandomTile() {
+		const empty: { r: number; c: number }[] = [];
+		for (let r = 0; r < GRID; r++) {
+			for (let c = 0; c < GRID; c++) {
+				if (this.grid[r][c] === 0) empty.push({ r, c });
+			}
+		}
+		if (empty.length === 0) return;
 
-			this.moveBlock(nr, nc, br, bc);
+		const cell = Phaser.Utils.Array.GetRandom(empty);
+		const value = Math.random() < 0.9 ? 2 : 4;
+		this.grid[cell.r][cell.c] = value;
+
+		const sprite = this.createTileSprite(cell.r, cell.c, value);
+		sprite.setScale(0);
+		this.tweens.add({ targets: sprite, scale: 1, duration: TWEEN_MS, ease: "Back.easeOut" });
+		this.tileSprites[cell.r][cell.c] = sprite;
+	}
+
+	private handleMove(dr: number, dc: number) {
+		if (!this.canMove) return;
+
+		let moved = false;
+		let moveScore = 0;
+		this.canMove = false;
+		this.movingCount = 0;
+
+		const merged: boolean[][] = Array.from({ length: GRID }, () => Array(GRID).fill(false));
+
+		const processCell = (r: number, c: number) => {
+			if (this.grid[r][c] === 0) return;
+
+			let nr = r + dr;
+			let nc = c + dc;
+
+			while (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID && this.grid[nr][nc] === 0) {
+				nr += dr;
+				nc += dc;
+			}
+
+			if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID && this.grid[nr][nc] === this.grid[r][c] && !merged[nr][nc]) {
+				const newVal = this.grid[r][c] * 2;
+				moveScore += newVal;
+				this.grid[nr][nc] = newVal;
+				this.grid[r][c] = 0;
+				merged[nr][nc] = true;
+				this.animateMove(r, c, nr, nc, true, newVal);
+				moved = true;
+			} else {
+				nr -= dr;
+				nc -= dc;
+				if (nr !== r || nc !== c) {
+					this.grid[nr][nc] = this.grid[r][c];
+					this.grid[r][c] = 0;
+					this.animateMove(r, c, nr, nc, false, 0);
+					moved = true;
+				}
+			}
+		};
+
+		if (dr === 1) {
+			for (let r = GRID - 2; r >= 0; r--) for (let c = 0; c < GRID; c++) processCell(r, c);
+		} else if (dr === -1) {
+			for (let r = 1; r < GRID; r++) for (let c = 0; c < GRID; c++) processCell(r, c);
+		} else if (dc === 1) {
+			for (let c = GRID - 2; c >= 0; c--) for (let r = 0; r < GRID; r++) processCell(r, c);
+		} else if (dc === -1) {
+			for (let c = 1; c < GRID; c++) for (let r = 0; r < GRID; r++) processCell(r, c);
 		}
 
-		this.movePlayer(nr, nc);
-		this.moves++;
-		this.movesText.setText("${g.puzzle.steps}: " + this.moves);
+		if (!moved) {
+			this.canMove = true;
+			return;
+		}
 
-		this.time.delayedCall(120, () => this.checkWin());
+		this.score += moveScore;
+		if (this.score > this.bestScore) {
+			this.bestScore = this.score;
+			localStorage.setItem(STORAGE_KEY, this.bestScore.toString());
+			this.bestText.setText("${g.puzzle.bestScore}: " + this.bestScore + " ${g.puzzle.newBest}");
+		}
+		this.scoreText.setText("${g.common.score}: " + this.score);
+
+		if (this.movingCount === 0) {
+			this.finishMove();
+		}
 	}
 
-	private movePlayer(nr, nc) {
-		this.isMoving = true;
-		const cur = this.grid[this.playerPos.r][this.playerPos.c];
-		this.grid[this.playerPos.r][this.playerPos.c] = cur === 6 ? 4 : 0;
+	private animateMove(fromR: number, fromC: number, toR: number, toC: number, isMerge: boolean, newVal: number) {
+		const sprite = this.tileSprites[fromR][fromC];
+		if (!sprite) return;
+		this.tileSprites[fromR][fromC] = null;
 
-		const dest = this.grid[nr][nc];
-		this.grid[nr][nc] = dest === 4 ? 6 : 2;
-		this.playerPos = { r: nr, c: nc };
+		const { x, y } = this.tilePos(toR, toC);
+		this.movingCount++;
 
-		const x = OFFSET_X + nc * TILE + TILE / 2;
-		const y = OFFSET_Y + nr * TILE + TILE / 2;
 		this.tweens.add({
-			targets: this.playerSprite,
-			x: x, y: y,
-			duration: 100,
-			onComplete: () => { this.isMoving = false; },
+			targets: sprite,
+			x: x + TILE / 2,
+			y: y + TILE / 2,
+			duration: TWEEN_MS,
+			onComplete: () => {
+				if (isMerge) {
+					sprite.destroy();
+					const existing = this.tileSprites[toR][toC];
+					if (existing) existing.destroy();
+					const merged = this.createTileSprite(toR, toC, newVal);
+					this.tileSprites[toR][toC] = merged;
+					this.tweens.add({ targets: merged, scale: 1.15, duration: 60, yoyo: true });
+				} else {
+					this.tileSprites[toR][toC] = sprite;
+				}
+				this.movingCount--;
+				if (this.movingCount === 0) {
+					this.finishMove();
+				}
+			},
 		});
 	}
 
-	private moveBlock(fr, fc, tr, tc) {
-		const key = fr + "," + fc;
-		const block = this.blocks.get(key);
-		if (!block) return;
-
-		const curCell = this.grid[fr][fc];
-		this.grid[fr][fc] = curCell === 5 ? 4 : 0;
-
-		const destCell = this.grid[tr][tc];
-		this.grid[tr][tc] = destCell === 4 ? 5 : 3;
-
-		this.blocks.delete(key);
-		this.blocks.set(tr + "," + tc, block);
-
-		const x = OFFSET_X + tc * TILE + TILE / 2;
-		const y = OFFSET_Y + tr * TILE + TILE / 2;
-		this.tweens.add({ targets: block, x: x, y: y, duration: 100 });
+	private finishMove() {
+		this.addRandomTile();
+		if (!this.hasValidMoves()) {
+			this.time.delayedCall(300, () => this.showGameOver());
+		} else {
+			this.canMove = true;
+		}
 	}
 
-	private inBounds(r, c) {
-		return r >= 0 && r < this.grid.length && c >= 0 && c < this.grid[0].length;
-	}
-
-	private checkWin() {
-		for (let r = 0; r < this.grid.length; r++) {
-			for (let c = 0; c < this.grid[r].length; c++) {
-				if (this.grid[r][c] === 4 || this.grid[r][c] === 6) return;
+	private hasValidMoves(): boolean {
+		for (let r = 0; r < GRID; r++) {
+			for (let c = 0; c < GRID; c++) {
+				if (this.grid[r][c] === 0) return true;
+				const val = this.grid[r][c];
+				if (r < GRID - 1 && this.grid[r + 1][c] === val) return true;
+				if (c < GRID - 1 && this.grid[r][c + 1] === val) return true;
 			}
 		}
+		return false;
+	}
 
-		this.time.delayedCall(200, () => {
-			this.add.rectangle(400, 300, 400, 200, 0x000000, 0.8).setDepth(200);
-			this.add.text(400, 270, "${g.puzzle.levelComplete}", {
-				fontSize: "36px",
-				color: "#22c55e",
-				fontFamily: "Arial",
-			}).setOrigin(0.5).setDepth(201);
+	private showGameOver() {
+		const overlay = this.add.rectangle(250, 350, 500, 600, 0x000000, 0.7).setDepth(50);
+		this.add.text(250, 260, "${g.common.gameOver}", { fontSize: "44px", color: "#ef4444", fontFamily: "Arial", fontStyle: "bold" }).setOrigin(0.5).setDepth(51);
+		this.add.text(250, 320, "${g.common.finalScore}: " + this.score, { fontSize: "24px", color: "#fbbf24", fontFamily: "Arial" }).setOrigin(0.5).setDepth(51);
 
-			this.add.text(400, 320, "${g.puzzle.steps}: " + this.moves, {
-				fontSize: "22px",
-				color: "#fbbf24",
-				fontFamily: "Arial",
-			}).setOrigin(0.5).setDepth(201);
+		const retryBtn = this.add.text(250, 400, "${g.common.restart}", { fontSize: "24px", color: "#06b6d4", fontFamily: "Arial" }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(51);
+		retryBtn.on("pointerdown", () => this.scene.restart());
 
-			const menuBtn = this.add
-				.text(400, 380, "${g.puzzle.backToMenu}", {
-					fontSize: "18px",
-					color: "#06b6d4",
-					fontFamily: "Arial",
-				})
-				.setOrigin(0.5)
-				.setInteractive({ useHandCursor: true })
-				.setDepth(201);
-
-			menuBtn.on("pointerdown", () => this.scene.start("MenuScene"));
-		});
+		const menuBtn = this.add.text(250, 450, "${g.common.backToMenu}", { fontSize: "18px", color: "#94a3b8", fontFamily: "Arial" }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(51);
+		menuBtn.on("pointerdown", () => this.scene.start("MenuScene"));
 	}
 }
 `,
@@ -317,7 +350,7 @@ export class GameScene extends Phaser.Scene {
 			path: "src/config/game-config.ts",
 			content: `export const GAME_CONFIG = {
 	title: "${meta.name}",
-	width: 800,
+	width: 500,
 	height: 600,
 	fps: 60,
 	gravity: 0,
