@@ -5,7 +5,7 @@ import type {
 	RimecraftManifest,
 } from "@rimecraft/core";
 import { openDB, type IDBPDatabase } from "idb";
-import type { StorageProvider } from "./types";
+import type { StorageProvider, ExportOptions, ImportResult } from "./types";
 import { generateTemplateFiles } from "../templates";
 
 const DB_NAME = "rimecraft";
@@ -240,7 +240,7 @@ export class IndexedDBStorageProvider implements StorageProvider {
 		return URL.createObjectURL(blob);
 	}
 
-	async exportProject(id: string): Promise<Blob> {
+	async exportProject(id: string, options?: ExportOptions): Promise<Blob> {
 		const { default: JSZip } = await import("jszip");
 		const zip = new JSZip();
 
@@ -261,11 +261,15 @@ export class IndexedDBStorageProvider implements StorageProvider {
 			}
 		}
 
+		if (options?.chatMessages && options.chatMessages.length > 0) {
+			zip.file("chat-history.json", JSON.stringify(options.chatMessages));
+		}
+
 		return zip.generateAsync({ type: "blob" });
 	}
 
-	async downloadExport(id: string, fileName: string): Promise<void> {
-		const blob = await this.exportProject(id);
+	async downloadExport(id: string, fileName: string, options?: ExportOptions): Promise<void> {
+		const blob = await this.exportProject(id, options);
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement("a");
 		a.href = url;
@@ -274,7 +278,7 @@ export class IndexedDBStorageProvider implements StorageProvider {
 		URL.revokeObjectURL(url);
 	}
 
-	async importProject(blob: Blob): Promise<Project> {
+	async importProject(blob: Blob): Promise<ImportResult> {
 		const { default: JSZip } = await import("jszip");
 		const zip = await JSZip.loadAsync(blob);
 
@@ -314,15 +318,28 @@ export class IndexedDBStorageProvider implements StorageProvider {
 		});
 
 		const files: FileEntry[] = [];
+		let chatMessages: unknown[] | undefined;
+
 		for (const [path, file] of Object.entries(zip.files)) {
 			if (file.dir || path === "rimecraft.json") continue;
+
+			if (path === "chat-history.json") {
+				try {
+					const raw = await file.async("string");
+					chatMessages = JSON.parse(raw);
+				} catch { /* skip malformed chat history */ }
+				continue;
+			}
 
 			const content = await file.async("string");
 			await this.writeFile(newId, path, content);
 			files.push({ path, type: "file" });
 		}
 
-		return { meta, manifest: newManifest, files };
+		return {
+			project: { meta, manifest: newManifest, files },
+			chatMessages,
+		};
 	}
 
 	private getDefaultProjectFiles(

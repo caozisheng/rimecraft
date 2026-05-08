@@ -4,7 +4,7 @@ import type {
 	FileEntry,
 	RimecraftManifest,
 } from "@rimecraft/core";
-import type { StorageProvider } from "./types";
+import type { StorageProvider, ExportOptions, ImportResult } from "./types";
 import {
 	readTextFile,
 	writeTextFile,
@@ -226,7 +226,7 @@ export class TauriStorageProvider implements StorageProvider {
 		return convertFileSrc(full);
 	}
 
-	async exportProject(id: string): Promise<Blob> {
+	async exportProject(id: string, options?: ExportOptions): Promise<Blob> {
 		const { default: JSZip } = await import("jszip");
 		const zip = new JSZip();
 
@@ -244,10 +244,14 @@ export class TauriStorageProvider implements StorageProvider {
 			}
 		}
 
+		if (options?.chatMessages && options.chatMessages.length > 0) {
+			zip.file("chat-history.json", JSON.stringify(options.chatMessages));
+		}
+
 		return zip.generateAsync({ type: "blob" });
 	}
 
-	async downloadExport(id: string, fileName: string): Promise<void> {
+	async downloadExport(id: string, fileName: string, options?: ExportOptions): Promise<void> {
 		const { save } = await import("@tauri-apps/plugin-dialog");
 		const defaultPath = joinPath(await downloadDir(), fileName);
 		const filePath = await save({
@@ -255,12 +259,12 @@ export class TauriStorageProvider implements StorageProvider {
 			filters: [{ name: "RimeCraft Project", extensions: ["zip"] }],
 		});
 		if (!filePath) return;
-		const blob = await this.exportProject(id);
+		const blob = await this.exportProject(id, options);
 		const buffer = await blob.arrayBuffer();
 		await writeFile(filePath, new Uint8Array(buffer));
 	}
 
-	async importProject(blob: Blob): Promise<Project> {
+	async importProject(blob: Blob): Promise<ImportResult> {
 		const { default: JSZip } = await import("jszip");
 		const zip = await JSZip.loadAsync(blob);
 
@@ -302,14 +306,27 @@ export class TauriStorageProvider implements StorageProvider {
 		);
 
 		const files: FileEntry[] = [];
+		let chatMessages: unknown[] | undefined;
+
 		for (const [path, file] of Object.entries(zip.files)) {
 			if (file.dir || path === "rimecraft.json") continue;
+
+			if (path === "chat-history.json") {
+				try {
+					const raw = await file.async("string");
+					chatMessages = JSON.parse(raw);
+				} catch { /* skip malformed chat history */ }
+				continue;
+			}
 
 			const content = await file.async("string");
 			await this.writeFile(newId, path, content);
 			files.push({ path, type: "file" });
 		}
 
-		return { meta, manifest: newManifest, files };
+		return {
+			project: { meta, manifest: newManifest, files },
+			chatMessages,
+		};
 	}
 }

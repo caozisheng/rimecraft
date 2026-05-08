@@ -37,6 +37,11 @@ const zh = {
 			"帮我做一个太空射击游戏",
 			"我想做一个像素风 RPG",
 		],
+		myProjects: "我的项目",
+		noProjects: "还没有项目，选择一个模板开始创建吧！",
+		deleteProject: "删除",
+		deleteConfirm: "确定要删除「{name}」吗？此操作不可撤销。",
+		updatedAt: "更新于 {time}",
 	},
 
 	toolbar: {

@@ -2,6 +2,7 @@ import type { ProjectMeta, Project, FileEntry } from "@rimecraft/core";
 import { IndexedDBStorageProvider } from "@/lib/storage/indexeddb";
 import type { StorageProvider } from "@/lib/storage/types";
 import { useProjectStore } from "@/stores/project-store";
+import { useChatStore } from "@/stores/chat-store";
 
 function isTauri(): boolean {
 	return typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
@@ -114,18 +115,40 @@ export class ProjectManager {
 		await this.ensureReady();
 		const projectId = useProjectStore.getState().currentProject?.id;
 		if (!projectId) throw new Error("No project open");
-		return this.storage.exportProject(projectId);
+		const chatMessages = useChatStore.getState().messages;
+		return this.storage.exportProject(projectId, { chatMessages });
 	}
 
 	async downloadExport(fileName: string): Promise<void> {
 		await this.ensureReady();
 		const projectId = useProjectStore.getState().currentProject?.id;
 		if (!projectId) throw new Error("No project open");
-		await this.storage.downloadExport(projectId, fileName);
+		const chatMessages = useChatStore.getState().messages;
+		await this.storage.downloadExport(projectId, fileName, { chatMessages });
 	}
 
 	async importProject(blob: Blob): Promise<Project> {
 		await this.ensureReady();
-		return this.storage.importProject(blob);
+		const result = await this.storage.importProject(blob);
+
+		if (result.chatMessages && Array.isArray(result.chatMessages) && result.chatMessages.length > 0) {
+			const chatStore = useChatStore.getState();
+			chatStore.clearMessages();
+			for (const msg of result.chatMessages) {
+				const m = msg as any;
+				if (m && m.role && m.content !== undefined) {
+					chatStore.addMessage(m.role, m.content, {
+						id: m.id,
+						toolCalls: m.toolCalls,
+						toolCallId: m.toolCallId,
+						toolResults: m.toolResults,
+						commandCheckpoint: m.commandCheckpoint,
+						createdAt: m.createdAt,
+					});
+				}
+			}
+		}
+
+		return result.project;
 	}
 }

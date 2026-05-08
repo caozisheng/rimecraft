@@ -39,6 +39,11 @@ const en: Messages = {
 			"Help me build a space shooter",
 			"I want to make a pixel RPG",
 		],
+		myProjects: "My Projects",
+		noProjects: "No projects yet. Pick a template above to get started!",
+		deleteProject: "Delete",
+		deleteConfirm: "Delete \"{name}\"? This cannot be undone.",
+		updatedAt: "Updated {time}",
 	},
 
 	toolbar: {

@@ -1,5 +1,14 @@
 import type { ProjectMeta, Project, FileEntry } from "@rimecraft/core";
 
+export interface ExportOptions {
+	chatMessages?: unknown[];
+}
+
+export interface ImportResult {
+	project: Project;
+	chatMessages?: unknown[];
+}
+
 export interface StorageProvider {
 	createProject(meta: ProjectMeta): Promise<Project>;
 	openProject(id: string): Promise<Project>;
@@ -24,7 +33,7 @@ export interface StorageProvider {
 	): Promise<void>;
 	getAssetUrl(projectId: string, path: string): Promise<string>;
 
-	exportProject(id: string): Promise<Blob>;
-	downloadExport(id: string, fileName: string): Promise<void>;
-	importProject(blob: Blob): Promise<Project>;
+	exportProject(id: string, options?: ExportOptions): Promise<Blob>;
+	downloadExport(id: string, fileName: string, options?: ExportOptions): Promise<void>;
+	importProject(blob: Blob): Promise<ImportResult>;
 }
