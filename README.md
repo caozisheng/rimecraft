@@ -110,6 +110,44 @@ Set BaseURL / API Key / Model Name via the in-app Settings dialog.
 
 Supports any OpenAI-compatible API (OpenAI, Claude, DeepSeek, Ollama, etc.)
 
+## File Storage
+
+RimeCraft uses different storage backends depending on the runtime environment.
+
+### Web (Browser)
+
+All data is stored in **IndexedDB**, database name `rimecraft` (version 2).
+
+| Store          | Content                          |
+| -------------- | -------------------------------- |
+| `projects`     | Project metadata and manifests   |
+| `files`        | Source files (keyed by `projectId:path`) |
+| `assets`       | Binary assets (images, audio)    |
+| `user_assets`  | User-uploaded and AI-generated assets |
+
+Data is scoped per browser origin and managed automatically by the browser. No filesystem access is required.
+
+### Tauri (Desktop)
+
+Projects are stored on the local filesystem under the OS **app data directory** (`appDataDir`), identifier `com.rimecraft.desktop`.
+
+| Platform | Path                                                                 |
+| -------- | -------------------------------------------------------------------- |
+| Windows  | `%APPDATA%\com.rimecraft.desktop\projects\`                          |
+| macOS    | `~/Library/Application Support/com.rimecraft.desktop/projects/`      |
+| Linux    | `~/.config/com.rimecraft.desktop/projects/` (or `$XDG_CONFIG_HOME`) |
+
+Each project is a directory containing:
+
+```
+<project-id>/
+├── rimecraft.json       # metadata + manifest
+├── src/                 # source files
+└── assets/              # binary assets (images, audio)
+```
+
+Exported `.zip` files are saved via the system file dialog, defaulting to the OS **Downloads** directory.
+
 ## License
 
 MIT
