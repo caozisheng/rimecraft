@@ -61,4 +61,28 @@ for (const rel of I18N_FILES) {
 	}
 }
 
+// 3. Update tauri.conf.json
+{
+	const rel = "apps/tauri/src-tauri/tauri.conf.json";
+	const abs = resolve(root, rel);
+	const json = JSON.parse(readFileSync(abs, "utf-8"));
+	const old = json.version;
+	json.version = newVersion;
+	writeFileSync(abs, JSON.stringify(json, null, "\t") + "\n");
+	console.log(`  ${rel}: ${old} -> ${newVersion}`);
+	updated++;
+}
+
+// 4. Update Cargo.toml
+{
+	const rel = "apps/tauri/src-tauri/Cargo.toml";
+	const abs = resolve(root, rel);
+	let content = readFileSync(abs, "utf-8");
+	const cargoRe = /^version = "\d+\.\d+\.\d+"/m;
+	content = content.replace(cargoRe, `version = "${newVersion}"`);
+	writeFileSync(abs, content);
+	console.log(`  ${rel}: -> ${newVersion}`);
+	updated++;
+}
+
 console.log(`\nDone. Updated ${updated} files to v${newVersion}.`);
