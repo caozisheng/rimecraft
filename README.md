@@ -1,6 +1,13 @@
-# RimeCraft
+<p align="center">
+  <img src="./rimecraft.svg" width="128" height="128" alt="RimeCraft Logo">
+</p>
 
-RimeCraft is an agentic chat-style game craft based on [Phaser.js](https://github.com/phaserjs/phaser). Describe your game idea in natural language, and AI agents will collaboratively write, debug, and preview Phaser games in real time.
+<h1 align="center">RimeCraft</h1>
+
+<p align="center">
+  An agentic chat-style game craft based on <a href="https://github.com/phaserjs/phaser">Phaser.js</a>.<br>
+  Describe your game idea in natural language, and AI agents will collaboratively write, debug, and preview Phaser games in real time.
+</p>
 
 <img width="957" height="632" alt="image" src="https://github.com/user-attachments/assets/59615cd3-bedf-4dab-8b25-19c55ecb12a8" />
 <img width="1062" height="628" alt="image" src="https://github.com/user-attachments/assets/9396a45a-a977-4679-90f0-0472695b5b51" />
