@@ -12,7 +12,6 @@
 <img width="957" height="632" alt="image" src="https://github.com/user-attachments/assets/59615cd3-bedf-4dab-8b25-19c55ecb12a8" />
 <img width="1062" height="628" alt="image" src="https://github.com/user-attachments/assets/9396a45a-a977-4679-90f0-0472695b5b51" />
 
-
 ## Features
 
 - **Chat-driven game creation** — Describe your game in natural language; multi-agent engine writes and iterates on the code
@@ -47,6 +46,14 @@ rimecraft/
 - **Node.js** >= 20
 - **Bun** >= 1.2
 - **Rust toolchain** (for Tauri desktop only)
+
+```bash
+# Linux & MacOS
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Windows
+winget install Rustlang.Rustup
+```
 
 ## Getting Started
 
