@@ -22,7 +22,7 @@ const zh = {
 		openProject: "打开项目",
 		importFile: "导入 .rimecraft 文件",
 		creating: "正在创建项目...",
-		footer: "RimeCraft v0.1.0 — 面向青少年的 AI 对话式 2D 游戏开发工具",
+		footer: "RimeCraft v0.1.2 — 面向青少年的 AI 对话式 2D 游戏开发工具",
 		templates: {
 			"endless-runner": { name: "无尽跑酷", description: "小恐龙风格的无尽跑酷游戏" },
 			platformer: { name: "平台跳跃", description: "超级马里奥风格的横版跳跃" },
