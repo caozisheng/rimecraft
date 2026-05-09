@@ -398,6 +398,7 @@ const zh = {
 			coins: "金币",
 			congratulations: "恭喜通关!",
 			tryAgain: "🔄  再来一次",
+			level: "Lv.",
 		},
 		spaceShooter: {
 			subtitle: "🚀 太空射击",
@@ -408,6 +409,9 @@ const zh = {
 			enemyUnit: "架",
 			totalScore: "总分",
 			retryBattle: "🔄  重新出击",
+			wave: "波次",
+			boss: "⚠ BOSS ⚠",
+			victory: "🎉 胜利!",
 		},
 		rpg: {
 			subtitle: "⚔️ RPG 冒险",
@@ -432,6 +436,8 @@ const zh = {
 			hp: "HP",
 			potions: "药水",
 			gems: "宝石",
+			hero: "勇者",
+			defeated: "💀 被击败了!",
 		},
 		puzzle: {
 			subtitle: "🧩 2048",

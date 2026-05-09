@@ -439,7 +439,7 @@ export class CombatScene extends Phaser.Scene {
 			fontSize: "20px", color: "#ef4444", fontFamily: "Arial",
 		}).setOrigin(0.5);
 
-		this.add.text(400, 380, "🧑 Hero", { fontSize: "22px", color: "#06b6d4", fontFamily: "Arial" }).setOrigin(0.5);
+		this.add.text(400, 380, "🧑 ${g.rpg.hero}", { fontSize: "22px", color: "#06b6d4", fontFamily: "Arial" }).setOrigin(0.5);
 		this.playerHPText = this.add.text(400, 410, "${g.rpg.hp}: " + this.playerHP, {
 			fontSize: "20px", color: "#22c55e", fontFamily: "Arial",
 		}).setOrigin(0.5);
@@ -525,7 +525,7 @@ export class CombatScene extends Phaser.Scene {
 			this.cameras.main.shake(100, 0.005);
 
 			if (this.playerHP <= 0) {
-				this.logText.setText("💀 Defeated!");
+				this.logText.setText("${g.rpg.defeated}");
 				this.time.delayedCall(1500, () => {
 					this.scene.start("MenuScene");
 				});

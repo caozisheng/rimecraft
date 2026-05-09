@@ -399,6 +399,7 @@ const en: Messages = {
 			coins: "Coins",
 			congratulations: "You Win!",
 			tryAgain: "🔄  Try Again",
+			level: "Lv.",
 		},
 		spaceShooter: {
 			subtitle: "🚀 Space Shooter",
@@ -409,6 +410,9 @@ const en: Messages = {
 			enemyUnit: "",
 			totalScore: "Total Score",
 			retryBattle: "🔄  Retry Mission",
+			wave: "Wave",
+			boss: "⚠ BOSS ⚠",
+			victory: "🎉 Victory!",
 		},
 		rpg: {
 			subtitle: "⚔️ RPG Adventure",
@@ -433,6 +437,8 @@ const en: Messages = {
 			hp: "HP",
 			potions: "Potions",
 			gems: "Gems",
+			hero: "Hero",
+			defeated: "💀 Defeated!",
 		},
 		puzzle: {
 			subtitle: "🧩 2048",

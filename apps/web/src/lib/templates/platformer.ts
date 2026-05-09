@@ -228,7 +228,7 @@ export class GameScene extends Phaser.Scene {
 		this.input.keyboard!.addKey("SPACE").on("down", () => this.jump());
 
 		this.scoreText = this.add.text(16, 16, "${g.platformer.coins}: 0", { fontSize: "24px", color: "#fbbf24", fontFamily: "Arial" }).setScrollFactor(0).setDepth(100);
-		this.levelText = this.add.text(784, 16, "Lv." + this.level, { fontSize: "22px", color: "#a3e635", fontFamily: "Arial" }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+		this.levelText = this.add.text(784, 16, "${g.platformer.level}" + this.level, { fontSize: "22px", color: "#a3e635", fontFamily: "Arial" }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
 	}
 
 	update() {
@@ -325,7 +325,7 @@ export class GameOverScene extends Phaser.Scene {
 
 		if (!win) {
 			this.add
-				.text(400, 310, "Lv." + (data.level ?? 1), {
+				.text(400, 310, "${g.platformer.level}" + (data.level ?? 1), {
 					fontSize: "22px",
 					color: "#94a3b8",
 					fontFamily: "Arial",

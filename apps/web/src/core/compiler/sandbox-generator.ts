@@ -161,6 +161,7 @@ window.__ASSET_BASE__ = "${origin}";
 		var msg = e.data;
 		if (!msg || !msg.type) return;
 		var game = window.__game;
+		var mid = msg.messageId;
 
 		if (msg.type === "set_edit_mode") {
 			editMode = !!msg.enabled;
@@ -187,13 +188,13 @@ window.__ASSET_BASE__ = "${origin}";
 					}
 				}
 			}
-			window.parent.postMessage({ type: "edit_mode_changed", enabled: editMode }, "*");
-			if (editMode) sendSceneTree();
+			window.parent.postMessage({ type: "edit_mode_changed", enabled: editMode, messageId: mid }, "*");
+			if (editMode) sendSceneTree(mid);
 			return;
 		}
 
 		if (msg.type === "scene_inspect") {
-			sendSceneTree();
+			sendSceneTree(mid);
 			return;
 		}
 
@@ -202,7 +203,8 @@ window.__ASSET_BASE__ = "${origin}";
 			if (obj) {
 				window.parent.postMessage({
 					type: "object_props", id: msg.id,
-					props: extractProps(obj)
+					props: extractProps(obj),
+					messageId: mid
 				}, "*");
 			}
 			return;
@@ -241,11 +243,11 @@ window.__ASSET_BASE__ = "${origin}";
 			var ltUrl = msg.url;
 			if (ltScene && ltKey && ltUrl) {
 				if (window.__game.textures.exists(ltKey)) {
-					window.parent.postMessage({ type: "texture_loaded", key: ltKey }, "*");
+					window.parent.postMessage({ type: "texture_loaded", key: ltKey, messageId: mid }, "*");
 				} else {
 					ltScene.load.image(ltKey, ltUrl);
 					ltScene.load.once("complete", function() {
-						window.parent.postMessage({ type: "texture_loaded", key: ltKey }, "*");
+						window.parent.postMessage({ type: "texture_loaded", key: ltKey, messageId: mid }, "*");
 					});
 					ltScene.load.start();
 				}
@@ -259,12 +261,12 @@ window.__ASSET_BASE__ = "${origin}";
 			var gtCode = msg.code;
 			if (gtScene && gtKey && gtCode) {
 				if (window.__game.textures.exists(gtKey)) {
-					window.parent.postMessage({ type: "texture_loaded", key: gtKey }, "*");
+					window.parent.postMessage({ type: "texture_loaded", key: gtKey, messageId: mid }, "*");
 				} else {
 					try {
 						new Function("scene", gtCode).call(gtScene, gtScene);
 					} catch (e) {}
-					window.parent.postMessage({ type: "texture_loaded", key: gtKey }, "*");
+					window.parent.postMessage({ type: "texture_loaded", key: gtKey, messageId: mid }, "*");
 				}
 			}
 			return;
@@ -281,13 +283,13 @@ window.__ASSET_BASE__ = "${origin}";
 					keys.push(k);
 				}
 			}
-			window.parent.postMessage({ type: "texture_list", keys: keys }, "*");
+			window.parent.postMessage({ type: "texture_list", keys: keys, messageId: mid }, "*");
 			return;
 		}
 
 		if (msg.type === "request_full_state") {
 			var fsScene = getActiveScene();
-			if (!fsScene) { window.parent.postMessage({ type: "full_state", objects: [], settings: { width: 800, height: 600 } }, "*"); return; }
+			if (!fsScene) { window.parent.postMessage({ type: "full_state", objects: [], settings: { width: 800, height: 600 }, messageId: mid }, "*"); return; }
 			var fsCam = fsScene.cameras ? fsScene.cameras.main : null;
 			var fsScrollX = fsCam ? fsCam.scrollX : 0;
 			var fsScrollY = fsCam ? fsCam.scrollY : 0;
@@ -324,7 +326,7 @@ window.__ASSET_BASE__ = "${origin}";
 			}
 			var fsGw = fsScene.scale ? fsScene.scale.width : 800;
 			var fsGh = fsScene.scale ? fsScene.scale.height : 600;
-			window.parent.postMessage({ type: "full_state", objects: fsObjects, settings: { width: fsGw, height: fsGh } }, "*");
+			window.parent.postMessage({ type: "full_state", objects: fsObjects, settings: { width: fsGw, height: fsGh }, messageId: mid }, "*");
 			return;
 		}
 	});
@@ -364,7 +366,7 @@ window.__ASSET_BASE__ = "${origin}";
 		return null;
 	}
 
-	function sendSceneTree() {
+	function sendSceneTree(messageId) {
 		var scene = getActiveScene();
 		if (!scene) return;
 		var cam = scene.cameras ? scene.cameras.main : null;
@@ -398,7 +400,8 @@ window.__ASSET_BASE__ = "${origin}";
 		window.parent.postMessage({
 			type: "scene_tree",
 			objects: objects,
-			settings: { width: gw, height: gh }
+			settings: { width: gw, height: gh },
+			messageId: messageId
 		}, "*");
 	}
 

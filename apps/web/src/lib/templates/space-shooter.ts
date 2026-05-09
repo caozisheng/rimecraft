@@ -165,7 +165,7 @@ export class GameScene extends Phaser.Scene {
 
 		this.scoreText = this.add.text(16, 16, "${g.common.score}: 0", { fontSize: "22px", color: "#ffffff", fontFamily: "Arial" }).setDepth(100);
 		this.livesText = this.add.text(784, 16, "❤️ " + this.lives, { fontSize: "22px", color: "#ef4444", fontFamily: "Arial" }).setOrigin(1, 0).setDepth(100);
-		this.waveText = this.add.text(400, 16, "Wave 1", { fontSize: "20px", color: "#a3e635", fontFamily: "Arial" }).setOrigin(0.5, 0).setDepth(100);
+		this.waveText = this.add.text(400, 16, "${g.spaceShooter.wave} 1", { fontSize: "20px", color: "#a3e635", fontFamily: "Arial" }).setOrigin(0.5, 0).setDepth(100);
 
 		this.bossBar = this.add.graphics().setDepth(100);
 
@@ -211,7 +211,7 @@ export class GameScene extends Phaser.Scene {
 		if (this.enemiesLeft === 0 && this.enemies.countActive() === 0 && !this.isBossWave) {
 			this.enemiesLeft = -1;
 			this.wave++;
-			this.waveText.setText("Wave " + (this.wave + 1));
+			this.waveText.setText("${g.spaceShooter.wave} " + (this.wave + 1));
 			if (this.wave < WAVES.length) {
 				this.time.delayedCall(1500, () => this.startWave());
 			} else if (this.wave === WAVES.length) {
@@ -223,7 +223,7 @@ export class GameScene extends Phaser.Scene {
 	private startWave() {
 		const w = WAVES[this.wave];
 		this.enemiesLeft = w.count;
-		this.waveText.setText("Wave " + (this.wave + 1));
+		this.waveText.setText("${g.spaceShooter.wave} " + (this.wave + 1));
 
 		let spawned = 0;
 		const timer = this.time.addEvent({
@@ -251,7 +251,7 @@ export class GameScene extends Phaser.Scene {
 
 	private startBoss() {
 		this.isBossWave = true;
-		this.waveText.setText("⚠ BOSS ⚠");
+		this.waveText.setText("${g.spaceShooter.boss}");
 
 		this.bossHP = 15;
 		this.bossMaxHP = 15;
@@ -413,7 +413,7 @@ export class GameOverScene extends Phaser.Scene {
 		this.add.image(400, 300, "starfield");
 
 		this.add
-			.text(400, 180, win ? "🎉 Victory!" : "${g.spaceShooter.missionFailed}", {
+			.text(400, 180, win ? "${g.spaceShooter.victory}" : "${g.spaceShooter.missionFailed}", {
 				fontSize: "44px",
 				color: win ? "#22c55e" : "#ef4444",
 				fontFamily: "Arial",

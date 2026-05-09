@@ -16,7 +16,7 @@
 
 - **Chat-driven game creation** — Describe your game in natural language; multi-agent engine writes and iterates on the code
 - **Live preview** — Phaser games compile and run in a sandboxed iframe as you chat
-- **5 built-in templates** — Endless Runner, Platformer, Space Shooter, RPG, Puzzle (Sokoban), plus a blank starter
+- **5 built-in templates** — Endless Runner, Platformer, Space Shooter, RPG, Puzzle (Sokoban), plus a blank starter, assets are from <a href="https://github.com/channingbreeze/games">channingbreeze/games</a>
 - **Asset library** — 40+ built-in assets with preview, search, upload, and AI-generated asset support
 - **Turn-level undo** — Roll back any agent turn without losing context
 - **Clickable options** — Agent replies include interactive suggestions you can click to continue
