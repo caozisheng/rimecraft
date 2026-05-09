@@ -1,186 +1,15 @@
 "use client";
 
 import { useRef, useEffect, useCallback, useState } from "react";
-import type { SceneObjectBounds, SceneObject } from "@/core/scene-graph";
+import type { SceneObject } from "@/core/scene-graph";
 import { generateObjectId } from "@/core/scene-graph";
 import { useVisualEditorStore } from "@/stores/visual-editor-store";
 import { sceneBridge } from "@/core/scene-bridge";
-
-// ── Coordinate mapping ──────────────────────────────────────────────
-
-interface CoordMapping {
-	scale: number;
-	offsetX: number;
-	offsetY: number;
-}
-
-function useContainerSize(ref: React.RefObject<HTMLElement | null>) {
-	const [size, setSize] = useState({ w: 0, h: 0 });
-	useEffect(() => {
-		const el = ref.current;
-		if (!el) return;
-
-		const measure = () => {
-			setSize({ w: Math.round(el.clientWidth), h: Math.round(el.clientHeight) });
-		};
-
-		const ro = new ResizeObserver(() => measure());
-		ro.observe(el);
-		window.addEventListener("resize", measure);
-		measure();
-
-		return () => {
-			ro.disconnect();
-			window.removeEventListener("resize", measure);
-		};
-	}, [ref]);
-	return size;
-}
-
-function useCoordinateMapping(
-	containerRef: React.RefObject<HTMLElement | null>,
-): CoordMapping | null {
-	const containerSize = useContainerSize(containerRef);
-	const iframeBounds = useVisualEditorStore((s) => s.iframeBounds);
-	if (!iframeBounds || containerSize.w === 0 || containerSize.h === 0)
-		return null;
-	const scale = Math.min(
-		containerSize.w / iframeBounds.width,
-		containerSize.h / iframeBounds.height,
-	);
-	return {
-		scale,
-		offsetX: (containerSize.w - iframeBounds.width * scale) / 2,
-		offsetY: (containerSize.h - iframeBounds.height * scale) / 2,
-	};
-}
-
-function screenToGame(
-	clientX: number,
-	clientY: number,
-	container: HTMLElement,
-	m: CoordMapping,
-) {
-	const rect = container.getBoundingClientRect();
-	return {
-		x: (clientX - rect.left - m.offsetX) / m.scale,
-		y: (clientY - rect.top - m.offsetY) / m.scale,
-	};
-}
-
-// ── Background detection ────────────────────────────────────────────
-
-function isBackgroundObject(
-	obj: SceneObjectBounds,
-	index: number,
-	iframeBounds: { width: number; height: number } | null,
-): boolean {
-	if (!iframeBounds || index !== 0) return false;
-	const coverage =
-		(obj.width * obj.height) / (iframeBounds.width * iframeBounds.height);
-	return coverage > 0.85;
-}
-
-// ── Drag system ─────────────────────────────────────────────────────
-
-type DragType = "move" | "resize" | "rotate";
-type Corner = "nw" | "ne" | "sw" | "se";
-
-interface DragState {
-	type: DragType;
-	objectId: string;
-	corner?: Corner;
-	startGame: { x: number; y: number };
-	startBounds: SceneObjectBounds;
-	allStarts: { id: string; x: number; y: number }[];
-	snapshotBounds: SceneObjectBounds[];
-}
-
-const CORNER_SIGN: Record<Corner, [number, number]> = {
-	se: [1, 1],
-	sw: [-1, 1],
-	ne: [1, -1],
-	nw: [-1, -1],
-};
-
-const MIN_SIZE = 8;
-const ROTATION_HANDLE_DIST = 24;
-
-function getDragCursor(drag: DragState | null): string {
-	if (!drag) return "default";
-	if (drag.type === "move") return "move";
-	if (drag.type === "rotate") return "grabbing";
-	if (drag.corner) return `${drag.corner}-resize`;
-	return "default";
-}
-
-// ── Grid canvas (DPR-aware) ─────────────────────────────────────────
-
-function GridCanvas({
-	mapping,
-	containerRef,
-}: {
-	mapping: CoordMapping | null;
-	containerRef: React.RefObject<HTMLDivElement | null>;
-}) {
-	const canvasRef = useRef<HTMLCanvasElement>(null);
-	const snapToGrid = useVisualEditorStore((s) => s.snapToGrid);
-	const gridSize = useVisualEditorStore((s) => s.gridSize);
-
-	useEffect(() => {
-		const canvas = canvasRef.current;
-		const container = containerRef.current;
-		if (!canvas || !container || !snapToGrid || !mapping) return;
-		const iframeBounds = useVisualEditorStore.getState().iframeBounds;
-		if (!iframeBounds) return;
-
-		const dpr = window.devicePixelRatio || 1;
-		const w = container.clientWidth;
-		const h = container.clientHeight;
-		if (w === 0 || h === 0) return;
-
-		canvas.width = w * dpr;
-		canvas.height = h * dpr;
-		canvas.style.width = `${w}px`;
-		canvas.style.height = `${h}px`;
-
-		const ctx = canvas.getContext("2d");
-		if (!ctx) return;
-		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-		const scaledGrid = gridSize * mapping.scale;
-		if (scaledGrid < 4) return;
-
-		const { scale, offsetX, offsetY } = mapping;
-		const canvasW = iframeBounds.width * scale;
-		const canvasH = iframeBounds.height * scale;
-
-		ctx.strokeStyle = "rgba(255,255,255,0.08)";
-		ctx.lineWidth = 1;
-		ctx.beginPath();
-		for (let gx = 0; gx <= iframeBounds.width; gx += gridSize) {
-			const px = Math.round(gx * scale + offsetX) + 0.5;
-			ctx.moveTo(px, Math.round(offsetY));
-			ctx.lineTo(px, Math.round(offsetY + canvasH));
-		}
-		for (let gy = 0; gy <= iframeBounds.height; gy += gridSize) {
-			const py = Math.round(gy * scale + offsetY) + 0.5;
-			ctx.moveTo(Math.round(offsetX), py);
-			ctx.lineTo(Math.round(offsetX + canvasW), py);
-		}
-		ctx.stroke();
-	}, [snapToGrid, gridSize, mapping, containerRef]);
-
-	if (!snapToGrid) return null;
-	return (
-		<canvas
-			ref={canvasRef}
-			className="pointer-events-none absolute left-0 top-0"
-		/>
-	);
-}
-
-// ── Main overlay ────────────────────────────────────────────────────
+import { useCoordinateMapping, screenToGame } from "./coordinate-utils";
+import type { DragState } from "./drag-system";
+import { CORNER_SIGN, MIN_SIZE, getDragCursor, isBackgroundObject } from "./drag-system";
+import { GridCanvas } from "./grid-canvas";
+import { HandleGroup } from "./handle-group";
 
 export function OverlayRenderer({
 	containerRef,
@@ -201,14 +30,12 @@ export function OverlayRenderer({
 	const mappingRef = useRef(mapping);
 	mappingRef.current = mapping;
 
-	// ── Start drag ──
-
 	const startDrag = useCallback(
 		(
 			e: React.PointerEvent,
 			objId: string,
-			type: DragType,
-			corner?: Corner,
+			type: DragState["type"],
+			corner?: DragState["corner"],
 		) => {
 			e.stopPropagation();
 			e.preventDefault();
@@ -259,8 +86,6 @@ export function OverlayRenderer({
 		},
 		[containerRef, selectObject, selectObjects],
 	);
-
-	// ── Drag move / up ──
 
 	useEffect(() => {
 		if (!isDragging) return;
@@ -354,8 +179,6 @@ export function OverlayRenderer({
 		};
 	}, [isDragging, containerRef]);
 
-	// ── Canvas click: add-mode creates object, else deselect ──
-
 	const handleCanvasClick = useCallback(
 		(e: React.MouseEvent) => {
 			if (isDragging) return;
@@ -431,7 +254,6 @@ export function OverlayRenderer({
 		<div className="absolute inset-0">
 			<GridCanvas mapping={mapping} containerRef={containerRef} />
 
-			{/* Background: add-mode creates, select-mode deselects */}
 			<div className="absolute inset-0" onClick={handleCanvasClick} />
 
 			{objectBounds.map((obj, index) => {
@@ -444,7 +266,6 @@ export function OverlayRenderer({
 				const ox = obj.originX ?? 0.5;
 				const oy = obj.originY ?? 0.5;
 
-				// Background objects: show outline only, no click capture
 				if (isBg && !selected) {
 					return (
 						<div
@@ -468,7 +289,6 @@ export function OverlayRenderer({
 
 				return (
 					<div key={obj.id}>
-						{/* Object body */}
 						<div
 							className={`absolute z-10 ${isAddMode ? "pointer-events-none" : "cursor-move"}`}
 							style={{
@@ -501,7 +321,6 @@ export function OverlayRenderer({
 							)}
 						</div>
 
-						{/* Handles for selected objects */}
 						{selected && (
 							<HandleGroup
 								obj={obj}
@@ -515,113 +334,12 @@ export function OverlayRenderer({
 				);
 			})}
 
-			{/* Full-screen overlay during drag */}
 			{isDragging && (
 				<div
 					className="fixed inset-0 z-50"
 					style={{ cursor: getDragCursor(dragRef.current) }}
 				/>
 			)}
-		</div>
-	);
-}
-
-// ── Resize + rotation handles ───────────────────────────────────────
-
-function HandleGroup({
-	obj,
-	scale,
-	offsetX,
-	offsetY,
-	onStartDrag,
-}: {
-	obj: SceneObjectBounds;
-	scale: number;
-	offsetX: number;
-	offsetY: number;
-	onStartDrag: (
-		e: React.PointerEvent,
-		id: string,
-		type: DragType,
-		corner?: Corner,
-	) => void;
-}) {
-	const sx = obj.x * scale + offsetX;
-	const sy = obj.y * scale + offsetY;
-	const sw = obj.width * scale;
-	const sh = obj.height * scale;
-	const ox = obj.originX ?? 0.5;
-	const oy = obj.originY ?? 0.5;
-
-	const corners: {
-		corner: Corner;
-		x: number;
-		y: number;
-		cursor: string;
-	}[] = [
-		{ corner: "nw", x: 0, y: 0, cursor: "nw-resize" },
-		{ corner: "ne", x: sw, y: 0, cursor: "ne-resize" },
-		{ corner: "sw", x: 0, y: sh, cursor: "sw-resize" },
-		{ corner: "se", x: sw, y: sh, cursor: "se-resize" },
-	];
-
-	return (
-		<div
-			className="pointer-events-none absolute z-20"
-			style={{
-				left: sx - sw * ox,
-				top: sy - sh * oy,
-				width: sw,
-				height: sh,
-				transform: obj.rotation
-					? `rotate(${obj.rotation}rad)`
-					: undefined,
-				transformOrigin: `${ox * 100}% ${oy * 100}%`,
-			}}
-		>
-			{/* Corner resize handles */}
-			{corners.map((c) => (
-				<div
-					key={c.corner}
-					className="pointer-events-auto absolute h-2.5 w-2.5 rounded-sm border border-primary bg-background shadow-sm"
-					style={{
-						left: c.x - 5,
-						top: c.y - 5,
-						cursor: c.cursor,
-					}}
-					onPointerDown={(e) =>
-						onStartDrag(e, obj.id, "resize", c.corner)
-					}
-				/>
-			))}
-
-			{/* Rotation handle */}
-			<div
-				className="pointer-events-none absolute"
-				style={{
-					left: sw / 2,
-					top: -ROTATION_HANDLE_DIST,
-					width: 0,
-					height: ROTATION_HANDLE_DIST,
-				}}
-			>
-				<div
-					className="absolute bg-primary/50"
-					style={{
-						left: -0.5,
-						top: 6,
-						width: 1,
-						height: ROTATION_HANDLE_DIST - 6,
-					}}
-				/>
-				<div
-					className="pointer-events-auto absolute h-3 w-3 cursor-grab rounded-full border border-primary bg-background shadow-sm"
-					style={{ left: -6, top: -6 }}
-					onPointerDown={(e) =>
-						onStartDrag(e, obj.id, "rotate")
-					}
-				/>
-			</div>
 		</div>
 	);
 }

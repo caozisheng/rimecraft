@@ -2,6 +2,7 @@ import { PhaserBridge } from "@rimecraft/phaser-runtime";
 import { useGameStore } from "@/stores/game-store";
 import { GameCompiler } from "./game-compiler";
 import type { ProjectManager } from "./project-manager";
+import { normalizeError } from "@/utils/normalize-error";
 
 export class PreviewManager {
 	private bridge: PhaserBridge;
@@ -72,7 +73,7 @@ export class PreviewManager {
 				this.onHtmlReady(html);
 			}
 		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e);
+			const msg = normalizeError(e);
 			useGameStore.getState().addError(`编译失败: ${msg}`);
 		}
 	}

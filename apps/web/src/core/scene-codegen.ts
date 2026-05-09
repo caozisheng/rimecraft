@@ -1,6 +1,8 @@
 import type { SceneGraph, SceneObject, SceneAssetRef } from "./scene-graph";
 import { assetRegistry } from "@/lib/assets/asset-registry";
 
+export const GENERATED_MARKER = "// @rimecraft-generated";
+
 export function generateSceneCode(
 	scene: SceneGraph,
 	sceneName = "GameScene",
@@ -9,7 +11,8 @@ export function generateSceneCode(
 	const preloadLines = generatePreload(scene.assets);
 	const createLines = generateCreate(scene.objects, scene.settings);
 
-	return `import Phaser from "phaser";
+	return `// @rimecraft-generated — do not edit manually; visual editor will overwrite this file
+import Phaser from "phaser";
 
 export class ${sceneName} extends Phaser.Scene {
 	constructor() {

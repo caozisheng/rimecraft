@@ -1,6 +1,7 @@
 export interface Command {
 	id: string;
 	name: string;
+	source?: "file" | "visual";
 	execute(): Promise<void>;
 	undo(): Promise<void>;
 }
@@ -24,6 +25,12 @@ export class CommandManager {
 	async execute(command: Command): Promise<void> {
 		this.history = this.history.slice(0, this.pointer + 1);
 		await command.execute();
+		this.history.push(command);
+		this.pointer++;
+	}
+
+	record(command: Command): void {
+		this.history = this.history.slice(0, this.pointer + 1);
 		this.history.push(command);
 		this.pointer++;
 	}

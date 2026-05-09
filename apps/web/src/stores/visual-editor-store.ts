@@ -5,19 +5,14 @@ import type {
 	SceneObjectBounds,
 } from "@/core/scene-graph";
 import { createEmptyScene, findObject } from "@/core/scene-graph";
+import type { VisualUndoEntry } from "@/core/visual-commands";
+import { createVisualCommand } from "@/core/visual-commands";
+import { getEditorCore } from "@/core/editor-core";
 
 export type EditorTool = "select" | "move" | "rotate" | "scale" | "add";
 export type AddObjectType = "text" | "image" | "sprite";
 
-interface UndoEntry {
-	type: "update" | "create" | "delete";
-	objectId: string;
-	oldProps?: Partial<SceneObject>;
-	newProps?: Partial<SceneObject>;
-	objectSnapshot?: SceneObject;
-}
-
-const MAX_UNDO = 50;
+export { type VisualUndoEntry };
 
 interface VisualEditorState {
 	enabled: boolean;
@@ -29,8 +24,6 @@ interface VisualEditorState {
 	iframeBounds: { width: number; height: number } | null;
 	snapToGrid: boolean;
 	gridSize: number;
-	undoStack: UndoEntry[];
-	redoStack: UndoEntry[];
 	dirty: boolean;
 
 	setEnabled: (enabled: boolean) => void;
@@ -50,10 +43,7 @@ interface VisualEditorState {
 	toggleSnapToGrid: () => void;
 	setGridSize: (size: number) => void;
 	getSelectedObjects: () => SceneObject[];
-	pushUndo: (entry: UndoEntry) => void;
-	undo: () => UndoEntry | null;
-	redo: () => UndoEntry | null;
-	clearHistory: () => void;
+	pushUndo: (entry: VisualUndoEntry) => void;
 	setDirty: (dirty: boolean) => void;
 }
 
@@ -68,8 +58,6 @@ export const useVisualEditorStore = create<VisualEditorState>(
 		iframeBounds: null,
 		snapToGrid: true,
 		gridSize: 16,
-		undoStack: [],
-		redoStack: [],
 		dirty: false,
 
 		setEnabled: (enabled) => set({ enabled }),
@@ -132,38 +120,16 @@ export const useVisualEditorStore = create<VisualEditorState>(
 				.filter(Boolean) as SceneObject[];
 		},
 
-		pushUndo: (entry) =>
-			set((s) => ({
-				undoStack: [...s.undoStack.slice(-MAX_UNDO + 1), entry],
-				redoStack: [],
-				dirty: true,
-			})),
-
-		undo: () => {
-			const s = get();
-			if (s.undoStack.length === 0) return null;
-			const entry = s.undoStack[s.undoStack.length - 1];
-			set({
-				undoStack: s.undoStack.slice(0, -1),
-				redoStack: [...s.redoStack, entry],
-				dirty: true,
-			});
-			return entry;
+		pushUndo: (entry) => {
+			const cmd = createVisualCommand(entry);
+			try {
+				getEditorCore().command.record(cmd);
+			} catch {
+				// EditorCore not initialized yet — ignore
+			}
+			set({ dirty: true });
 		},
 
-		redo: () => {
-			const s = get();
-			if (s.redoStack.length === 0) return null;
-			const entry = s.redoStack[s.redoStack.length - 1];
-			set({
-				redoStack: s.redoStack.slice(0, -1),
-				undoStack: [...s.undoStack, entry],
-				dirty: true,
-			});
-			return entry;
-		},
-
-		clearHistory: () => set({ undoStack: [], redoStack: [], dirty: false }),
 		setDirty: (dirty) => set({ dirty }),
 	}),
 );
