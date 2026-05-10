@@ -964,6 +964,1541 @@
         "correct": "if (velocity.x < 0) player.setFlipX(true);\nelse if (velocity.x > 0) player.setFlipX(false);",
         "explanation": "根据移动方向设置 flipX 来翻转精灵朝向"
       }
+    },
+
+    {
+      "id": "err-p3-scene-add-group",
+      "category": "api-misuse",
+      "errorPattern": "this.add.group is not a function in Phaser 4",
+      "errorRegex": "this\\.add\\.group.*not a function|add\\.group.*undefined",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["group", "add", "physics", "P3", "P4", "迁移"],
+      "cause": "Phaser 3 中 this.add.group() 可以创建普通组，Phaser 4 要用 this.physics.add.group() 或 new Phaser.GameObjects.Group()",
+      "fix": {
+        "wrong": "this.coins = this.add.group();",
+        "correct": "// 物理组\nthis.coins = this.physics.add.group();\n// 或普通显示组\nthis.coins = this.add.group();",
+        "explanation": "Phaser 4 中 this.add.group() 仍可用但返回的是显示组，需要物理组时用 this.physics.add.group()"
+      }
+    },
+    {
+      "id": "err-p3-scene-sys",
+      "category": "api-misuse",
+      "errorPattern": "this.sys.game deprecated patterns",
+      "errorRegex": "this\\.sys\\.game|sys\\.canvas|sys\\.config",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["sys", "game", "config", "canvas", "P3", "迁移"],
+      "cause": "通过 this.sys.game 访问全局配置是 Phaser 3 的模式，Phaser 4 推荐用 this.game 或 this.scale",
+      "fix": {
+        "wrong": "const w = this.sys.game.config.width as number;",
+        "correct": "const w = this.scale.width;",
+        "explanation": "使用 this.scale.width/height 获取画布尺寸，this.game 访问全局游戏实例"
+      }
+    },
+    {
+      "id": "err-p3-container-p4",
+      "category": "api-misuse",
+      "errorPattern": "Container children physics not working",
+      "errorRegex": "Container.*physics|container.*body.*null|physics.*inside.*container",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["Container", "physics", "children", "body", "容器", "物理"],
+      "cause": "Phaser 中 Container 内的子对象物理体不会正确工作，因为物理坐标是世界坐标",
+      "fix": {
+        "wrong": "const container = this.add.container(100, 100);\nconst sprite = this.physics.add.sprite(0, 0, 'player');\ncontainer.add(sprite);",
+        "correct": "// 不要将物理对象放入 Container\n// 直接在世界坐标中管理物理对象\nconst player = this.physics.add.sprite(100, 100, 'player');",
+        "explanation": "物理对象不应放入 Container。Container 适合纯 UI 元素的分组"
+      }
+    },
+    {
+      "id": "err-p3-bitmaptext",
+      "category": "api-misuse",
+      "errorPattern": "add.bitmapText font not loaded / P3 bitmap font API",
+      "errorRegex": "bitmapText.*font.*not|bitmapFont.*load|retro.*font",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["bitmapText", "bitmapFont", "font", "位图字体"],
+      "cause": "使用 BitmapText 但没有正确加载位图字体，或混淆了 P3/P4 的加载 API",
+      "fix": {
+        "correct": "// preload\nthis.load.bitmapFont('pixelFont', 'font.png', 'font.xml');\n// create\nthis.add.bitmapText(100, 100, 'pixelFont', 'Hello', 16);",
+        "explanation": "需要同时加载 .png 和 .xml/.fnt 文件。确保 key 一致"
+      }
+    },
+    {
+      "id": "err-p3-camera-fade",
+      "category": "api-misuse",
+      "errorPattern": "Camera fade/flash using P3 API",
+      "errorRegex": "camera.*fade.*p3|cameras.*main.*fade",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["camera", "fade", "flash", "shake", "相机", "渐变"],
+      "cause": "Phaser 4 的相机效果 API 参数顺序可能与 P3 不同",
+      "fix": {
+        "correct": "// 渐出\nthis.cameras.main.fadeOut(1000, 0, 0, 0);\n// 渐入\nthis.cameras.main.fadeIn(1000, 0, 0, 0);\n// 震动\nthis.cameras.main.shake(500, 0.01);",
+        "explanation": "fadeOut/fadeIn 参数: (duration, r, g, b)，shake 参数: (duration, intensity)"
+      }
+    },
+    {
+      "id": "err-p3-input-on",
+      "category": "api-misuse",
+      "errorPattern": "Using scene.input.on with wrong event names",
+      "errorRegex": "input\\.on.*wrong|gameobjectdown|pointerdown.*scene",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["input", "on", "event", "pointerdown", "事件名"],
+      "cause": "全局 input 事件名与对象级事件名混淆",
+      "fix": {
+        "wrong": "// 混淆了全局和对象级事件\nthis.input.on('pointerdown', (pointer, gameObjects) => { ... });\nsprite.on('gameobjectdown', () => { ... });",
+        "correct": "// 全局事件\nthis.input.on('gameobjectdown', (pointer, gameObject) => { ... });\n// 对象级事件\nsprite.on('pointerdown', () => { ... });",
+        "explanation": "全局用 'gameobjectdown'（注意带 gameobject 前缀），对象级用 'pointerdown'"
+      }
+    },
+    {
+      "id": "err-matter-body-config",
+      "category": "physics",
+      "errorPattern": "Matter.js body configuration errors",
+      "errorRegex": "matter.*body.*config|matter.*shape|MatterPhysics",
+      "severity": "high",
+      "frequency": "uncommon",
+      "keywords": ["matter", "body", "shape", "config", "Matter.js", "物理配置"],
+      "cause": "使用 Matter.js 物理引擎时，body 配置格式与 Arcade 不同",
+      "fix": {
+        "correct": "const player = this.matter.add.sprite(100, 300, 'player', undefined, {\n  shape: { type: 'rectangle', width: 32, height: 48 },\n  friction: 0.1,\n  restitution: 0.2\n});",
+        "explanation": "Matter.js 使用 shape 配置碰撞体形状，支持 rectangle/circle/polygon 等"
+      }
+    },
+    {
+      "id": "err-matter-collision-category",
+      "category": "physics",
+      "errorPattern": "Matter.js collision categories not filtering correctly",
+      "errorRegex": "collision.*category|collisionFilter|matter.*filter",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["matter", "collision", "category", "filter", "碰撞过滤", "分组"],
+      "cause": "Matter.js 碰撞过滤使用位掩码，设置不当导致碰撞不生效或误碰撞",
+      "fix": {
+        "correct": "const CATEGORY_PLAYER = 0x0001;\nconst CATEGORY_ENEMY = 0x0002;\nconst CATEGORY_BULLET = 0x0004;\n\nplayer.setCollisionCategory(CATEGORY_PLAYER);\nplayer.setCollidesWith([CATEGORY_ENEMY]);\n\nbullet.setCollisionCategory(CATEGORY_BULLET);\nbullet.setCollidesWith([CATEGORY_ENEMY]);",
+        "explanation": "碰撞分类使用 2 的幂（位掩码）。setCollidesWith 接受数组指定可碰撞的分类"
+      }
+    },
+    {
+      "id": "err-matter-sensor",
+      "category": "physics",
+      "errorPattern": "Matter.js sensor not detecting overlaps",
+      "errorRegex": "matter.*sensor|isSensor|sensor.*overlap",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["matter", "sensor", "isSensor", "overlap", "传感器"],
+      "cause": "Matter.js 的 sensor 不产生碰撞响应，需要监听 collision 事件来检测",
+      "fix": {
+        "correct": "// 设置为传感器\nsprite.setSensor(true);\n\n// 监听碰撞事件\nthis.matter.world.on('collisionstart', (event) => {\n  event.pairs.forEach((pair) => {\n    // 检查 pair.bodyA 和 pair.bodyB\n  });\n});",
+        "explanation": "sensor 只检测重叠不产生物理响应，需要用 collisionstart 事件手动处理"
+      }
+    },
+    {
+      "id": "err-arcade-overlap-group-group",
+      "category": "physics",
+      "errorPattern": "Overlap between two groups not detecting all pairs",
+      "errorRegex": "group.*group.*overlap|overlap.*miss|group.*collide.*group",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["group", "overlap", "collider", "组对组", "碰撞检测"],
+      "cause": "组对组碰撞时某些成员不触发回调，通常因为 active 状态或 body.enable 问题",
+      "fix": {
+        "checkList": [
+          "确认两个 group 中的对象都有 active=true 和 body.enable=true",
+          "使用对象池时确认复用对象已调 setActive(true).setVisible(true)",
+          "确认 collider/overlap 在 create() 中创建，不是在某个条件内",
+          "确认回调函数中没有异常导致后续对的检测中断"
+        ]
+      }
+    },
+    {
+      "id": "err-body-setsize-ratio",
+      "category": "physics",
+      "errorPattern": "Physics body setSize doesn't account for scale",
+      "errorRegex": "setSize.*scale|body.*size.*wrong|hitbox.*too.*(?:big|small)",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["setSize", "body", "scale", "hitbox", "碰撞体", "大小"],
+      "cause": "setScale 后使用 setSize 设置碰撞体大小，但忘记碰撞体大小是相对于原始尺寸的",
+      "fix": {
+        "correct": "// 方法1：先设大小再缩放\nsprite.body!.setSize(24, 32);\nsprite.body!.setOffset(4, 16);\n\n// 方法2：使用实际像素值\nsprite.setScale(2);\nsprite.body!.setSize(24, 32); // 这是原始帧中的像素",
+        "explanation": "body.setSize 的参数是基于原始纹理大小的，不受 setScale 影响"
+      }
+    },
+    {
+      "id": "err-bounce-config",
+      "category": "physics",
+      "errorPattern": "Object doesn't bounce correctly / bounce value wrong",
+      "errorRegex": "setBounce|bounce.*wrong|restitution|弹跳",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["bounce", "setBounce", "restitution", "弹跳", "反弹"],
+      "cause": "setBounce 的值设置不正确——0 表示无弹跳，1 表示完全弹跳",
+      "fix": {
+        "correct": "player.setBounce(0.2); // 轻微弹跳\nball.setBounce(1); // 完全弹跳（不损失能量）\nball.setBounce(1.05); // 越弹越高（不真实但有趣）",
+        "explanation": "bounce 值: 0=不弹, 0.5=半弹, 1=完全弹, >1=越弹越高"
+      }
+    },
+    {
+      "id": "err-atlas-frame-name",
+      "category": "resource-loading",
+      "errorPattern": "Atlas frame name not found / wrong frame reference",
+      "errorRegex": "frame.*not found.*atlas|atlas.*frame.*undefined|setFrame.*null",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["atlas", "frame", "name", "JSON", "图集", "帧名"],
+      "cause": "使用 atlas 时帧名称（frame name）与 JSON 文件中的名称不匹配",
+      "fix": {
+        "wrong": "this.add.sprite(100, 100, 'atlas', 'player.png');",
+        "correct": "// 检查 JSON 中的 frames 键名\n// 可能是 'player' 而不是 'player.png'\nthis.add.sprite(100, 100, 'atlas', 'player');",
+        "explanation": "帧名取决于打包工具的输出格式——有的带扩展名有的不带。检查 atlas JSON 文件确认确切的帧名"
+      }
+    },
+    {
+      "id": "err-atlas-json-format",
+      "category": "resource-loading",
+      "errorPattern": "Atlas JSON format not recognized / parse error",
+      "errorRegex": "atlas.*JSON.*(?:parse|format|invalid)|Unexpected token.*atlas",
+      "severity": "high",
+      "frequency": "uncommon",
+      "keywords": ["atlas", "JSON", "format", "parse", "图集", "格式"],
+      "cause": "Atlas 的 JSON 文件格式不正确或与 Phaser 期望的格式不匹配",
+      "fix": {
+        "correct": "// Phaser 支持两种 atlas JSON 格式:\n// 1. Array format (TexturePacker JSON Array)\nthis.load.atlas('sprites', 'sprites.png', 'sprites.json');\n\n// 2. Hash format (TexturePacker JSON Hash)\nthis.load.atlas('sprites', 'sprites.png', 'sprites.json');",
+        "explanation": "确保 JSON 文件是 TexturePacker 的 JSON Array 或 JSON Hash 格式。手写的 JSON 必须包含 frames 数组/对象和 meta 信息"
+      }
+    },
+    {
+      "id": "err-audio-format-support",
+      "category": "resource-loading",
+      "errorPattern": "Audio format not supported in browser",
+      "errorRegex": "audio.*format|codec.*not.*supported|decode.*audio|ogg.*mp3",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["audio", "format", "ogg", "mp3", "wav", "音频格式"],
+      "cause": "某些浏览器不支持特定音频格式（如 Safari 不支持 OGG）",
+      "fix": {
+        "correct": "// 提供多种格式的回退\nthis.load.audio('bgm', ['audio/bgm.ogg', 'audio/bgm.mp3']);\nthis.load.audio('sfx', ['audio/sfx.webm', 'audio/sfx.mp3']);",
+        "explanation": "提供 ogg + mp3 双格式确保跨浏览器兼容。OGG 用于 Chrome/Firefox，MP3 用于 Safari"
+      }
+    },
+    {
+      "id": "err-json-cache-key",
+      "category": "resource-loading",
+      "errorPattern": "JSON data not in cache / cache.get returns null",
+      "errorRegex": "cache.*json.*null|json.*not.*cache|this\\.cache.*undefined",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["cache", "JSON", "data", "load", "缓存", "数据"],
+      "cause": "加载的 JSON 数据无法通过 cache 获取，通常因为 key 不匹配或加载失败",
+      "fix": {
+        "wrong": "// preload\nthis.load.json('levels', 'data/levels.json');\n// create\nconst data = this.cache.json.get('level');  // key 不匹配!",
+        "correct": "// preload\nthis.load.json('levels', 'data/levels.json');\n// create\nconst data = this.cache.json.get('levels');  // key 必须一致",
+        "explanation": "cache.json.get() 的 key 必须与 load.json() 的 key 完全一致"
+      }
+    },
+    {
+      "id": "err-load-on-complete",
+      "category": "resource-loading",
+      "errorPattern": "Assets loaded at runtime not triggering callback",
+      "errorRegex": "load\\.on.*complete|runtime.*load|dynamic.*load|addFile",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["load", "on", "complete", "runtime", "动态加载"],
+      "cause": "在 create() 或 update() 中动态加载资源没有调用 this.load.start()",
+      "fix": {
+        "wrong": "// create() 中动态加载\nthis.load.image('extra', 'extra.png');\n// 资源未加载因为没有 start",
+        "correct": "this.load.image('extra', 'extra.png');\nthis.load.once('complete', () => {\n  // 资源加载完毕，可以使用了\n  this.add.sprite(100, 100, 'extra');\n});\nthis.load.start();",
+        "explanation": "preload() 外动态加载资源必须手动调 this.load.start()，并监听 complete 事件"
+      }
+    },
+    {
+      "id": "err-load-path-prefix",
+      "category": "resource-loading",
+      "errorPattern": "Asset path incorrect after setting load path prefix",
+      "errorRegex": "load\\.setPath|setBaseURL|path.*prefix|404.*asset",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["setPath", "setBaseURL", "path", "prefix", "路径前缀"],
+      "cause": "使用 this.load.setPath() 后，后续所有加载路径都会加上前缀，可能导致路径叠加错误",
+      "fix": {
+        "correct": "preload() {\n  this.load.setPath('assets/images/');\n  this.load.image('player', 'player.png');  // 实际路径: assets/images/player.png\n  this.load.image('bg', 'bg.png');          // 实际路径: assets/images/bg.png\n  \n  // 加载其他目录的资源时重置\n  this.load.setPath('assets/audio/');\n  this.load.audio('bgm', 'bgm.mp3');\n}",
+        "explanation": "setPath 影响之后的所有 load 调用。切换目录时记得更新 setPath"
+      }
+    },
+    {
+      "id": "err-scene-restart-cleanup",
+      "category": "scene-lifecycle",
+      "errorPattern": "Scene restart causes accumulated listeners / stale references",
+      "errorRegex": "scene.*restart.*leak|restart.*cleanup|stale.*reference.*restart",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["scene", "restart", "cleanup", "shutdown", "重启", "清理"],
+      "cause": "场景重启时自定义的全局事件监听器、定时器和外部引用没有清理",
+      "fix": {
+        "correct": "create() {\n  // ... 创建逻辑 ...\n  \n  // 注册清理\n  this.events.on('shutdown', this.cleanup, this);\n}\n\ncleanup() {\n  // 清理全局事件\n  this.game.events.off('custom-event', this.handler);\n  // 清理外部引用\n  this.externalRef = null;\n}",
+        "explanation": "在 shutdown 事件中清理全局事件监听器、外部引用和手动创建的资源"
+      }
+    },
+    {
+      "id": "err-scene-sleep-vs-pause",
+      "category": "scene-lifecycle",
+      "errorPattern": "Scene sleep vs pause confusion / sleeping scene still processing input",
+      "errorRegex": "scene.*sleep|scene.*pause|sleep.*update|pause.*input",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["scene", "sleep", "pause", "wake", "resume", "休眠", "暂停"],
+      "cause": "混淆 scene.sleep() 和 scene.pause() 的行为——sleep 停止更新和渲染，pause 只停止更新",
+      "fix": {
+        "correct": "// sleep: 停止更新和渲染，但保留状态\nthis.scene.sleep('GameScene');\nthis.scene.wake('GameScene');  // 唤醒\n\n// pause: 停止更新但继续渲染\nthis.scene.pause('GameScene');\nthis.scene.resume('GameScene');  // 恢复",
+        "explanation": "暂停菜单用 pause（游戏画面可见），切换到其他场景用 sleep（不可见但保留状态）"
+      }
+    },
+    {
+      "id": "err-scene-events-cross",
+      "category": "scene-lifecycle",
+      "errorPattern": "Events not received between scenes / cross-scene communication fails",
+      "errorRegex": "cross.*scene.*event|scene.*communicate|emit.*other.*scene",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["scene", "events", "emit", "cross", "跨场景", "通信"],
+      "cause": "直接在一个场景 emit 的事件无法被另一个场景接收，因为事件系统是场景私有的",
+      "fix": {
+        "wrong": "// Scene A\nthis.events.emit('score-changed', 100);\n// Scene B — 收不到！\nthis.events.on('score-changed', (s) => { ... });",
+        "correct": "// Scene A — 使用全局事件总线\nthis.game.events.emit('score-changed', 100);\n// Scene B\nthis.game.events.on('score-changed', (s) => { ... });\n\n// 或直接获取另一个场景\nconst hud = this.scene.get('HUDScene');\nhud.updateScore(100);",
+        "explanation": "跨场景通信用 this.game.events（全局事件总线）或 this.scene.get() 直接调方法"
+      }
+    },
+    {
+      "id": "err-scene-destroy-memory",
+      "category": "scene-lifecycle",
+      "errorPattern": "Stopped scenes still consuming memory",
+      "errorRegex": "scene.*memory|stopped.*scene.*memory|gc.*scene",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["scene", "memory", "destroy", "stop", "remove", "内存", "回收"],
+      "cause": "scene.stop() 不会销毁场景——它保留在场景管理器中，可以被重新启动",
+      "fix": {
+        "correct": "// stop: 保留在管理器中，可重新 start\nthis.scene.stop('TempScene');\n\n// remove: 完全从管理器中移除\nthis.scene.remove('TempScene');",
+        "explanation": "对于临时场景（如一次性过场动画），用 scene.remove() 完全释放。常用场景用 stop/start 循环使用"
+      }
+    },
+    {
+      "id": "err-ts-strict-scene-property",
+      "category": "type-error",
+      "errorPattern": "Property 'xxx' does not exist on type 'Scene'",
+      "errorRegex": "Property.*does not exist.*Scene|TS2339.*Scene",
+      "severity": "medium",
+      "frequency": "very-common",
+      "keywords": ["typescript", "property", "Scene", "declare", "类型声明"],
+      "cause": "TypeScript 严格模式下自定义属性必须在类中声明类型",
+      "fix": {
+        "wrong": "export class GameScene extends Phaser.Scene {\n  create() {\n    this.player = this.physics.add.sprite(100, 300, 'player');\n  }\n}",
+        "correct": "export class GameScene extends Phaser.Scene {\n  private player!: Phaser.Physics.Arcade.Sprite;\n  private score: number = 0;\n  \n  create() {\n    this.player = this.physics.add.sprite(100, 300, 'player');\n  }\n}",
+        "explanation": "在类顶部声明所有自定义属性的类型。使用 ! 表示将在 create() 中初始化"
+      }
+    },
+    {
+      "id": "err-ts-physics-body-cast",
+      "category": "type-error",
+      "errorPattern": "Property 'setVelocityX' does not exist on type 'Body | StaticBody'",
+      "errorRegex": "setVelocity.*Body.*StaticBody|does not exist.*Body \\| StaticBody",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["typescript", "Body", "StaticBody", "cast", "物理体", "类型"],
+      "cause": "sprite.body 的类型是 Body | StaticBody | null，需要类型收窄",
+      "fix": {
+        "wrong": "player.body.setVelocityX(200);",
+        "correct": "const body = player.body as Phaser.Physics.Arcade.Body;\nbody.setVelocityX(200);\n// 或\n(player.body as Phaser.Physics.Arcade.Body).setVelocityX(200);",
+        "explanation": "将 body 断言为 Phaser.Physics.Arcade.Body 来访问动态物理体方法"
+      }
+    },
+    {
+      "id": "err-ts-config-type",
+      "category": "type-error",
+      "errorPattern": "GameConfig type errors / missing required properties",
+      "errorRegex": "GameConfig.*type|Types\\.Core\\.GameConfig|config.*not.*assignable",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["GameConfig", "config", "type", "Types", "配置类型"],
+      "cause": "GameConfig 对象的属性类型与 Phaser.Types.Core.GameConfig 不匹配",
+      "fix": {
+        "correct": "const config: Phaser.Types.Core.GameConfig = {\n  type: Phaser.AUTO,\n  width: 800,\n  height: 600,\n  parent: 'game-container',\n  backgroundColor: '#1a1a2e',\n  physics: {\n    default: 'arcade',\n    arcade: { gravity: { x: 0, y: 300 }, debug: false }\n  },\n  scene: [GameScene]\n};",
+        "explanation": "使用 Phaser.Types.Core.GameConfig 类型注解让 TypeScript 检查配置正确性"
+      }
+    },
+    {
+      "id": "err-ts-this-context-callback",
+      "category": "type-error",
+      "errorPattern": "'this' implicitly has type 'any' in callback",
+      "errorRegex": "this.*implicitly.*any|noImplicitThis|this.*context.*any",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["this", "any", "implicit", "callback", "上下文", "类型"],
+      "cause": "在回调函数中使用 function 关键字导致 this 类型丢失",
+      "fix": {
+        "wrong": "this.time.addEvent({\n  delay: 1000,\n  callback: function() { this.spawn(); }  // this 是 any\n});",
+        "correct": "this.time.addEvent({\n  delay: 1000,\n  callback: () => { this.spawn(); }  // 箭头函数保留 this 类型\n});",
+        "explanation": "始终使用箭头函数保留 this 的类型和上下文"
+      }
+    },
+    {
+      "id": "err-ts-event-handler-type",
+      "category": "type-error",
+      "errorPattern": "Event handler parameter types not inferred",
+      "errorRegex": "parameter.*implicitly.*any.*event|event.*handler.*type",
+      "severity": "low",
+      "frequency": "common",
+      "keywords": ["event", "handler", "parameter", "type", "事件", "参数类型"],
+      "cause": "Phaser 事件处理器的参数类型不会自动推断，需要手动标注",
+      "fix": {
+        "wrong": "this.input.on('pointerdown', (pointer) => {\n  // pointer 是 any\n});",
+        "correct": "this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {\n  console.log(pointer.x, pointer.y);\n});",
+        "explanation": "手动标注事件处理器参数类型，常见: Pointer, Key, GameObject"
+      }
+    },
+    {
+      "id": "err-ts-overload-mismatch",
+      "category": "type-error",
+      "errorPattern": "No overload matches this call for Phaser methods",
+      "errorRegex": "No overload matches|overload.*Phaser|Argument.*not assignable.*overload",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["overload", "mismatch", "argument", "TypeScript", "重载"],
+      "cause": "Phaser 方法有多个重载签名，传入的参数组合不匹配任何一个",
+      "fix": {
+        "explanation": "检查 Phaser 类型定义中的方法签名。常见问题: collider/overlap 的 processCallback 参数应传 undefined 而非 null。使用 IDE 悬停查看所有可用重载"
+      }
+    },
+    {
+      "id": "err-gamepad-not-connected",
+      "category": "input",
+      "errorPattern": "Gamepad input undefined / no gamepads detected",
+      "errorRegex": "gamepad.*undefined|pad.*null|no.*gamepad|getPad.*null",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["gamepad", "controller", "pad", "joystick", "手柄", "控制器"],
+      "cause": "浏览器在用户按下手柄按钮前不会报告手柄连接，或 input.gamepad 未启用",
+      "fix": {
+        "correct": "// 配置中启用 gamepad\nconst config = {\n  input: { gamepad: true },\n  // ...\n};\n\n// 监听连接事件\nthis.input.gamepad!.on('connected', (pad: Phaser.Input.Gamepad.Gamepad) => {\n  console.log('Gamepad connected:', pad.id);\n});\n\n// 在 update 中安全使用\nconst pad = this.input.gamepad!.getPad(0);\nif (pad) {\n  if (pad.left) player.setVelocityX(-200);\n}",
+        "explanation": "config 中启用 gamepad，并在使用前检查 getPad 返回值是否为 null"
+      }
+    },
+    {
+      "id": "err-multitouch-pointer",
+      "category": "input",
+      "errorPattern": "Only first touch point detected / multi-touch not working",
+      "errorRegex": "multi.*touch|pointer.*1|second.*touch|多点触控",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["multi-touch", "pointer", "touch", "多点触控", "触摸"],
+      "cause": "默认只有 pointer1（第一个触摸点），需要手动启用额外指针",
+      "fix": {
+        "correct": "// 在 create() 中启用多点触控\nthis.input.addPointer(2); // 最多支持3个额外指针\n\n// 使用\nconst pointer1 = this.input.pointer1;\nconst pointer2 = this.input.pointer2;\nif (pointer1.isDown && pointer2.isDown) {\n  // 双指操作\n}",
+        "explanation": "默认只有 1 个 pointer。调用 addPointer(n) 启用额外的触摸点"
+      }
+    },
+    {
+      "id": "err-pointer-worldxy",
+      "category": "input",
+      "errorPattern": "Pointer position wrong after camera scroll",
+      "errorRegex": "pointer.*world.*position|pointer.*camera.*offset|click.*wrong.*position",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["pointer", "worldX", "worldY", "camera", "坐标", "世界坐标"],
+      "cause": "使用 pointer.x/y 而非 pointer.worldX/worldY，相机移动后坐标不正确",
+      "fix": {
+        "wrong": "this.input.on('pointerdown', (pointer) => {\n  this.add.sprite(pointer.x, pointer.y, 'marker');\n});",
+        "correct": "this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {\n  // 使用世界坐标，考虑相机偏移\n  this.add.sprite(pointer.worldX, pointer.worldY, 'marker');\n});",
+        "explanation": "pointer.x/y 是屏幕坐标，pointer.worldX/worldY 是世界坐标（考虑相机偏移）"
+      }
+    },
+    {
+      "id": "err-input-hitarea-shape",
+      "category": "input",
+      "errorPattern": "setInteractive hit area too small / click on transparent area not detected",
+      "errorRegex": "hitArea|hit.*area|interactive.*shape|click.*transparent",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["hitArea", "interactive", "shape", "click", "点击区域"],
+      "cause": "默认 hit area 基于纹理尺寸，透明区域不可点击",
+      "fix": {
+        "correct": "// 自定义矩形点击区域\nsprite.setInteractive(\n  new Phaser.Geom.Rectangle(0, 0, 64, 64),\n  Phaser.Geom.Rectangle.Contains\n);\n\n// 像素级精确点击（性能较低）\nsprite.setInteractive({ pixelPerfect: true, alphaTolerance: 128 });",
+        "explanation": "可以自定义 hit area 形状（Rectangle/Circle/Polygon）或使用像素精确检测"
+      }
+    },
+    {
+      "id": "err-gesture-pinch-zoom",
+      "category": "input",
+      "errorPattern": "Pinch zoom not implemented / gesture recognition",
+      "errorRegex": "pinch|zoom.*gesture|two.*finger|缩放手势",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["pinch", "zoom", "gesture", "touch", "缩放", "手势"],
+      "cause": "Phaser 没有内置手势识别，需要手动实现",
+      "fix": {
+        "correct": "// 双指缩放实现\nthis.input.addPointer(1);\nlet prevDist = 0;\n\nthis.input.on('pointermove', () => {\n  const p1 = this.input.pointer1;\n  const p2 = this.input.pointer2;\n  if (p1.isDown && p2.isDown) {\n    const dist = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);\n    if (prevDist > 0) {\n      const zoom = this.cameras.main.zoom * (dist / prevDist);\n      this.cameras.main.setZoom(Phaser.Math.Clamp(zoom, 0.5, 3));\n    }\n    prevDist = dist;\n  } else {\n    prevDist = 0;\n  }\n});",
+        "explanation": "使用两个 pointer 的距离变化来计算缩放比例，手动更新 camera.zoom"
+      }
+    },
+    {
+      "id": "err-anim-chain-interrupt",
+      "category": "animation",
+      "errorPattern": "Animation chain interrupted / next animation not playing",
+      "errorRegex": "anim.*chain|animation.*interrupt|play.*after.*complete",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["animation", "chain", "sequence", "interrupt", "动画链", "中断"],
+      "cause": "在动画未完成时调用 play() 会中断当前动画，链式动画不生效",
+      "fix": {
+        "correct": "// 方法1：使用 chain\nsprite.play('attack');\nsprite.chain('idle');\n\n// 方法2：监听完成事件\nsprite.on('animationcomplete-attack', () => {\n  sprite.play('idle');\n});\n\n// 方法3：在 update 中检查\nif (!sprite.anims.isPlaying || sprite.anims.currentAnim?.key !== 'attack') {\n  sprite.play('idle');\n}",
+        "explanation": "使用 chain() 排队下一个动画，或监听 animationcomplete 事件"
+      }
+    },
+    {
+      "id": "err-anim-atlas-frames",
+      "category": "animation",
+      "errorPattern": "Animation from atlas frames not working / wrong frame names",
+      "errorRegex": "generateFrameNames.*atlas|atlas.*anim.*frame|animation.*atlas",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["animation", "atlas", "generateFrameNames", "帧名", "图集动画"],
+      "cause": "使用 generateFrameNames 时前缀、后缀或编号格式与 atlas JSON 中的帧名不匹配",
+      "fix": {
+        "wrong": "this.anims.create({\n  key: 'walk',\n  frames: this.anims.generateFrameNames('atlas', {\n    prefix: 'walk',\n    start: 1, end: 8\n  })\n});",
+        "correct": "// 假设 atlas JSON 中帧名为 walk_01, walk_02, ...\nthis.anims.create({\n  key: 'walk',\n  frames: this.anims.generateFrameNames('atlas', {\n    prefix: 'walk_',\n    start: 1, end: 8,\n    zeroPad: 2  // 补零到2位: 01, 02, ...\n  }),\n  frameRate: 10,\n  repeat: -1\n});",
+        "explanation": "prefix/suffix/zeroPad 必须与 atlas JSON 中的帧名格式完全匹配。先检查 JSON 确认帧名格式"
+      }
+    },
+    {
+      "id": "err-anim-repeat-config",
+      "category": "animation",
+      "errorPattern": "Animation not looping / plays only once",
+      "errorRegex": "anim.*not.*loop|animation.*once|repeat.*not.*work",
+      "severity": "low",
+      "frequency": "common",
+      "keywords": ["animation", "repeat", "loop", "循环", "重复"],
+      "cause": "动画默认 repeat: 0（播放一次），需要设置 repeat: -1 来循环",
+      "fix": {
+        "wrong": "this.anims.create({\n  key: 'walk',\n  frames: ...,\n  frameRate: 10\n});",
+        "correct": "this.anims.create({\n  key: 'walk',\n  frames: ...,\n  frameRate: 10,\n  repeat: -1  // -1 表示无限循环\n});",
+        "explanation": "repeat: -1 无限循环，repeat: 0 播放一次，repeat: N 播放 N+1 次"
+      }
+    },
+    {
+      "id": "err-anim-play-while-playing",
+      "category": "animation",
+      "errorPattern": "Animation restarting every frame in update()",
+      "errorRegex": "anim.*restart.*frame|play.*every.*update|animation.*flicker",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["animation", "play", "update", "restart", "闪烁", "重启"],
+      "cause": "在 update() 中无条件调用 play()，导致动画每帧重新开始",
+      "fix": {
+        "wrong": "update() {\n  if (cursors.left.isDown) {\n    player.play('walk-left');  // 每帧重启!\n  }\n}",
+        "correct": "update() {\n  if (cursors.left.isDown) {\n    player.play('walk-left', true);  // true = ignoreIfPlaying\n  }\n}",
+        "explanation": "play() 的第二个参数 true 表示如果该动画已在播放则忽略，避免每帧重启"
+      }
+    },
+    {
+      "id": "err-perf-texture-size",
+      "category": "performance",
+      "errorPattern": "WebGL texture size limit exceeded / texture too large",
+      "errorRegex": "texture.*size.*limit|WebGL.*texture.*max|4096.*texture",
+      "severity": "high",
+      "frequency": "uncommon",
+      "keywords": ["texture", "size", "WebGL", "limit", "4096", "纹理大小"],
+      "cause": "纹理尺寸超过 WebGL 最大限制（通常 4096x4096），导致渲染失败或性能下降",
+      "fix": {
+        "checkList": [
+          "单张纹理不超过 4096x4096 像素（移动端可能更低: 2048x2048）",
+          "使用 texture atlas 打包多个小图到一张大图",
+          "大型背景图分割为多个瓦片",
+          "用 this.renderer.getMaxTextureSize() 检查实际限制"
+        ]
+      }
+    },
+    {
+      "id": "err-perf-drawcall",
+      "category": "performance",
+      "errorPattern": "Too many draw calls / WebGL batch breaks",
+      "errorRegex": "draw.*call|batch.*break|render.*slow|渲染.*慢",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["draw call", "batch", "render", "WebGL", "渲染", "批次"],
+      "cause": "使用过多不同纹理导致 WebGL 批次中断，增加 draw call",
+      "fix": {
+        "checkList": [
+          "将相关的小图打包到一个 texture atlas 减少纹理切换",
+          "相同纹理的对象尽量连续创建（减少 depth 交错）",
+          "使用 game.renderer.drawCount 监控 draw call 数量",
+          "避免过多的文本对象，文本对象每个都是独立 draw call"
+        ]
+      }
+    },
+    {
+      "id": "err-perf-physics-objects",
+      "category": "performance",
+      "errorPattern": "Physics simulation slow with many objects",
+      "errorRegex": "physics.*slow|too many.*physics|arcade.*performance|物理.*卡",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["physics", "performance", "objects", "count", "物理", "性能"],
+      "cause": "场景中活跃物理对象过多导致碰撞检测耗时大",
+      "fix": {
+        "checkList": [
+          "使用对象池限制活跃对象数量（maxSize）",
+          "出屏对象用 killAndHide 禁用物理体",
+          "不需要碰撞的对象不要用 physics.add 创建",
+          "使用 setCollisionCategory/setCollidesWith 减少不必要的碰撞对",
+          "避免 O(n^2) 碰撞——两个大 group 之间的 collider 会检测每一对"
+        ]
+      }
+    },
+    {
+      "id": "err-perf-text-create",
+      "category": "performance",
+      "errorPattern": "Creating text objects causes frame spike",
+      "errorRegex": "text.*performance|text.*spike|text.*slow|文本.*卡顿",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["text", "performance", "BitmapText", "文本", "性能"],
+      "cause": "Text 对象使用 Canvas 渲染，创建时成本高。大量文本对象或频繁修改导致性能下降",
+      "fix": {
+        "correct": "// 高性能方案：使用 BitmapText\n// preload\nthis.load.bitmapFont('pixel', 'font.png', 'font.xml');\n// create\nthis.scoreText = this.add.bitmapText(10, 10, 'pixel', '0', 24);\n\n// 或减少 Text 的 setText 调用频率\nlet lastScore = -1;\nupdate() {\n  if (this.score !== lastScore) {\n    this.scoreText.setText('Score: ' + this.score);\n    lastScore = this.score;\n  }\n}",
+        "explanation": "BitmapText 性能远优于普通 Text。如果必须用 Text，避免每帧调 setText"
+      }
+    },
+    {
+      "id": "err-perf-camera-render",
+      "category": "performance",
+      "errorPattern": "Everything rendered even when off-camera",
+      "errorRegex": "off.*camera.*render|cull|visible.*off.*screen|视野外.*渲染",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["camera", "cull", "render", "visible", "剔除", "视野"],
+      "cause": "默认情况下 Phaser 会渲染所有可见对象，不管是否在相机视野内",
+      "fix": {
+        "correct": "// 方法1：手动管理可见性\nupdate() {\n  this.enemies.getChildren().forEach((e) => {\n    const enemy = e as Phaser.Physics.Arcade.Sprite;\n    const cam = this.cameras.main;\n    enemy.setVisible(\n      enemy.x > cam.scrollX - 64 &&\n      enemy.x < cam.scrollX + cam.width + 64\n    );\n  });\n}\n\n// 方法2：使用 camera cull（实验性）\nthis.cameras.main.useBounds = true;",
+        "explanation": "对于大地图上的大量对象，手动基于相机位置设置 visible 可显著提升性能"
+      }
+    },
+    {
+      "id": "err-runtime-nan-position",
+      "category": "runtime",
+      "errorPattern": "Object position becomes NaN / sprite disappears",
+      "errorRegex": "NaN.*position|position.*NaN|sprite.*disappear|对象.*消失",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["NaN", "position", "undefined", "disappear", "坐标", "消失"],
+      "cause": "对象坐标被设置为 NaN（通常因为算术运算中有 undefined 或除以零）",
+      "fix": {
+        "wrong": "const speed = distance / deltaTime;  // deltaTime 可能为 0!\nplayer.x += speed;",
+        "correct": "const speed = deltaTime > 0 ? distance / deltaTime : 0;\nplayer.x += speed;\n\n// 防御性检查\nif (isNaN(player.x)) player.x = 100;\nif (isNaN(player.y)) player.y = 100;",
+        "explanation": "任何可能产生 NaN 的运算（除以零、undefined 参与运算）都需要防御性检查"
+      }
+    },
+    {
+      "id": "err-runtime-undefined-array",
+      "category": "runtime",
+      "errorPattern": "Cannot read property of undefined (array access)",
+      "errorRegex": "Cannot read.*undefined.*\\[|array.*index.*undefined|数组.*越界",
+      "severity": "high",
+      "frequency": "very-common",
+      "keywords": ["undefined", "array", "index", "access", "数组", "越界"],
+      "cause": "访问数组越界或数组元素为 undefined",
+      "fix": {
+        "wrong": "const tile = this.map[row][col];  // row 或 col 越界!",
+        "correct": "if (row >= 0 && row < this.map.length &&\n    col >= 0 && col < this.map[row].length) {\n  const tile = this.map[row][col];\n}",
+        "explanation": "访问二维数组前检查索引边界。游戏中常见于地图访问、碰撞网格等"
+      }
+    },
+    {
+      "id": "err-runtime-typeof-guard",
+      "category": "runtime",
+      "errorPattern": "TypeError: xxx is not a function / object method missing",
+      "errorRegex": "is not a function|TypeError.*method|方法.*不存在",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["TypeError", "function", "method", "undefined", "方法"],
+      "cause": "调用的方法不存在于对象上——对象类型不是预期的类型",
+      "fix": {
+        "correct": "// 调用前检查方法存在性\nif (typeof obj.method === 'function') {\n  obj.method();\n}\n\n// 或使用可选链\nobj?.method?.();",
+        "explanation": "对可能为 null/undefined 或类型不确定的对象使用可选链或 typeof 检查"
+      }
+    },
+    {
+      "id": "err-runtime-max-callstack",
+      "category": "runtime",
+      "errorPattern": "Maximum call stack size exceeded / infinite recursion",
+      "errorRegex": "Maximum call stack|stack.*exceeded|infinite.*recursion|递归.*溢出",
+      "severity": "high",
+      "frequency": "uncommon",
+      "keywords": ["stack", "overflow", "recursion", "infinite", "递归", "栈溢出"],
+      "cause": "递归函数没有正确的终止条件，或事件处理器形成循环触发",
+      "fix": {
+        "checkList": [
+          "检查递归函数是否有正确的 base case（终止条件）",
+          "检查事件处理器是否会触发自身（A 触发 B，B 触发 A）",
+          "检查 setter/getter 中是否递归赋值",
+          "对于深度递归改用迭代方式实现"
+        ]
+      }
+    },
+    {
+      "id": "err-runtime-this-undefined",
+      "category": "runtime",
+      "errorPattern": "this is undefined in class method / lost context",
+      "errorRegex": "this.*undefined.*method|lost.*context|Cannot read.*this",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["this", "undefined", "context", "bind", "上下文", "丢失"],
+      "cause": "将类方法作为回调传递时 this 上下文丢失",
+      "fix": {
+        "wrong": "// this.handleCollision 作为回调时 this 可能丢失\nthis.physics.add.collider(a, b, this.handleCollision);",
+        "correct": "// 方法1：箭头函数包裹\nthis.physics.add.collider(a, b, (a, b) => this.handleCollision(a, b));\n\n// 方法2：bind\nthis.physics.add.collider(a, b, this.handleCollision.bind(this));\n\n// 方法3：传 scope 参数\nthis.physics.add.collider(a, b, this.handleCollision, undefined, this);",
+        "explanation": "推荐使用箭头函数或传 scope 参数来保持 this 上下文"
+      }
+    },
+    {
+      "id": "err-runtime-json-parse",
+      "category": "runtime",
+      "errorPattern": "SyntaxError: Unexpected token in JSON",
+      "errorRegex": "Unexpected token.*JSON|JSON\\.parse|SyntaxError.*JSON",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["JSON", "parse", "SyntaxError", "token", "解析"],
+      "cause": "JSON 文件格式错误（尾逗号、注释、单引号等）",
+      "fix": {
+        "checkList": [
+          "JSON 不允许尾逗号（最后一个元素后不能有逗号）",
+          "JSON 不允许注释（// 或 /* */）",
+          "JSON 字符串必须用双引号，不能用单引号",
+          "确认文件编码为 UTF-8 无 BOM",
+          "用在线 JSON 验证器检查格式"
+        ]
+      }
+    },
+    {
+      "id": "err-runtime-delta-time",
+      "category": "runtime",
+      "errorPattern": "Movement speed varies with frame rate",
+      "errorRegex": "delta.*time|frame.*rate.*speed|movement.*inconsistent|速度.*不一致",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["delta", "time", "frame rate", "speed", "帧率", "速度"],
+      "cause": "移动计算没有考虑 delta time，导致不同帧率下速度不同",
+      "fix": {
+        "wrong": "update() {\n  player.x += 5;  // 60fps下300px/s, 30fps下150px/s\n}",
+        "correct": "update(time: number, delta: number) {\n  const speed = 300; // 像素/秒\n  player.x += speed * (delta / 1000);\n}",
+        "explanation": "用 delta（毫秒）除以 1000 得到秒数，乘以目标速度，确保帧率无关的平滑移动"
+      }
+    },
+    {
+      "id": "err-runtime-circular-reference",
+      "category": "runtime",
+      "errorPattern": "Converting circular structure to JSON / TypeError in stringify",
+      "errorRegex": "circular.*structure|Converting circular|循环引用",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["circular", "reference", "JSON", "stringify", "循环引用"],
+      "cause": "尝试 JSON.stringify 含有循环引用的对象（如 Phaser 游戏对象），常在保存游戏状态时发生",
+      "fix": {
+        "wrong": "const saveData = JSON.stringify(this.player);  // 循环引用!",
+        "correct": "const saveData = JSON.stringify({\n  x: this.player.x,\n  y: this.player.y,\n  health: this.playerHealth,\n  score: this.score\n});",
+        "explanation": "不要直接序列化游戏对象。只提取需要保存的纯数据"
+      }
+    },
+    {
+      "id": "err-logic-collision-group-self",
+      "category": "logic",
+      "errorPattern": "Group collides with itself / bullets hitting each other",
+      "errorRegex": "group.*self.*collide|bullet.*hit.*bullet|自碰撞",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["group", "self", "collide", "friendly fire", "自碰撞", "友军伤害"],
+      "cause": "同一个 group 作为 collider 的两个参数，导致组内对象互相碰撞",
+      "fix": {
+        "wrong": "// 子弹组与自己碰撞！\nthis.physics.add.collider(this.bullets, this.bullets);",
+        "correct": "// 只让子弹与敌人碰撞\nthis.physics.add.overlap(this.bullets, this.enemies, this.hitEnemy, undefined, this);",
+        "explanation": "确保 collider/overlap 的两个参数是不同的对象或组"
+      }
+    },
+    {
+      "id": "err-logic-inverted-condition",
+      "category": "logic",
+      "errorPattern": "Game logic inverted / wrong boolean condition",
+      "errorRegex": "inverted.*condition|wrong.*boolean|logic.*reversed|逻辑.*反",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["condition", "boolean", "inverted", "reversed", "条件", "反转"],
+      "cause": "条件判断取反导致逻辑错误——常见于 isAlive、isGameOver 等布尔值",
+      "fix": {
+        "wrong": "// 玩家死亡时仍然可以移动\nif (this.isGameOver) {\n  this.handleInput();\n}",
+        "correct": "if (!this.isGameOver) {\n  this.handleInput();\n}",
+        "explanation": "检查所有布尔条件是否需要取反。命名时使用正向语义（isAlive 而非 isDead）减少混淆"
+      }
+    },
+    {
+      "id": "err-logic-off-by-one",
+      "category": "logic",
+      "errorPattern": "Off-by-one error in game boundaries / level generation",
+      "errorRegex": "off.*by.*one|boundary.*error|index.*off|边界.*错误",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["off-by-one", "boundary", "index", "fence-post", "边界", "偏差"],
+      "cause": "循环边界或数组索引差一错误，常见于地图生成、网格计算",
+      "fix": {
+        "wrong": "// 生成 10x10 地图但访问了第 11 行/列\nfor (let i = 0; i <= 10; i++) {\n  for (let j = 0; j <= 10; j++) {\n    this.map[i][j] = 0;  // i=10 时越界!\n  }\n}",
+        "correct": "const ROWS = 10, COLS = 10;\nfor (let i = 0; i < ROWS; i++) {\n  for (let j = 0; j < COLS; j++) {\n    this.map[i][j] = 0;\n  }\n}",
+        "explanation": "使用 < 而非 <=，用常量定义边界。数组索引从 0 到 length-1"
+      }
+    },
+    {
+      "id": "err-logic-timer-drift",
+      "category": "logic",
+      "errorPattern": "Timer accumulation error / spawns drifting over time",
+      "errorRegex": "timer.*drift|spawn.*timing|interval.*accumulate|计时.*漂移",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["timer", "drift", "accumulation", "interval", "计时", "漂移"],
+      "cause": "使用 time.addEvent 的 delay 在高负载时可能不精确，或用 delta 累加有精度损失",
+      "fix": {
+        "correct": "// 使用 Phaser 内置定时器（自动处理暂停等）\nthis.time.addEvent({\n  delay: 2000,\n  callback: () => this.spawnEnemy(),\n  loop: true\n});\n\n// 如果用 delta 累加，减去 delay 而非重置为 0\nthis.spawnTimer += delta;\nif (this.spawnTimer >= 2000) {\n  this.spawnTimer -= 2000;  // 保留余数，避免漂移\n  this.spawnEnemy();\n}",
+        "explanation": "delta 累加后减去间隔值（而非重置为 0）以避免时间漂移"
+      }
+    },
+    {
+      "id": "err-logic-double-damage",
+      "category": "logic",
+      "errorPattern": "Player takes damage multiple times from single hit",
+      "errorRegex": "double.*damage|multiple.*hit|damage.*repeat|重复.*伤害",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["damage", "invincible", "cooldown", "repeat", "伤害", "无敌帧"],
+      "cause": "碰撞回调每帧触发，导致一次碰撞造成多次伤害",
+      "fix": {
+        "correct": "handleHit(player: Phaser.Physics.Arcade.Sprite) {\n  if (this.isInvincible) return;\n  \n  this.health -= 1;\n  this.isInvincible = true;\n  \n  // 闪烁效果 + 无敌帧\n  this.tweens.add({\n    targets: player,\n    alpha: { from: 0.3, to: 1 },\n    duration: 100,\n    repeat: 5,\n    onComplete: () => {\n      this.isInvincible = false;\n      player.setAlpha(1);\n    }\n  });\n}",
+        "explanation": "实现无敌帧机制——受击后设置 isInvincible 标志，一段时间后解除"
+      }
+    },
+    {
+      "id": "err-logic-spawn-offscreen",
+      "category": "logic",
+      "errorPattern": "Enemies spawning on screen / visible spawn point",
+      "errorRegex": "spawn.*visible|enemy.*appear|spawn.*on.*screen|出生点.*可见",
+      "severity": "low",
+      "frequency": "common",
+      "keywords": ["spawn", "offscreen", "visible", "enemy", "出生", "屏幕外"],
+      "cause": "敌人在屏幕可见区域内直接出现，视觉上不自然",
+      "fix": {
+        "correct": "spawnEnemy() {\n  const cam = this.cameras.main;\n  const side = Phaser.Math.Between(0, 3);\n  let x = 0, y = 0;\n  switch (side) {\n    case 0: x = cam.scrollX - 50; y = Phaser.Math.Between(cam.scrollY, cam.scrollY + cam.height); break;\n    case 1: x = cam.scrollX + cam.width + 50; y = Phaser.Math.Between(cam.scrollY, cam.scrollY + cam.height); break;\n    case 2: x = Phaser.Math.Between(cam.scrollX, cam.scrollX + cam.width); y = cam.scrollY - 50; break;\n    case 3: x = Phaser.Math.Between(cam.scrollX, cam.scrollX + cam.width); y = cam.scrollY + cam.height + 50; break;\n  }\n  // 在 (x, y) 处生成\n}",
+        "explanation": "在相机视野外的随机边缘位置生成敌人，确保玩家看不到突然出现的效果"
+      }
+    },
+    {
+      "id": "err-logic-state-machine",
+      "category": "logic",
+      "errorPattern": "Game state inconsistent / unexpected behavior between states",
+      "errorRegex": "state.*machine|state.*inconsistent|wrong.*state|状态.*混乱",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["state", "machine", "transition", "enum", "状态机", "转换"],
+      "cause": "没有使用状态机模式管理游戏状态，导致多个状态同时激活",
+      "fix": {
+        "correct": "enum GameState { PLAYING, PAUSED, GAME_OVER, LEVEL_COMPLETE }\n\nclass GameScene extends Phaser.Scene {\n  private state: GameState = GameState.PLAYING;\n  \n  update(time: number, delta: number) {\n    switch (this.state) {\n      case GameState.PLAYING:\n        this.handleInput();\n        this.updateEnemies(delta);\n        break;\n      case GameState.PAUSED:\n        // 不更新游戏逻辑\n        break;\n      case GameState.GAME_OVER:\n        // 只显示游戏结束 UI\n        break;\n    }\n  }\n}",
+        "explanation": "使用 enum + switch 状态机确保同一时间只有一种状态激活"
+      }
+    },
+    {
+      "id": "err-logic-score-negative",
+      "category": "logic",
+      "errorPattern": "Score goes negative / health below zero",
+      "errorRegex": "score.*negative|health.*below.*zero|negative.*value|数值.*负",
+      "severity": "low",
+      "frequency": "common",
+      "keywords": ["score", "negative", "clamp", "health", "数值", "负数"],
+      "cause": "没有限制数值范围，导致分数、生命值等出现负数",
+      "fix": {
+        "correct": "// 使用 Clamp 限制范围\nthis.health = Phaser.Math.Clamp(this.health - damage, 0, this.maxHealth);\nthis.score = Math.max(0, this.score - penalty);\n\n// 或在 setter 中限制\nset health(value: number) {\n  this._health = Phaser.Math.Clamp(value, 0, this.maxHealth);\n  if (this._health <= 0) this.onDeath();\n}",
+        "explanation": "使用 Phaser.Math.Clamp 或 Math.max/min 限制数值在有效范围内"
+      }
+    },
+    {
+      "id": "err-rendering-z-fighting",
+      "category": "rendering",
+      "errorPattern": "Sprites flickering / z-fighting between overlapping objects",
+      "errorRegex": "flicker|z.*fight|overlapping.*render|闪烁.*重叠",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["flicker", "z-fighting", "depth", "overlap", "闪烁", "深度冲突"],
+      "cause": "多个对象在相同 depth 和位置重叠，渲染顺序不确定导致闪烁",
+      "fix": {
+        "correct": "// 确保重叠对象有不同的 depth\nbackground.setDepth(0);\nplatform.setDepth(1);\nplayer.setDepth(2);\n\n// 对于相同 depth 的对象，创建顺序决定渲染顺序\n// 先创建的在下面",
+        "explanation": "给可能重叠的对象设置不同的 depth 值，避免渲染顺序不确定"
+      }
+    },
+    {
+      "id": "err-rendering-texture-bleeding",
+      "category": "rendering",
+      "errorPattern": "Color lines between tiles / texture bleeding artifacts",
+      "errorRegex": "texture.*bleed|tile.*gap|seam.*tile|线条.*瓦片",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["texture", "bleeding", "tile", "gap", "seam", "纹理出血", "缝隙"],
+      "cause": "瓦片之间出现细线/缝隙，通常因为纹理过滤或浮点精度问题",
+      "fix": {
+        "checkList": [
+          "在 atlas/spritesheet 中给每个帧添加 1-2 像素的 extrude/padding",
+          "使用 Phaser.AUTO 而非 Phaser.WEBGL 让引擎选择最佳渲染器",
+          "相机位置取整: this.cameras.main.setRoundPixels(true)",
+          "对象位置取整: sprite.x = Math.round(x)",
+          "tilemap 使用 setRoundPixels: layer.setRoundPixels(true)"
+        ]
+      }
+    },
+    {
+      "id": "err-rendering-camera-bounds",
+      "category": "rendering",
+      "errorPattern": "Camera showing area outside game world / black edges",
+      "errorRegex": "camera.*bounds|camera.*black|camera.*outside|相机.*边界",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["camera", "bounds", "edge", "black", "相机", "黑边"],
+      "cause": "相机跟随目标移动到世界边缘外，显示黑色空白区域",
+      "fix": {
+        "correct": "// 设置相机边界限制\nthis.cameras.main.setBounds(0, 0, worldWidth, worldHeight);\n\n// 可以设置背景色避免黑色\nthis.cameras.main.setBackgroundColor('#1a1a2e');",
+        "explanation": "用 setBounds 限制相机不超出世界范围，设背景色替代默认黑色"
+      }
+    },
+    {
+      "id": "err-rendering-alpha-performance",
+      "category": "rendering",
+      "errorPattern": "Semi-transparent objects causing performance issues",
+      "errorRegex": "alpha.*performance|transparent.*slow|blending.*performance|透明.*性能",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["alpha", "transparent", "blend", "performance", "透明", "混合"],
+      "cause": "大量半透明对象导致过度绘制（overdraw），降低渲染性能",
+      "fix": {
+        "checkList": [
+          "减少半透明对象数量",
+          "尽量使用不透明纹理",
+          "不需要透明度的对象确保 alpha = 1",
+          "大面积半透明背景用 camera.setAlpha 而非多个半透明精灵叠加",
+          "粒子效果限制 maxParticles 并缩短 lifespan"
+        ]
+      }
+    },
+    {
+      "id": "err-rendering-round-pixels",
+      "category": "rendering",
+      "errorPattern": "Pixel art looks blurry / sprites not crisp",
+      "errorRegex": "blurry|pixel.*art.*fuzzy|crisp|模糊.*像素|像素.*模糊",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["pixel", "blurry", "crisp", "roundPixels", "pixelArt", "像素", "模糊"],
+      "cause": "像素风格游戏没有启用 pixelArt 配置，导致纹理被平滑（anti-alias）",
+      "fix": {
+        "correct": "const config: Phaser.Types.Core.GameConfig = {\n  pixelArt: true,  // 关闭纹理平滑\n  roundPixels: true,  // 坐标取整\n  // 或使用 scale 缩放\n  scale: {\n    mode: Phaser.Scale.FIT,\n    width: 320,\n    height: 240,\n    autoCenter: Phaser.Scale.CENTER_BOTH\n  }\n};",
+        "explanation": "pixelArt: true 使用最近邻插值保持像素清晰。配合 roundPixels 避免子像素渲染"
+      }
+    },
+    {
+      "id": "err-rendering-mask-issue",
+      "category": "rendering",
+      "errorPattern": "Mask not working / bitmap mask rendering incorrectly",
+      "errorRegex": "mask.*not.*work|BitmapMask|GeometryMask|遮罩.*错误",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["mask", "BitmapMask", "GeometryMask", "遮罩"],
+      "cause": "遮罩使用不当——BitmapMask 需要一个游戏对象作为源，GeometryMask 需要 Graphics",
+      "fix": {
+        "correct": "// GeometryMask（形状遮罩）\nconst graphics = this.add.graphics();\ngraphics.fillCircle(200, 200, 100);\nconst mask = graphics.createGeometryMask();\nsprite.setMask(mask);\n\n// BitmapMask（位图遮罩）\nconst maskImage = this.add.image(200, 200, 'mask-texture').setVisible(false);\nconst bitmapMask = maskImage.createBitmapMask();\nsprite.setMask(bitmapMask);",
+        "explanation": "GeometryMask 用 Graphics 形状裁剪，BitmapMask 用纹理 alpha 通道裁剪"
+      }
+    },
+    {
+      "id": "err-mobile-touch-jump",
+      "category": "mobile",
+      "errorPattern": "Touch controls not responding / virtual button issues",
+      "errorRegex": "touch.*control|virtual.*button|mobile.*input|触摸.*控制",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["touch", "mobile", "virtual", "button", "触摸", "虚拟按钮"],
+      "cause": "移动端没有键盘，需要实现虚拟触摸控制",
+      "fix": {
+        "correct": "// 创建虚拟方向键\nconst leftBtn = this.add.rectangle(80, 500, 64, 64, 0x333333, 0.5)\n  .setScrollFactor(0)\n  .setDepth(100)\n  .setInteractive();\n\nleftBtn.on('pointerdown', () => { this.moveLeft = true; });\nleftBtn.on('pointerup', () => { this.moveLeft = false; });\nleftBtn.on('pointerout', () => { this.moveLeft = false; });\n\n// 别忘了 pointerout 处理手指滑出按钮区域",
+        "explanation": "虚拟按钮需要处理 pointerdown/pointerup/pointerout 三个事件。设 setScrollFactor(0) 固定位置"
+      }
+    },
+    {
+      "id": "err-mobile-orientation",
+      "category": "mobile",
+      "errorPattern": "Game layout broken in portrait/landscape mode",
+      "errorRegex": "orientation|portrait|landscape|rotate.*screen|横屏.*竖屏",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["orientation", "portrait", "landscape", "rotate", "横屏", "竖屏", "方向"],
+      "cause": "游戏没有处理屏幕方向变化，或没有锁定期望的方向",
+      "fix": {
+        "correct": "const config: Phaser.Types.Core.GameConfig = {\n  scale: {\n    mode: Phaser.Scale.FIT,\n    autoCenter: Phaser.Scale.CENTER_BOTH,\n    width: 800,\n    height: 600,\n    // 最小/最大尺寸适配\n    min: { width: 400, height: 300 },\n    max: { width: 1600, height: 1200 }\n  }\n};\n\n// 监听方向变化\nthis.scale.on('orientationchange', (orientation: string) => {\n  if (orientation === 'portrait-primary') {\n    this.showRotatePrompt();\n  }\n});",
+        "explanation": "使用 Scale.FIT 自动适配，监听 orientationchange 提示用户旋转设备"
+      }
+    },
+    {
+      "id": "err-mobile-audio-unlock",
+      "category": "mobile",
+      "errorPattern": "Audio not playing on mobile / requires user gesture",
+      "errorRegex": "mobile.*audio|audio.*gesture|touch.*unlock|autoplay.*mobile",
+      "severity": "high",
+      "frequency": "very-common",
+      "keywords": ["mobile", "audio", "unlock", "gesture", "autoplay", "移动端", "音频解锁"],
+      "cause": "iOS/Android 浏览器要求用户交互后才能播放音频，比桌面浏览器更严格",
+      "fix": {
+        "correct": "// 方案1：在开始按钮中解锁\ncreate() {\n  const startBtn = this.add.text(400, 300, 'TAP TO START', { fontSize: '32px' })\n    .setOrigin(0.5)\n    .setInteractive();\n  \n  startBtn.once('pointerdown', () => {\n    // 用户交互后解锁音频\n    this.sound.play('bgm', { loop: true });\n    startBtn.destroy();\n  });\n}\n\n// 方案2：Phaser 自动处理\n// 确保 audio 配置中未禁用自动解锁\nconst config = {\n  audio: { disableWebAudio: false }\n};",
+        "explanation": "在用户首次触摸/点击事件中播放音频。可以用一个 'TAP TO START' 按钮作为入口"
+      }
+    },
+    {
+      "id": "err-mobile-performance",
+      "category": "mobile",
+      "errorPattern": "Game runs too slowly on mobile devices",
+      "errorRegex": "mobile.*slow|mobile.*performance|phone.*fps|手机.*卡顿",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["mobile", "performance", "slow", "fps", "移动端", "性能", "卡顿"],
+      "cause": "移动端 GPU/CPU 性能较弱，未针对移动端优化",
+      "fix": {
+        "checkList": [
+          "减少同时活跃的游戏对象数量（<200个）",
+          "减小纹理尺寸（移动端最大 2048x2048）",
+          "使用对象池避免频繁创建/销毁",
+          "减少粒子数量和 lifespan",
+          "简化物理——减少碰撞对数量",
+          "使用 WebGL 渲染器而非 Canvas（Phaser.AUTO 会自动选择）",
+          "对低端设备降低画质: 缩小 resolution 或游戏尺寸"
+        ]
+      }
+    },
+    {
+      "id": "err-mobile-viewport",
+      "category": "mobile",
+      "errorPattern": "Game canvas too small or overflowing on mobile",
+      "errorRegex": "viewport|mobile.*size|canvas.*overflow|mobile.*scroll|视口.*溢出",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["viewport", "mobile", "canvas", "overflow", "scroll", "视口", "溢出"],
+      "cause": "HTML viewport meta 标签缺失或配置不当，导致移动端布局异常",
+      "fix": {
+        "correct": "<!-- index.html 中必须有 -->\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n\n<style>\n  * { margin: 0; padding: 0; }\n  html, body { overflow: hidden; width: 100%; height: 100%; }\n  canvas { display: block; }\n</style>",
+        "explanation": "设置 viewport meta 禁止缩放，CSS 消除边距和滚动条"
+      }
+    },
+    {
+      "id": "err-mobile-touch-prevent-default",
+      "category": "mobile",
+      "errorPattern": "Page scrolls when touching game / unwanted browser gestures",
+      "errorRegex": "scroll.*touch|touch.*scroll|gesture.*browser|页面.*滚动",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["touch", "scroll", "preventDefault", "gesture", "触摸", "滚动"],
+      "cause": "触摸事件冒泡导致页面滚动或浏览器默认手势触发",
+      "fix": {
+        "correct": "const config: Phaser.Types.Core.GameConfig = {\n  input: {\n    touch: { capture: true }  // Phaser 自动 preventDefault\n  }\n};\n\n// 如果仍有问题，在容器上手动处理\nconst container = document.getElementById('game-container');\ncontainer?.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });",
+        "explanation": "设置 input.touch.capture: true 让 Phaser 阻止触摸事件默认行为"
+      }
+    },
+    {
+      "id": "err-mobile-dpr-blurry",
+      "category": "mobile",
+      "errorPattern": "Game looks blurry on high-DPI mobile screen",
+      "errorRegex": "DPI|device.*pixel.*ratio|retina.*blurry|高清屏.*模糊",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["DPI", "devicePixelRatio", "retina", "resolution", "高清", "分辨率"],
+      "cause": "高 DPI 屏幕（如 Retina）上游戏画面被放大导致模糊",
+      "fix": {
+        "correct": "const config: Phaser.Types.Core.GameConfig = {\n  // 方案1：匹配设备 DPR（画质好但性能消耗大）\n  resolution: window.devicePixelRatio,\n  \n  // 方案2：使用 Scale Manager 自动适配\n  scale: {\n    mode: Phaser.Scale.FIT,\n    autoCenter: Phaser.Scale.CENTER_BOTH\n  }\n};",
+        "explanation": "设置 resolution 匹配设备 DPR 可提升清晰度，但会增加渲染负担。像素风格游戏用 pixelArt: true 更合适"
+      }
+    },
+    {
+      "id": "err-p3-arcade-body-methods",
+      "category": "api-misuse",
+      "errorPattern": "Using deprecated Arcade body methods from P3",
+      "errorRegex": "setAllowGravity|allowGravity|setFriction.*deprecated",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["deprecated", "P3", "P4", "body", "method", "废弃", "方法"],
+      "cause": "使用了 Phaser 3 中已弃用的物理体方法",
+      "fix": {
+        "wrong": "sprite.body.setAllowGravity(false);",
+        "correct": "sprite.body!.setAllowGravity(false);\n// 或直接设置属性\n(sprite.body as Phaser.Physics.Arcade.Body).allowGravity = false;",
+        "explanation": "大部分 P3 物理方法在 P4 仍可用，但需要注意类型断言和非空断言"
+      }
+    },
+    {
+      "id": "err-p3-tween-api",
+      "category": "api-misuse",
+      "errorPattern": "Tween config using P3 format",
+      "errorRegex": "tween.*p3|tween.*deprecated|timeline.*create",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["tween", "P3", "P4", "timeline", "补间", "迁移"],
+      "cause": "Phaser 4 对 Tween 的某些配置选项进行了调整",
+      "fix": {
+        "correct": "// Phaser 4 Tween 标准用法\nthis.tweens.add({\n  targets: sprite,\n  x: 400,\n  y: 300,\n  scale: 1.5,\n  duration: 1000,\n  ease: 'Power2',\n  yoyo: true,\n  repeat: -1,\n  onComplete: () => { console.log('done'); }\n});\n\n// Timeline (序列动画)\nconst timeline = this.tweens.createTimeline();\ntimeline.add({ targets: sprite, x: 200, duration: 500 });\ntimeline.add({ targets: sprite, y: 400, duration: 500 });\ntimeline.play();",
+        "explanation": "Phaser 4 的 tween API 基本与 P3 兼容，但 timeline 用法略有不同"
+      }
+    },
+    {
+      "id": "err-graphics-clear",
+      "category": "api-misuse",
+      "errorPattern": "Graphics accumulating draws / lines not clearing",
+      "errorRegex": "graphics.*clear|graphics.*accumulate|draw.*pile.*up|图形.*累积",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["Graphics", "clear", "draw", "update", "图形", "清除"],
+      "cause": "在 update() 中用 Graphics 画图但忘记先 clear()，导致绘制叠加",
+      "fix": {
+        "wrong": "update() {\n  // 每帧画线但不清除，线条越来越多\n  this.graphics.lineStyle(2, 0xff0000);\n  this.graphics.lineBetween(0, 0, player.x, player.y);\n}",
+        "correct": "update() {\n  this.graphics.clear();\n  this.graphics.lineStyle(2, 0xff0000);\n  this.graphics.lineBetween(0, 0, player.x, player.y);\n}",
+        "explanation": "在 update 中绘图前调用 graphics.clear() 清除上一帧的绘制"
+      }
+    },
+    {
+      "id": "err-setdata-getdata",
+      "category": "api-misuse",
+      "errorPattern": "getData returns undefined / data not set on game object",
+      "errorRegex": "getData.*undefined|setData.*getData|data.*not.*set",
+      "severity": "low",
+      "frequency": "common",
+      "keywords": ["getData", "setData", "data", "数据", "属性"],
+      "cause": "使用 getData 获取未通过 setData 设置的值",
+      "fix": {
+        "wrong": "// 忘记设置数据\nconst points = enemy.getData('points'); // undefined",
+        "correct": "// 创建时设置数据\nenemy.setData('points', 100);\nenemy.setData('type', 'fast');\n\n// 安全获取\nconst points = enemy.getData('points') ?? 0;",
+        "explanation": "先用 setData 设置数据，getData 时用 ?? 提供默认值"
+      }
+    },
+    {
+      "id": "err-container-depth",
+      "category": "rendering",
+      "errorPattern": "Container children depth ignored / wrong render order inside container",
+      "errorRegex": "container.*depth|depth.*inside.*container|container.*z.*order",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["Container", "depth", "children", "render", "容器", "层级"],
+      "cause": "Container 内子对象的 depth 是相对于 container 内部的，不影响外部渲染顺序",
+      "fix": {
+        "correct": "// Container 的 depth 决定整体层级\nconst container = this.add.container(0, 0);\ncontainer.setDepth(10);\n\n// 内部子对象用 sort 或创建顺序控制\ncontainer.sort('y'); // 按 y 坐标排序（适合伪3D效果）",
+        "explanation": "Container 内部用创建顺序或 sort() 控制子对象渲染顺序。Container 的 depth 控制整体在场景中的层级"
+      }
+    },
+    {
+      "id": "err-physics-debug-production",
+      "category": "performance",
+      "errorPattern": "Physics debug rendering left on in production",
+      "errorRegex": "debug.*true|physics.*debug|debug.*production|调试.*生产",
+      "severity": "low",
+      "frequency": "common",
+      "keywords": ["debug", "physics", "production", "调试", "生产环境"],
+      "cause": "物理调试渲染在发布版本中没有关闭，导致显示碰撞框和速度向量",
+      "fix": {
+        "wrong": "physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 300 }, debug: true } }",
+        "correct": "physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 300 }, debug: false } }",
+        "explanation": "发布前确保 arcade.debug 设为 false。可以用环境变量控制: debug: import.meta.env.DEV"
+      }
+    },
+    {
+      "id": "err-runtime-undefined-property-chain",
+      "category": "runtime",
+      "errorPattern": "Cannot read properties of undefined (nested object access)",
+      "errorRegex": "Cannot read.*undefined.*nested|deep.*property.*undefined|嵌套.*属性",
+      "severity": "high",
+      "frequency": "very-common",
+      "keywords": ["undefined", "nested", "property", "optional chaining", "嵌套", "可选链"],
+      "cause": "链式访问嵌套属性时中间某层为 undefined",
+      "fix": {
+        "wrong": "const weaponDamage = this.player.inventory.weapon.damage;",
+        "correct": "const weaponDamage = this.player?.inventory?.weapon?.damage ?? 10;",
+        "explanation": "使用可选链 ?. 和空值合并 ?? 安全访问嵌套属性"
+      }
+    },
+    {
+      "id": "err-logic-collision-layer",
+      "category": "logic",
+      "errorPattern": "Collision not working on specific tilemap layer",
+      "errorRegex": "tilemap.*collision|layer.*collision|setCollision.*tile|碰撞.*图层",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["tilemap", "collision", "layer", "setCollision", "图层", "碰撞"],
+      "cause": "地图图层没有设置碰撞属性，或碰撞的 tile ID 不正确",
+      "fix": {
+        "correct": "const layer = map.createLayer('Platforms', tileset)!;\n// 方法1：按 tile ID 设置碰撞\nlayer.setCollision([1, 2, 3, 4]);\n// 方法2：按属性设置碰撞（Tiled 中设置的自定义属性）\nlayer.setCollisionByProperty({ collides: true });\n// 方法3：所有非空 tile 都碰撞\nlayer.setCollisionByExclusion([-1]);\n\n// 添加碰撞\nthis.physics.add.collider(player, layer);",
+        "explanation": "必须对 tilemap layer 调 setCollision 设置哪些 tile 可碰撞，然后添加 collider"
+      }
+    },
+    {
+      "id": "err-rendering-camera-zoom-artifacts",
+      "category": "rendering",
+      "errorPattern": "Visual artifacts when camera is zoomed",
+      "errorRegex": "camera.*zoom.*artifact|zoom.*blurry|zoom.*gap|缩放.*瑕疵",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["camera", "zoom", "artifact", "blurry", "缩放", "模糊"],
+      "cause": "相机缩放时出现纹理模糊或瓦片缝隙",
+      "fix": {
+        "correct": "// 1. 启用 roundPixels\nthis.cameras.main.setRoundPixels(true);\n\n// 2. 像素游戏用 pixelArt 配置\nconst config = { pixelArt: true };\n\n// 3. 缩放到整数倍\nthis.cameras.main.setZoom(2);  // 整数倍更清晰\n// 避免 setZoom(1.5) 等非整数值",
+        "explanation": "缩放时用整数倍（2x, 3x）避免子像素渲染问题。启用 roundPixels 减少瑕疵"
+      }
+    },
+    {
+      "id": "err-runtime-closure-loop",
+      "category": "runtime",
+      "errorPattern": "Loop variable captured by closure / all callbacks use last value",
+      "errorRegex": "closure.*loop|var.*loop|callback.*last.*value|闭包.*循环",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["closure", "loop", "var", "let", "闭包", "循环变量"],
+      "cause": "用 var 在循环中创建回调，所有回调共享同一个变量引用",
+      "fix": {
+        "wrong": "for (var i = 0; i < 5; i++) {\n  buttons[i].on('pointerdown', () => {\n    console.log(i);  // 永远是 5!\n  });\n}",
+        "correct": "for (let i = 0; i < 5; i++) {\n  buttons[i].on('pointerdown', () => {\n    console.log(i);  // 正确: 0, 1, 2, 3, 4\n  });\n}",
+        "explanation": "用 let 代替 var 声明循环变量，let 有块级作用域，每次迭代创建新绑定"
+      }
+    },
+    {
+      "id": "err-logic-update-order",
+      "category": "logic",
+      "errorPattern": "Physics state read before physics step / stale collision data",
+      "errorRegex": "update.*order|physics.*step|stale.*collision|更新.*顺序",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["update", "order", "physics", "step", "更新顺序", "物理步"],
+      "cause": "在 update() 中读取物理状态时，物理引擎可能还没完成当前帧的模拟",
+      "fix": {
+        "correct": "// Phaser update 执行顺序:\n// 1. input 处理\n// 2. scene.update() 调用\n// 3. 物理引擎步进\n// 4. 碰撞回调\n// 5. 渲染\n\n// 如果需要在物理步进后处理，用 postUpdate\nthis.events.on('postupdate', () => {\n  // 物理模拟后的逻辑\n});",
+        "explanation": "物理相关的检查（如 touching、velocity）放在 collider 回调中最可靠。或用 postupdate 事件"
+      }
+    },
+    {
+      "id": "err-perf-massive-tilemap",
+      "category": "performance",
+      "errorPattern": "Large tilemap causing performance issues",
+      "errorRegex": "tilemap.*slow|large.*map.*fps|tilemap.*performance|大地图.*卡",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["tilemap", "large", "performance", "layer", "大地图", "性能"],
+      "cause": "超大瓦片地图导致渲染和碰撞检测性能下降",
+      "fix": {
+        "checkList": [
+          "使用图层分离——将不需要碰撞的装饰层和碰撞层分开",
+          "对碰撞层只对必要的 tile 设碰撞",
+          "使用 setCullPadding 限制渲染范围",
+          "不要在一个超大层上设置全部碰撞，只在玩家附近的区域检测",
+          "考虑使用无限地图的分块加载策略"
+        ]
+      }
+    },
+    {
+      "id": "err-physics-overlap-stuck",
+      "category": "physics",
+      "errorPattern": "Object stuck inside another object / physics resolution fails",
+      "errorRegex": "stuck.*inside|embedded|physics.*resolution|卡在.*里面",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["stuck", "embedded", "inside", "overlap", "resolution", "卡住", "嵌入"],
+      "cause": "物体因速度过快或生成位置不当嵌入其他物体中，物理引擎无法正确分离",
+      "fix": {
+        "checkList": [
+          "确保生成位置不与现有物体重叠",
+          "使用 body.reset(x, y) 重置位置到安全坐标",
+          "限制最大速度: body.setMaxVelocity(300, 600)",
+          "增大碰撞体 padding 给物理引擎更多分离空间",
+          "使用 body.checkCollision 精确控制哪些方向需要碰撞检测"
+        ]
+      }
+    },
+    {
+      "id": "err-scene-preload-progress",
+      "category": "scene-lifecycle",
+      "errorPattern": "Loading progress bar not updating / preload stuck",
+      "errorRegex": "progress.*bar|preload.*stuck|loading.*screen|加载.*进度",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["preload", "progress", "loading", "bar", "加载", "进度条"],
+      "cause": "加载进度条在 preload 中创建但没有监听 load 事件来更新",
+      "fix": {
+        "correct": "preload() {\n  const bar = this.add.graphics();\n  \n  this.load.on('progress', (value: number) => {\n    bar.clear();\n    bar.fillStyle(0xffffff, 1);\n    bar.fillRect(100, 290, 600 * value, 20);\n  });\n  \n  this.load.on('complete', () => {\n    bar.destroy();\n  });\n  \n  // 加载资源\n  this.load.image('player', 'player.png');\n}",
+        "explanation": "在 preload 中用 this.load.on('progress', fn) 监听进度，value 从 0 到 1"
+      }
+    },
+    {
+      "id": "err-runtime-math-infinity",
+      "category": "runtime",
+      "errorPattern": "Object flies off to infinity / Infinity position value",
+      "errorRegex": "Infinity|infinity.*position|fly.*off|飞出.*屏幕|无穷",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["Infinity", "position", "velocity", "maxVelocity", "无穷", "飞出"],
+      "cause": "速度或力的计算结果为 Infinity（如除以极小值或连续累加），对象飞出屏幕",
+      "fix": {
+        "correct": "// 限制最大速度\nplayer.body!.setMaxVelocity(500, 800);\n\n// 防御性检查\nconst vx = isFinite(calculatedVx) ? calculatedVx : 0;\nplayer.body!.setVelocityX(vx);",
+        "explanation": "始终用 setMaxVelocity 限制最大速度，并检查计算结果是否为有限数"
+      }
+    },
+    {
+      "id": "err-logic-race-condition",
+      "category": "logic",
+      "errorPattern": "Race condition between tween/timer completion and game state",
+      "errorRegex": "race.*condition|tween.*complete.*state|timer.*race|竞态",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["race", "condition", "tween", "timer", "async", "竞态", "竞争"],
+      "cause": "动画/定时器完成回调执行时游戏状态已改变（如场景已切换），导致操作无效对象",
+      "fix": {
+        "correct": "this.tweens.add({\n  targets: sprite,\n  alpha: 0,\n  duration: 1000,\n  onComplete: () => {\n    // 检查场景是否仍然活跃\n    if (this.scene.isActive()) {\n      this.scene.start('NextScene');\n    }\n  }\n});",
+        "explanation": "在延迟回调中检查场景/对象是否仍然有效，避免操作已销毁的资源"
+      }
+    },
+    {
+      "id": "err-input-keyboard-focus",
+      "category": "input",
+      "errorPattern": "Keyboard input stops working / game loses focus",
+      "errorRegex": "keyboard.*focus|input.*stop|game.*focus|键盘.*失去焦点",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["keyboard", "focus", "blur", "input", "焦点", "失去"],
+      "cause": "游戏画布失去焦点后键盘输入不再响应（用户点击了画布外的元素）",
+      "fix": {
+        "correct": "// 方案1：点击画布时重新获取焦点\nthis.game.canvas.addEventListener('click', () => {\n  this.game.canvas.focus();\n});\n\n// 方案2：监听 blur/focus 自动暂停\nthis.game.events.on('blur', () => {\n  this.scene.pause();\n});\nthis.game.events.on('focus', () => {\n  this.scene.resume();\n});",
+        "explanation": "监听 blur/focus 事件处理焦点丢失，或在嵌入页面中确保画布可以接收焦点"
+      }
+    },
+    {
+      "id": "err-rendering-text-wrap",
+      "category": "rendering",
+      "errorPattern": "Text overflows / no word wrapping",
+      "errorRegex": "text.*overflow|word.*wrap|text.*long|文本.*溢出",
+      "severity": "low",
+      "frequency": "common",
+      "keywords": ["text", "wrap", "overflow", "wordWrap", "文本", "换行"],
+      "cause": "长文本没有设置自动换行，超出屏幕或容器",
+      "fix": {
+        "correct": "this.add.text(50, 50, 'Very long text content...', {\n  fontSize: '18px',\n  color: '#ffffff',\n  wordWrap: { width: 300, useAdvancedWrap: true }\n});",
+        "explanation": "设置 wordWrap.width 启用自动换行。useAdvancedWrap 改善中文等 CJK 文本的换行效果"
+      }
+    },
+    {
+      "id": "err-mobile-safe-area",
+      "category": "mobile",
+      "errorPattern": "UI hidden behind notch / safe area inset issues",
+      "errorRegex": "notch|safe.*area|inset|刘海|安全区域",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["notch", "safe-area", "inset", "刘海", "安全区域"],
+      "cause": "iPhone 刘海屏等设备的安全区域遮挡了 UI 元素",
+      "fix": {
+        "correct": "// CSS 处理\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover\">\n\n<style>\n  #game-container {\n    padding-top: env(safe-area-inset-top);\n    padding-bottom: env(safe-area-inset-bottom);\n    padding-left: env(safe-area-inset-left);\n    padding-right: env(safe-area-inset-right);\n  }\n</style>\n\n// 或在游戏中偏移 UI\nconst topPadding = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0');\nthis.scoreText.setY(16 + topPadding);",
+        "explanation": "使用 CSS env(safe-area-inset-*) 避开刘海区域，或在游戏内计算偏移"
+      }
+    },
+    {
+      "id": "err-logic-spawn-rate-delta",
+      "category": "logic",
+      "errorPattern": "Spawn rate depends on frame rate / too many spawns on fast machines",
+      "errorRegex": "spawn.*rate|spawn.*frame.*rate|too many.*spawn|生成.*帧率",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["spawn", "rate", "delta", "frame", "生成速率", "帧率"],
+      "cause": "在 update() 中基于概率生成对象但没有考虑 delta time",
+      "fix": {
+        "wrong": "update() {\n  if (Math.random() < 0.02) {  // 60fps时每秒~1.2个, 30fps时每秒~0.6个\n    this.spawnEnemy();\n  }\n}",
+        "correct": "update(time: number, delta: number) {\n  // 使用定时器确保稳定频率\n  // 或在 create 中设置\n  // this.time.addEvent({ delay: 2000, callback: () => this.spawnEnemy(), loop: true });\n}",
+        "explanation": "不要在 update 中用随机概率生成——使用 time.addEvent 定时器确保帧率无关的生成速率"
+      }
+    },
+    {
+      "id": "err-perf-nine-slice",
+      "category": "performance",
+      "errorPattern": "NineSlice not available / scalable UI panel implementation",
+      "errorRegex": "NineSlice|nine.*slice|scalable.*panel|九宫格",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["NineSlice", "nine-slice", "panel", "scalable", "九宫格", "面板"],
+      "cause": "需要可缩放的 UI 面板但不知道使用 NineSlice",
+      "fix": {
+        "correct": "// Phaser 4 内置 NineSlice\nconst panel = this.add.nineslice(\n  400, 300,      // x, y\n  'panel',       // texture key\n  undefined,     // frame\n  300, 200,      // width, height\n  16, 16, 16, 16 // leftWidth, rightWidth, topHeight, bottomHeight\n);\npanel.setOrigin(0.5);",
+        "explanation": "NineSlice 可以在不失真的情况下缩放 UI 面板。四个数值定义不缩放的边角区域"
+      }
+    },
+    {
+      "id": "err-runtime-setinterval-leak",
+      "category": "runtime",
+      "errorPattern": "Using setInterval/setTimeout instead of Phaser timers",
+      "errorRegex": "setInterval|setTimeout|clearInterval|window\\.setInterval",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["setInterval", "setTimeout", "timer", "leak", "定时器", "泄漏"],
+      "cause": "使用原生 setInterval/setTimeout 而非 Phaser 定时器，场景切换时不会自动清理",
+      "fix": {
+        "wrong": "create() {\n  setInterval(() => this.spawnEnemy(), 2000);\n  setTimeout(() => this.gameOver(), 60000);\n}",
+        "correct": "create() {\n  this.time.addEvent({\n    delay: 2000,\n    callback: () => this.spawnEnemy(),\n    loop: true\n  });\n  this.time.delayedCall(60000, () => this.gameOver());\n}",
+        "explanation": "Phaser 的 time.addEvent/delayedCall 会在场景暂停/停止时自动暂停/清理，避免内存泄漏"
+      }
+    },
+    {
+      "id": "err-physics-group-defaults",
+      "category": "physics",
+      "errorPattern": "Physics group children have wrong default properties",
+      "errorRegex": "group.*default|group.*bounceX|group.*gravity|组.*默认属性",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["group", "defaults", "defaultKey", "config", "组", "默认"],
+      "cause": "physics.add.group 的配置选项中可以设置子对象的默认物理属性",
+      "fix": {
+        "correct": "this.enemies = this.physics.add.group({\n  classType: Phaser.Physics.Arcade.Sprite,\n  defaultKey: 'enemy',\n  maxSize: 30,\n  collideWorldBounds: true,\n  bounceX: 1,\n  bounceY: 0,\n  velocityX: 100\n});",
+        "explanation": "在 group 配置中设置的属性会自动应用到所有新创建/复用的子对象"
+      }
+    },
+    {
+      "id": "err-rendering-blend-mode",
+      "category": "rendering",
+      "errorPattern": "Blend mode not working / additive blending issues",
+      "errorRegex": "blendMode|blend.*mode|additive|BlendModes|混合模式",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["blendMode", "ADD", "MULTIPLY", "SCREEN", "混合模式"],
+      "cause": "Canvas 渲染器不支持所有 WebGL 混合模式",
+      "fix": {
+        "correct": "// 设置混合模式\nsprite.setBlendMode(Phaser.BlendModes.ADD);  // 加法混合 — 适合发光效果\nsprite.setBlendMode(Phaser.BlendModes.MULTIPLY);  // 乘法混合\nsprite.setBlendMode(Phaser.BlendModes.SCREEN);  // 屏幕混合\n\n// 注意：Canvas 渲染器只支持部分混合模式\n// 确保使用 WebGL: type: Phaser.WEBGL",
+        "explanation": "混合模式在 WebGL 模式下效果最好。Canvas 渲染器支持有限"
+      }
+    },
+    {
+      "id": "err-logic-enemy-ai-stuck",
+      "category": "logic",
+      "errorPattern": "Enemy AI gets stuck / path blocked / oscillation",
+      "errorRegex": "enemy.*stuck|AI.*stuck|path.*block|oscillat|敌人.*卡住",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["AI", "enemy", "stuck", "path", "patrol", "敌人", "卡住", "巡逻"],
+      "cause": "简单的追踪/巡逻 AI 在障碍物处卡住或来回振荡",
+      "fix": {
+        "correct": "// 巡逻 AI 示例\nclass PatrolEnemy {\n  direction = 1;\n  patrolMin = 100;\n  patrolMax = 500;\n  \n  update(sprite: Phaser.Physics.Arcade.Sprite) {\n    sprite.setVelocityX(100 * this.direction);\n    if (sprite.x >= this.patrolMax) this.direction = -1;\n    if (sprite.x <= this.patrolMin) this.direction = 1;\n    sprite.setFlipX(this.direction < 0);\n  }\n}",
+        "explanation": "用明确的边界判断替代实时追踪。在碰墙时加入转向冷却避免振荡"
+      }
+    },
+    {
+      "id": "err-rendering-tint-color",
+      "category": "rendering",
+      "errorPattern": "setTint color incorrect / wrong color format",
+      "errorRegex": "setTint|tint.*color|tint.*wrong|染色.*错误",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["tint", "color", "setTint", "clearTint", "染色", "着色"],
+      "cause": "setTint 使用整数颜色值而非字符串，格式混淆",
+      "fix": {
+        "wrong": "sprite.setTint('#ff0000');  // 错误: 字符串格式",
+        "correct": "sprite.setTint(0xff0000);   // 红色染色\nsprite.setTint(0xff0000, 0x00ff00, 0x0000ff, 0xffff00);  // 四角不同色\nsprite.clearTint();  // 清除染色",
+        "explanation": "setTint 使用 0xRRGGBB 整数格式，不是字符串。可以传 1 个或 4 个值"
+      }
+    },
+    {
+      "id": "err-mobile-fullscreen",
+      "category": "mobile",
+      "errorPattern": "Fullscreen not working on mobile / iOS fullscreen",
+      "errorRegex": "fullscreen|full.*screen|startFullscreen|iOS.*fullscreen|全屏",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["fullscreen", "mobile", "iOS", "Android", "全屏"],
+      "cause": "iOS Safari 不支持 Fullscreen API，Android 上需要用户手势触发",
+      "fix": {
+        "correct": "// 在用户点击按钮时触发全屏\nfullscreenBtn.on('pointerdown', () => {\n  if (this.scale.isFullscreen) {\n    this.scale.stopFullscreen();\n  } else {\n    this.scale.startFullscreen();\n  }\n});\n\n// iOS 替代方案：使用 Scale.FIT + PWA 的 standalone 模式\n// 在 manifest.json 中设置 \"display\": \"standalone\"",
+        "explanation": "iOS 不支持全屏 API。替代方案是使用 PWA 的 standalone 模式或引导用户 '添加到主屏幕'"
+      }
+    },
+    {
+      "id": "err-physics-acceleration",
+      "category": "physics",
+      "errorPattern": "Using velocity for smooth movement instead of acceleration",
+      "errorRegex": "acceleration|smooth.*movement|setAcceleration|加速度",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["acceleration", "velocity", "smooth", "movement", "加速度", "平滑"],
+      "cause": "直接设置 velocity 导致移动不自然，应该使用 acceleration 获得平滑加减速",
+      "fix": {
+        "wrong": "// 突然的移动\nif (cursors.left.isDown) player.setVelocityX(-200);\nelse if (cursors.right.isDown) player.setVelocityX(200);\nelse player.setVelocityX(0);",
+        "correct": "// 平滑的加减速\nconst body = player.body as Phaser.Physics.Arcade.Body;\nif (cursors.left.isDown) {\n  body.setAccelerationX(-600);\n} else if (cursors.right.isDown) {\n  body.setAccelerationX(600);\n} else {\n  body.setAccelerationX(0);\n}\nbody.setDragX(800);  // 阻力使对象自然减速\nbody.setMaxVelocity(300, 600);",
+        "explanation": "使用 acceleration + drag + maxVelocity 实现自然的加速和减速运动"
+      }
+    },
+    {
+      "id": "err-runtime-prototype-error",
+      "category": "runtime",
+      "errorPattern": "Class method undefined after serialization / prototype lost",
+      "errorRegex": "prototype|method.*undefined.*class|class.*serializ|原型.*丢失",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["prototype", "class", "method", "serialization", "原型", "序列化"],
+      "cause": "通过 JSON.parse 反序列化的对象没有类的原型，方法调用失败",
+      "fix": {
+        "wrong": "// 保存\nlocalStorage.setItem('enemy', JSON.stringify(enemy));\n// 恢复\nconst enemy = JSON.parse(localStorage.getItem('enemy')!);\nenemy.attack();  // TypeError: attack is not a function",
+        "correct": "// 只保存纯数据\nconst saveData = { x: enemy.x, y: enemy.y, health: enemy.health };\nlocalStorage.setItem('enemy', JSON.stringify(saveData));\n\n// 恢复时重新创建对象\nconst data = JSON.parse(localStorage.getItem('enemy')!);\nconst enemy = new Enemy(this, data.x, data.y);\nenemy.health = data.health;",
+        "explanation": "JSON 序列化只保留数据，不保留方法。恢复时用保存的数据重新创建对象实例"
+      }
+    },
+    {
+      "id": "err-perf-shader-pipeline",
+      "category": "performance",
+      "errorPattern": "Custom pipeline / shader causing performance issues",
+      "errorRegex": "pipeline|shader|PostFX|custom.*render|着色器.*性能",
+      "severity": "medium",
+      "frequency": "rare",
+      "keywords": ["pipeline", "shader", "PostFX", "WebGL", "着色器", "后处理"],
+      "cause": "自定义着色器或后处理效果在低端设备上性能不佳",
+      "fix": {
+        "checkList": [
+          "在低端设备上禁用后处理效果",
+          "减少 PostFX pipeline 中的纹理采样次数",
+          "不要对每个对象单独设置 pipeline，尽量对整个 camera 设置",
+          "使用 this.renderer.type 检测是否 WebGL，Canvas 不支持自定义 shader",
+          "提供画质等级设置让用户选择"
+        ]
+      }
+    },
+    {
+      "id": "err-logic-random-seed",
+      "category": "logic",
+      "errorPattern": "Random results not reproducible / different every run",
+      "errorRegex": "random.*seed|reproducible|deterministic|随机.*种子",
+      "severity": "low",
+      "frequency": "rare",
+      "keywords": ["random", "seed", "reproducible", "deterministic", "随机种子", "可复现"],
+      "cause": "使用 Math.random() 无法复现关卡生成结果，调试困难",
+      "fix": {
+        "correct": "// 使用带种子的随机数生成器\nconst rng = new Phaser.Math.RandomDataGenerator(['seed123']);\nconst x = rng.between(0, 800);\nconst y = rng.frac();  // 0-1 之间\n\n// 同一个种子总是产生相同的序列\n// 适合关卡生成、每日挑战等需要可复现随机的场景",
+        "explanation": "Phaser.Math.RandomDataGenerator 支持种子——同一种子总是生成相同的随机序列"
+      }
+    },
+    {
+      "id": "err-rendering-graphics-perf",
+      "category": "rendering",
+      "errorPattern": "Graphics object causes performance drop / too many draw calls",
+      "errorRegex": "Graphics.*performance|graphics.*slow|graphics.*draw.*call|图形.*慢",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["Graphics", "performance", "draw", "render", "图形", "性能"],
+      "cause": "Graphics 对象每帧重绘成本较高，尤其是复杂形状",
+      "fix": {
+        "correct": "// 方案1：静态图形用 generateTexture 转为纹理\nconst gfx = this.add.graphics();\ngfx.fillStyle(0xff0000);\ngfx.fillCircle(16, 16, 16);\ngfx.generateTexture('red-circle', 32, 32);\ngfx.destroy();\n// 之后用 this.add.sprite(x, y, 'red-circle')\n\n// 方案2：只在需要时重绘，不要在 update 中每帧绘制\nlet needsRedraw = true;\nupdate() {\n  if (needsRedraw) {\n    this.graphics.clear();\n    // ... 绘制 ...\n    needsRedraw = false;\n  }\n}",
+        "explanation": "静态图形用 generateTexture 转为纹理只绘制一次。动态图形只在数据变化时重绘"
+      }
     }
   ]
 }

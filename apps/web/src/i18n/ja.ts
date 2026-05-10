@@ -439,7 +439,9 @@ const ja: Messages = {
 			potions: "ポーション",
 			gems: "宝石",
 			hero: "勇者",
-			defeated: "💀 倒された！",
+			defeated: "倒された！",
+			flee: "逃げる",
+			bossDefeated: "呪いが解けた！勝利！",
 		},
 		puzzle: {
 			subtitle: "🧩 2048",

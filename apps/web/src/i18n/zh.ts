@@ -437,7 +437,9 @@ const zh = {
 			potions: "药水",
 			gems: "宝石",
 			hero: "勇者",
-			defeated: "💀 被击败了!",
+			defeated: "被击败了!",
+			flee: "逃跑",
+			bossDefeated: "诅咒解除了！你赢了！",
 		},
 		puzzle: {
 			subtitle: "🧩 2048",

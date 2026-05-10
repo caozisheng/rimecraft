@@ -46,6 +46,7 @@ export class MenuScene extends Phaser.Scene {
 		this.load.image("star", "/assets/demoscene/star.png");
 		this.load.image("bomb", "/assets/sprites/bomb.png");
 		this.load.image("saw", "/assets/sprites/saw.png");
+		this.load.image("firstaid", "/assets/sprites/firstaid.png");
 	}
 
 	create() {
@@ -111,11 +112,18 @@ export class GameScene extends Phaser.Scene {
 	private score = 0;
 	private coinCount = 0;
 	private speed = 300;
+	private bestScore = 0;
+	private jumpCount = 0;
+	private milestone = 0;
 	private scoreText!: Phaser.GameObjects.Text;
 	private coinText!: Phaser.GameObjects.Text;
+	private bestText!: Phaser.GameObjects.Text;
+	private milestoneText!: Phaser.GameObjects.Text;
 	private spawnTimer!: Phaser.Time.TimerEvent;
 	private coinTimer!: Phaser.Time.TimerEvent;
 	private isGameOver = false;
+
+	private static readonly STORAGE_KEY = "rimecraft_runner_best";
 
 	constructor() {
 		super("GameScene");
@@ -126,6 +134,9 @@ export class GameScene extends Phaser.Scene {
 		this.coinCount = 0;
 		this.speed = 300;
 		this.isGameOver = false;
+		this.jumpCount = 0;
+		this.milestone = 0;
+		this.bestScore = parseInt(localStorage.getItem(GameScene.STORAGE_KEY) || "0", 10);
 
 		this.add.image(400, 300, "sky");
 
@@ -167,7 +178,9 @@ export class GameScene extends Phaser.Scene {
 		this.input.on("pointerdown", () => this.jump());
 
 		this.scoreText = this.add.text(16, 16, "${g.common.score}: 0", { fontSize: "26px", color: "#ffffff", fontFamily: "Arial", stroke: "#000", strokeThickness: 3 }).setScrollFactor(0).setDepth(100);
-		this.coinText = this.add.text(16, 50, "⭐ 0", { fontSize: "22px", color: "#fbbf24", fontFamily: "Arial", stroke: "#000", strokeThickness: 2 }).setScrollFactor(0).setDepth(100);
+		this.coinText = this.add.text(16, 50, "\\u2B50 0", { fontSize: "22px", color: "#fbbf24", fontFamily: "Arial", stroke: "#000", strokeThickness: 2 }).setScrollFactor(0).setDepth(100);
+		this.bestText = this.add.text(784, 16, "${g.common.score}: " + this.bestScore, { fontSize: "18px", color: "#94a3b8", fontFamily: "Arial", stroke: "#000", strokeThickness: 2 }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+		this.milestoneText = this.add.text(400, 80, "", { fontSize: "28px", color: "#fbbf24", fontFamily: "Arial", stroke: "#000", strokeThickness: 3 }).setOrigin(0.5).setScrollFactor(0).setDepth(100).setAlpha(0);
 	}
 
 	update() {
@@ -175,6 +188,23 @@ export class GameScene extends Phaser.Scene {
 
 		this.score += 1;
 		this.scoreText.setText("${g.common.score}: " + this.score);
+
+		if (this.score > this.bestScore) {
+			this.bestScore = this.score;
+		}
+
+		const newMilestone = Math.floor(this.score / 500);
+		if (newMilestone > this.milestone) {
+			this.milestone = newMilestone;
+			this.milestoneText.setText(this.score + "!");
+			this.milestoneText.setAlpha(1).setScale(1.5);
+			this.tweens.add({ targets: this.milestoneText, alpha: 0, scale: 0.8, duration: 1200 });
+		}
+
+		const body = this.player.body as Phaser.Physics.Arcade.Body;
+		if (body.blocked.down) {
+			this.jumpCount = 0;
+		}
 
 		for (const cloud of this.clouds) {
 			cloud.x -= 0.5;
@@ -205,6 +235,23 @@ export class GameScene extends Phaser.Scene {
 		const body = this.player.body as Phaser.Physics.Arcade.Body;
 		if (body.blocked.down) {
 			body.setVelocityY(-460);
+			this.jumpCount = 1;
+		} else if (this.jumpCount === 1) {
+			body.setVelocityY(-400);
+			this.jumpCount = 2;
+			for (let i = 0; i < 5; i++) {
+				const p = this.add.circle(
+					this.player.x + Phaser.Math.Between(-8, 8),
+					this.player.y + 20,
+					Phaser.Math.Between(2, 4), 0x06b6d4, 0.7
+				);
+				this.tweens.add({
+					targets: p,
+					y: p.y + Phaser.Math.Between(10, 25),
+					alpha: 0, duration: 350,
+					onComplete: () => p.destroy(),
+				});
+			}
 		}
 	}
 
@@ -246,16 +293,36 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private collectCoin(_player: any, coin: any) {
+		const cx = coin.x;
+		const cy = coin.y;
 		this.coins.killAndHide(coin);
 		(coin.body as Phaser.Physics.Arcade.Body).stop();
 		this.coinCount++;
-		this.coinText.setText("⭐ " + this.coinCount);
+		this.coinText.setText("\\u2B50 " + this.coinCount);
 		this.score += 50;
+
+		for (let i = 0; i < 4; i++) {
+			const spark = this.add.circle(
+				cx + Phaser.Math.Between(-6, 6),
+				cy + Phaser.Math.Between(-6, 6),
+				Phaser.Math.Between(2, 4), 0xfbbf24, 1
+			);
+			this.tweens.add({
+				targets: spark,
+				y: spark.y - Phaser.Math.Between(10, 25),
+				alpha: 0, duration: 300,
+				onComplete: () => spark.destroy(),
+			});
+		}
 	}
 
 	private hitObstacle() {
 		if (this.isGameOver) return;
 		this.isGameOver = true;
+
+		if (this.score > parseInt(localStorage.getItem(GameScene.STORAGE_KEY) || "0", 10)) {
+			localStorage.setItem(GameScene.STORAGE_KEY, this.score.toString());
+		}
 
 		this.physics.pause();
 		this.player.setTint(0xff0000);
@@ -283,9 +350,11 @@ export class GameOverScene extends Phaser.Scene {
 	create(data: any) {
 		const score = data.score ?? 0;
 		const coins = data.coins ?? 0;
+		const best = parseInt(localStorage.getItem("rimecraft_runner_best") || "0", 10);
+		const isNewBest = score >= best && score > 0;
 
 		this.add
-			.text(400, 180, "${g.common.gameOver}", {
+			.text(400, 160, "${g.common.gameOver}", {
 				fontSize: "48px",
 				color: "#ef4444",
 				fontFamily: "Arial",
@@ -293,7 +362,7 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 270, "${g.common.finalScore}: " + score, {
+			.text(400, 250, "${g.common.finalScore}: " + score, {
 				fontSize: "32px",
 				color: "#fbbf24",
 				fontFamily: "Arial",
@@ -301,12 +370,30 @@ export class GameOverScene extends Phaser.Scene {
 			.setOrigin(0.5);
 
 		this.add
-			.text(400, 320, "⭐ " + coins, {
+			.text(400, 300, "\\u2B50 " + coins, {
 				fontSize: "24px",
 				color: "#fbbf24",
 				fontFamily: "Arial",
 			})
 			.setOrigin(0.5);
+
+		if (isNewBest) {
+			this.add
+				.text(400, 345, "\\u{1F3C6} New Best!", {
+					fontSize: "22px",
+					color: "#22c55e",
+					fontFamily: "Arial",
+				})
+				.setOrigin(0.5);
+		} else {
+			this.add
+				.text(400, 345, "Best: " + best, {
+					fontSize: "18px",
+					color: "#94a3b8",
+					fontFamily: "Arial",
+				})
+				.setOrigin(0.5);
+		}
 
 		const retryBtn = this.add
 			.text(400, 420, "${g.common.restart}", {

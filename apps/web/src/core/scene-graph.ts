@@ -108,6 +108,68 @@ export function findObject(
 	return undefined;
 }
 
+function fuzzyScore(a: string, b: string): number {
+	const al = a.toLowerCase();
+	const bl = b.toLowerCase();
+	if (al === bl) return 1;
+	if (al.includes(bl) || bl.includes(al)) return 0.8;
+	let matches = 0;
+	const shorter = al.length < bl.length ? al : bl;
+	const longer = al.length < bl.length ? bl : al;
+	for (const ch of shorter) {
+		if (longer.includes(ch)) matches++;
+	}
+	return matches / Math.max(al.length, bl.length);
+}
+
+export function resolveObjectId(
+	objects: SceneObject[],
+	idOrName: string,
+): SceneObject | undefined {
+	const exact = findObject(objects, idOrName);
+	if (exact) return exact;
+
+	const flat = flattenObjects(objects);
+	const byName = flat.find(
+		(o) => o.name.toLowerCase() === idOrName.toLowerCase(),
+	);
+	if (byName) return byName;
+
+	const byLabel = flat.find(
+		(o) => o.label?.toLowerCase() === idOrName.toLowerCase(),
+	);
+	if (byLabel) return byLabel;
+
+	const partialName = flat.find(
+		(o) => o.name.toLowerCase().includes(idOrName.toLowerCase()),
+	);
+	if (partialName) return partialName;
+
+	const scored = flat
+		.map((o) => ({ obj: o, score: Math.max(fuzzyScore(o.name, idOrName), fuzzyScore(o.id, idOrName)) }))
+		.filter((s) => s.score >= 0.5)
+		.sort((a, b) => b.score - a.score);
+	return scored[0]?.obj;
+}
+
+export function getSimilarObjects(
+	objects: SceneObject[],
+	idOrName: string,
+	limit = 5,
+): Array<{ id: string; name: string; type: string }> {
+	const flat = flattenObjects(objects);
+	return flat
+		.map((o) => ({
+			id: o.id,
+			name: o.name,
+			type: o.type,
+			score: Math.max(fuzzyScore(o.name, idOrName), fuzzyScore(o.id, idOrName)),
+		}))
+		.sort((a, b) => b.score - a.score)
+		.slice(0, limit)
+		.map(({ id, name, type }) => ({ id, name, type }));
+}
+
 export function removeObject(
 	objects: SceneObject[],
 	id: string,

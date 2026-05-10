@@ -8,10 +8,13 @@ export type ExpertRole =
 
 export type AgentStatus = "idle" | "thinking" | "streaming" | "error";
 
+export type LLMProvider = "openai" | "anthropic" | "openai-compatible";
+
 export interface AgentLLMConfig {
 	baseUrl: string;
 	apiKey: string;
 	model: string;
+	provider?: LLMProvider;
 }
 
 export interface AgentMessage {

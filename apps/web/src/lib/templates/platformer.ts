@@ -46,6 +46,8 @@ export class MenuScene extends Phaser.Scene {
 		this.load.image("star", "/assets/demoscene/star.png");
 		this.load.image("bomb", "/assets/sprites/bomb.png");
 		this.load.image("wasp", "/assets/sprites/wasp.png");
+		this.load.image("firstaid", "/assets/sprites/firstaid.png");
+		this.load.image("shinyball", "/assets/sprites/shinyball.png");
 	}
 
 	create() {
@@ -152,6 +154,35 @@ const LEVELS = [
 		bombs: [{ x: 650, y: 140 }],
 		playerStart: { x: 100, y: 520 },
 	},
+	{
+		platforms: [
+			{ x: 400, y: 584, scaleX: 2 },
+			{ x: 150, y: 490, scaleX: 0.4 },
+			{ x: 650, y: 450, scaleX: 0.4 },
+			{ x: 400, y: 380, scaleX: 0.5 },
+			{ x: 150, y: 300, scaleX: 0.4 },
+			{ x: 650, y: 240, scaleX: 0.4 },
+			{ x: 400, y: 160, scaleX: 0.5 },
+			{ x: 200, y: 90, scaleX: 0.4 },
+		],
+		movingPlatforms: [
+			{ x: 350, y: 490, scaleX: 0.4, moveX: 200, speed: 1800 },
+			{ x: 400, y: 240, scaleX: 0.4, moveX: 150, speed: 1500 },
+			{ x: 550, y: 90, scaleX: 0.3, moveX: 120, speed: 1400 },
+		],
+		stars: [
+			{ x: 150, y: 450 }, { x: 650, y: 410 }, { x: 400, y: 340 },
+			{ x: 150, y: 260 }, { x: 650, y: 200 }, { x: 400, y: 120 },
+			{ x: 200, y: 50 }, { x: 500, y: 540 }, { x: 700, y: 540 },
+		],
+		enemies: [
+			{ x: 350, y: 354, minX: 300, maxX: 500 },
+			{ x: 600, y: 214, minX: 550, maxX: 700 },
+			{ x: 180, y: 274, minX: 100, maxX: 250 },
+		],
+		bombs: [{ x: 400, y: 140 }, { x: 200, y: 270 }],
+		playerStart: { x: 100, y: 520 },
+	},
 ];
 
 export class GameScene extends Phaser.Scene {
@@ -164,8 +195,11 @@ export class GameScene extends Phaser.Scene {
 	private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
 	private score = 0;
 	private level = 1;
+	private lives = 1;
+	private jumpCount = 0;
 	private scoreText!: Phaser.GameObjects.Text;
 	private levelText!: Phaser.GameObjects.Text;
+	private livesText!: Phaser.GameObjects.Text;
 
 	constructor() {
 		super("GameScene");
@@ -173,10 +207,13 @@ export class GameScene extends Phaser.Scene {
 
 	init(data: any) {
 		this.level = data.level || 1;
+		this.score = data.score || 0;
+		this.lives = data.lives ?? 1;
 	}
 
 	create() {
-		this.score = 0;
+		this.score = this.score || 0;
+		this.jumpCount = 0;
 
 		this.add.image(400, 300, "sky");
 
@@ -226,13 +263,20 @@ export class GameScene extends Phaser.Scene {
 
 		this.cursors = this.input.keyboard!.createCursorKeys();
 		this.input.keyboard!.addKey("SPACE").on("down", () => this.jump());
+		this.input.keyboard!.addKey("UP").on("down", () => this.jump());
 
-		this.scoreText = this.add.text(16, 16, "${g.platformer.coins}: 0", { fontSize: "24px", color: "#fbbf24", fontFamily: "Arial" }).setScrollFactor(0).setDepth(100);
+		this.scoreText = this.add.text(16, 16, "${g.platformer.coins}: " + this.score, { fontSize: "24px", color: "#fbbf24", fontFamily: "Arial" }).setScrollFactor(0).setDepth(100);
 		this.levelText = this.add.text(784, 16, "${g.platformer.level}" + this.level, { fontSize: "22px", color: "#a3e635", fontFamily: "Arial" }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+		this.livesText = this.add.text(400, 16, "\\u2764\\uFE0F " + this.lives, { fontSize: "22px", color: "#ef4444", fontFamily: "Arial" }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(100);
 	}
 
 	update() {
 		const body = this.player.body as Phaser.Physics.Arcade.Body;
+
+		if (body.blocked.down) {
+			this.jumpCount = 0;
+		}
+
 		if (this.cursors.left.isDown) {
 			body.setVelocityX(-200);
 			this.player.anims.play("left", true);
@@ -244,12 +288,8 @@ export class GameScene extends Phaser.Scene {
 			this.player.anims.play("turn");
 		}
 
-		if (this.cursors.up.isDown && body.blocked.down) {
-			this.jump();
-		}
-
 		if (this.player.y > 620) {
-			this.scene.start("GameOverScene", { score: this.score, level: this.level });
+			this.loseLife();
 		}
 
 		this.movingPlatforms.getChildren().forEach((p: any) => {
@@ -261,6 +301,24 @@ export class GameScene extends Phaser.Scene {
 		const body = this.player.body as Phaser.Physics.Arcade.Body;
 		if (body.blocked.down) {
 			body.setVelocityY(-420);
+			this.jumpCount = 1;
+		} else if (this.jumpCount === 1) {
+			body.setVelocityY(-380);
+			this.jumpCount = 2;
+			for (let i = 0; i < 6; i++) {
+				const p = this.add.circle(
+					this.player.x + Phaser.Math.Between(-10, 10),
+					this.player.y + 20,
+					Phaser.Math.Between(2, 5), 0x06b6d4, 0.8
+				);
+				this.tweens.add({
+					targets: p,
+					y: p.y + Phaser.Math.Between(10, 30),
+					x: p.x + Phaser.Math.Between(-20, 20),
+					alpha: 0, scale: 0, duration: 400,
+					onComplete: () => p.destroy(),
+				});
+			}
 		}
 	}
 
@@ -269,10 +327,25 @@ export class GameScene extends Phaser.Scene {
 		this.score += 10;
 		this.scoreText.setText("${g.platformer.coins}: " + this.score);
 
+		for (let i = 0; i < 5; i++) {
+			const spark = this.add.circle(
+				star.x + Phaser.Math.Between(-8, 8),
+				star.y + Phaser.Math.Between(-8, 8),
+				Phaser.Math.Between(2, 4), 0xfbbf24, 1
+			);
+			this.tweens.add({
+				targets: spark,
+				y: spark.y - Phaser.Math.Between(15, 35),
+				x: spark.x + Phaser.Math.Between(-20, 20),
+				alpha: 0, duration: 350,
+				onComplete: () => spark.destroy(),
+			});
+		}
+
 		if (this.stars.countActive(true) === 0) {
 			if (this.level < LEVELS.length) {
 				this.time.delayedCall(500, () => {
-					this.scene.start("GameScene", { level: this.level + 1 });
+					this.scene.start("GameScene", { level: this.level + 1, score: this.score, lives: this.lives });
 				});
 			} else {
 				this.time.delayedCall(500, () => {
@@ -283,13 +356,30 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private hitDanger() {
-		this.physics.pause();
-		this.player.setTint(0xff0000);
-		this.player.anims.play("turn");
-		this.cameras.main.shake(200, 0.01);
-		this.time.delayedCall(600, () => {
-			this.scene.start("GameOverScene", { score: this.score, level: this.level });
-		});
+		this.loseLife();
+	}
+
+	private loseLife() {
+		this.lives--;
+		if (this.lives <= 0) {
+			this.physics.pause();
+			this.player.setTint(0xff0000);
+			this.player.anims.play("turn");
+			this.cameras.main.shake(200, 0.01);
+			this.time.delayedCall(600, () => {
+				this.scene.start("GameOverScene", { score: this.score, level: this.level });
+			});
+		} else {
+			this.cameras.main.shake(200, 0.01);
+			this.player.setTint(0xff0000);
+			this.livesText.setText("\\u2764\\uFE0F " + this.lives);
+			this.time.delayedCall(200, () => {
+				this.player.clearTint();
+				const lvl = LEVELS[(this.level - 1) % LEVELS.length];
+				this.player.setPosition(lvl.playerStart.x, lvl.playerStart.y);
+				(this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0);
+			});
+		}
 	}
 }
 `,
@@ -331,6 +421,22 @@ export class GameOverScene extends Phaser.Scene {
 					fontFamily: "Arial",
 				})
 				.setOrigin(0.5);
+		}
+
+		if (win) {
+			for (let i = 0; i < 25; i++) {
+				const x = Phaser.Math.Between(50, 750);
+				const y = Phaser.Math.Between(50, 550);
+				const colors = [0xfbbf24, 0x22c55e, 0x06b6d4, 0xa78bfa, 0xf472b6];
+				const dot = this.add.circle(x, y, Phaser.Math.Between(3, 6), Phaser.Utils.Array.GetRandom(colors));
+				this.tweens.add({
+					targets: dot,
+					y: y - Phaser.Math.Between(40, 100),
+					alpha: 0, duration: Phaser.Math.Between(800, 1500),
+					delay: Phaser.Math.Between(0, 600),
+					repeat: -1, repeatDelay: Phaser.Math.Between(200, 800),
+				});
+			}
 		}
 
 		const retryBtn = this.add

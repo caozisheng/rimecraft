@@ -491,6 +491,272 @@
       "keywords": ["weather", "rain", "snow", "particles", "天气", "下雨", "下雪"],
       "title": "Weather Effects (Rain/Snow)",
       "code": "// Rain effect using particles\nfunction createRain(scene: Phaser.Scene) {\n  const { width } = scene.scale;\n  return scene.add.particles(0, -10, \"particle\", {\n    x: { min: 0, max: width },\n    y: -10,\n    speedY: { min: 300, max: 500 },\n    speedX: { min: -50, max: -20 },\n    scale: { start: 0.1, end: 0.05 },\n    tint: 0x6ea8fe,\n    alpha: { start: 0.7, end: 0.3 },\n    lifespan: 1200,\n    frequency: 20,\n    quantity: 3\n  }).setDepth(800);\n}\n\n// Snow effect\nfunction createSnow(scene: Phaser.Scene) {\n  const { width } = scene.scale;\n  return scene.add.particles(0, -10, \"particle\", {\n    x: { min: 0, max: width },\n    y: -10,\n    speedY: { min: 40, max: 100 },\n    speedX: { min: -30, max: 30 },\n    scale: { min: 0.1, max: 0.4 },\n    tint: 0xffffff,\n    alpha: { start: 0.9, end: 0 },\n    lifespan: 4000,\n    frequency: 100,\n    quantity: 2,\n    rotate: { min: 0, max: 360 }\n  }).setDepth(800);\n}\n\n// Fog overlay\nfunction createFog(scene: Phaser.Scene) {\n  const { width, height } = scene.scale;\n  const fog = scene.add.rectangle(width / 2, height / 2, width, height, 0xcccccc, 0.2)\n    .setScrollFactor(0).setDepth(700);\n  scene.tweens.add({ targets: fog, alpha: 0.1, duration: 3000, yoyo: true, repeat: -1 });\n  return fog;\n}\n\n// Usage:\nconst rain = createRain(this);\n// To stop: rain.stop(); rain.destroy();"
+    },
+    {
+      "id": "structure-config-centralized",
+      "keywords": ["config", "constants", "settings", "配置", "常量", "参数", "数值"],
+      "title": "Centralized Game Config",
+      "category": "structure",
+      "code": "// src/config.ts — 所有游戏常量集中管理\nexport const GAME_CONFIG = {\n  WIDTH: 800,\n  HEIGHT: 600,\n  BACKGROUND_COLOR: 0x1a1a2e,\n  PLAYER: {\n    SPEED: 300,\n    JUMP_VELOCITY: -500,\n    SIZE: 32,\n    COLOR: 0x00ff88,\n    GRAVITY: 800,\n  },\n  ENEMY: {\n    SPEED: 100,\n    SIZE: 28,\n    COLOR: 0xff4444,\n    SPAWN_INTERVAL: 2000,\n  },\n  RULES: {\n    STARTING_LIVES: 3,\n    POINTS_PER_COIN: 10,\n    POINTS_PER_ENEMY: 50,\n  },\n} as const;\n\n// 在场景中使用：\nimport { GAME_CONFIG } from \"../config\";\nplayer.body!.setVelocityX(GAME_CONFIG.PLAYER.SPEED);"
+    },
+    {
+      "id": "structure-scene-skeleton",
+      "keywords": ["scene", "template", "skeleton", "structure", "场景", "模板", "骨架", "结构"],
+      "title": "Scene Skeleton Pattern",
+      "category": "structure",
+      "code": "import Phaser from \"phaser\";\nimport { GAME_CONFIG } from \"../config\";\n\nexport class GameScene extends Phaser.Scene {\n  // 1. 属性声明\n  private player!: Phaser.Physics.Arcade.Sprite;\n  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;\n  private score = 0;\n  private scoreText!: Phaser.GameObjects.Text;\n\n  constructor() { super(\"GameScene\"); }\n\n  init(data?: { score?: number }) {\n    this.score = data?.score ?? 0;\n  }\n\n  preload() { this.createTextures(); }\n\n  create() {\n    this.createWorld();\n    this.createPlayer();\n    this.setupCollisions();\n    this.setupInput();\n    this.createUI();\n  }\n\n  update(time: number, delta: number) {\n    this.handleInput();\n    this.updateGameLogic(delta);\n    this.updateUI();\n  }\n\n  // 私有方法按职责分组\n  private createTextures() { /* generateTexture calls */ }\n  private createWorld() { /* platforms, bg */ }\n  private createPlayer() { /* physics sprite */ }\n  private setupCollisions() { /* colliders, overlaps */ }\n  private setupInput() { /* keyboard, pointer */ }\n  private createUI() { /* score text, HP bar */ }\n  private handleInput() { /* movement from cursors */ }\n  private updateGameLogic(delta: number) { /* game rules */ }\n  private updateUI() { /* refresh displays */ }\n}"
+    },
+    {
+      "id": "structure-multi-scene-data",
+      "keywords": ["scene", "data", "transition", "pass", "场景", "数据", "切换", "传递"],
+      "title": "Multi-Scene Data Passing",
+      "category": "structure",
+      "code": "// 发送数据到下一个场景\nthis.scene.start(\"GameOverScene\", { score: this.score, level: this.level });\n\n// 在目标场景接收\nexport class GameOverScene extends Phaser.Scene {\n  private finalScore = 0;\n  private level = 1;\n\n  constructor() { super(\"GameOverScene\"); }\n\n  init(data?: { score?: number; level?: number }) {\n    this.finalScore = data?.score ?? 0;\n    this.level = data?.level ?? 1;\n  }\n\n  create() {\n    const { width, height } = this.scale;\n    this.add.text(width / 2, height / 3, \"Game Over\", {\n      fontSize: \"48px\", color: \"#fff\"\n    }).setOrigin(0.5);\n    this.add.text(width / 2, height / 2, `Score: ${this.finalScore}`, {\n      fontSize: \"32px\", color: \"#4ade80\"\n    }).setOrigin(0.5);\n\n    // 重试按钮\n    const retry = this.add.text(width / 2, height * 0.7, \"Retry\", {\n      fontSize: \"28px\", color: \"#06b6d4\"\n    }).setOrigin(0.5).setInteractive({ useHandCursor: true });\n    retry.on(\"pointerdown\", () => this.scene.start(\"GameScene\"));\n  }\n}"
+    },
+    {
+      "id": "structure-hud-overlay",
+      "keywords": ["hud", "ui", "overlay", "score", "界面", "叠加", "HUD"],
+      "title": "HUD Overlay Scene",
+      "category": "structure",
+      "code": "// GameScene 中启动 HUD\ncreate() {\n  // ... game setup ...\n  this.scene.launch(\"HUDScene\");\n  this.scene.bringToTop(\"HUDScene\");\n}\n\n// 通知 HUD 分数变化\naddScore(points: number) {\n  this.score += points;\n  this.events.emit(\"scoreChanged\", this.score);\n}\n\n// HUDScene\nexport class HUDScene extends Phaser.Scene {\n  private scoreText!: Phaser.GameObjects.Text;\n\n  constructor() { super(\"HUDScene\"); }\n\n  create() {\n    this.scoreText = this.add.text(16, 16, \"Score: 0\", {\n      fontSize: \"24px\", color: \"#fff\"\n    }).setScrollFactor(0).setDepth(100);\n\n    // 监听 GameScene 事件\n    const gameScene = this.scene.get(\"GameScene\");\n    gameScene.events.on(\"scoreChanged\", (score: number) => {\n      this.scoreText.setText(\"Score: \" + score);\n    });\n  }\n}"
+    },
+    {
+      "id": "structure-main-entry",
+      "keywords": ["main", "entry", "game", "config", "入口", "启动", "注册"],
+      "title": "Main Entry Point Pattern",
+      "category": "structure",
+      "code": "// src/main.ts — 标准入口文件\nimport Phaser from \"phaser\";\nimport { GAME_CONFIG } from \"./config\";\nimport { GameScene } from \"./scenes/game-scene\";\nimport { GameOverScene } from \"./scenes/game-over-scene\";\n\nconst config: Phaser.Types.Core.GameConfig = {\n  type: Phaser.AUTO,\n  width: GAME_CONFIG.WIDTH,\n  height: GAME_CONFIG.HEIGHT,\n  backgroundColor: \"#\" + GAME_CONFIG.BACKGROUND_COLOR.toString(16).padStart(6, \"0\"),\n  physics: {\n    default: \"arcade\",\n    arcade: { gravity: { x: 0, y: 0 }, debug: false }\n  },\n  scene: [GameScene, GameOverScene]  // 所有场景类都要注册\n};\n\nnew Phaser.Game(config);"
+    },
+    {
+      "id": "movement-dash-trail",
+      "keywords": ["dash", "afterimage", "trail", "ghost", "冲刺", "残影", "拖尾", "闪避"],
+      "title": "Dash with Afterimage Trail",
+      "category": "movement",
+      "code": "// Dash with afterimage trail effect\nlet canDash = true;\nconst dashSpeed = 600;\nconst dashDuration = 150;\n\nfunction dash(player: Phaser.Physics.Arcade.Sprite, scene: Phaser.Scene) {\n  if (!canDash) return;\n  canDash = false;\n  const dir = player.flipX ? -1 : 1;\n  player.body!.setVelocityX(dir * dashSpeed);\n\n  // Spawn afterimage ghosts\n  for (let i = 0; i < 3; i++) {\n    scene.time.delayedCall(i * 50, () => {\n      const ghost = scene.add.sprite(player.x, player.y, player.texture.key)\n        .setAlpha(0.5).setTint(0x00ccff).setFlipX(player.flipX);\n      scene.tweens.add({ targets: ghost, alpha: 0, duration: 300, onComplete: () => ghost.destroy() });\n    });\n  }\n\n  scene.time.delayedCall(dashDuration, () => player.body!.setVelocityX(0));\n  scene.time.delayedCall(800, () => { canDash = true; });\n}"
+    },
+    {
+      "id": "movement-wall-slide",
+      "keywords": ["wall", "slide", "wall jump", "墙壁", "滑墙", "蹬墙跳", "wall slide"],
+      "title": "Wall Slide and Wall Jump",
+      "category": "movement",
+      "code": "// Wall slide & wall jump\nconst WALL_SLIDE_SPEED = 50;\nconst WALL_JUMP_X = 250;\nconst WALL_JUMP_Y = -350;\nlet isTouchingWall = false;\nlet wallDirection = 0; // -1 left, 1 right\n\n// In update():\nconst blocked = player.body! as Phaser.Physics.Arcade.Body;\nisTouchingWall = false;\nif (blocked.blocked.left) { isTouchingWall = true; wallDirection = -1; }\nif (blocked.blocked.right) { isTouchingWall = true; wallDirection = 1; }\n\nif (isTouchingWall && !blocked.blocked.down && player.body!.velocity.y > 0) {\n  player.body!.setVelocityY(WALL_SLIDE_SPEED); // slow slide\n}\n\nif (isTouchingWall && !blocked.blocked.down && cursors.up.isDown) {\n  player.body!.setVelocityY(WALL_JUMP_Y);\n  player.body!.setVelocityX(-wallDirection * WALL_JUMP_X);\n}"
+    },
+    {
+      "id": "movement-rope-swing",
+      "keywords": ["rope", "grapple", "swing", "hook", "绳索", "钩爪", "摆荡", "抓钩"],
+      "title": "Rope / Grappling Hook Swing",
+      "category": "movement",
+      "code": "// Rope swing mechanic using distance constraint\nlet ropeJoint: Phaser.Physics.Arcade.Sprite | null = null;\nconst ropeLength = 200;\n\nfunction attachRope(player: Phaser.Physics.Arcade.Sprite, anchorX: number, anchorY: number, scene: Phaser.Scene) {\n  ropeJoint = scene.add.sprite(anchorX, anchorY, '__WHITE') as any;\n  // Simulate pendulum in update\n}\n\n// In update(): simulate rope constraint\nif (ropeJoint) {\n  const dx = player.x - ropeJoint.x;\n  const dy = player.y - ropeJoint.y;\n  const dist = Math.sqrt(dx * dx + dy * dy);\n  if (dist > ropeLength) {\n    const angle = Math.atan2(dy, dx);\n    player.setPosition(\n      ropeJoint.x + Math.cos(angle) * ropeLength,\n      ropeJoint.y + Math.sin(angle) * ropeLength\n    );\n    // tangential velocity\n    const nx = dx / dist, ny = dy / dist;\n    const dot = player.body!.velocity.x * nx + player.body!.velocity.y * ny;\n    player.body!.velocity.x -= dot * nx;\n    player.body!.velocity.y -= dot * ny;\n  }\n  // Draw rope line\n  scene.add.line(0, 0, ropeJoint.x, ropeJoint.y, player.x, player.y, 0xffffff).setOrigin(0).setDepth(-1);\n}"
+    },
+    {
+      "id": "movement-ice-friction",
+      "keywords": ["ice", "friction", "slippery", "slide", "冰面", "滑", "摩擦力", "惯性"],
+      "title": "Ice Surface Slippery Movement",
+      "category": "movement",
+      "code": "// Ice surface movement with low friction\nlet onIce = false;\nconst ICE_ACCEL = 100;\nconst ICE_MAX_SPEED = 300;\nconst ICE_DRAG = 50; // very low drag = slippery\nconst NORMAL_DRAG = 600;\n\n// In update():\nif (onIce) {\n  player.body!.setDragX(ICE_DRAG);\n  player.body!.setMaxVelocityX(ICE_MAX_SPEED);\n  if (cursors.left.isDown) player.body!.setAccelerationX(-ICE_ACCEL);\n  else if (cursors.right.isDown) player.body!.setAccelerationX(ICE_ACCEL);\n  else player.body!.setAccelerationX(0); // coast on ice\n} else {\n  player.body!.setDragX(NORMAL_DRAG);\n  if (cursors.left.isDown) player.body!.setVelocityX(-160);\n  else if (cursors.right.isDown) player.body!.setVelocityX(160);\n  else player.body!.setVelocityX(0);\n}\n\n// Detect ice overlap\nthis.physics.add.overlap(player, iceZones, () => { onIce = true; });"
+    },
+    {
+      "id": "movement-ladder-climb",
+      "keywords": ["ladder", "climb", "梯子", "攀爬", "爬梯", "climbing"],
+      "title": "Ladder Climbing Mechanics",
+      "category": "movement",
+      "code": "// Ladder climbing\nlet onLadder = false;\nconst CLIMB_SPEED = 120;\n\n// Overlap check with ladder zones\nthis.physics.add.overlap(player, ladders, () => { onLadder = true; });\n\n// In update():\nif (onLadder) {\n  player.body!.setAllowGravity(false);\n  if (cursors.up.isDown) player.body!.setVelocityY(-CLIMB_SPEED);\n  else if (cursors.down.isDown) player.body!.setVelocityY(CLIMB_SPEED);\n  else player.body!.setVelocityY(0);\n  // Allow horizontal movement on ladder\n  if (cursors.left.isDown) player.body!.setVelocityX(-80);\n  else if (cursors.right.isDown) player.body!.setVelocityX(80);\n  else player.body!.setVelocityX(0);\n} else {\n  player.body!.setAllowGravity(true);\n}\nonLadder = false; // reset each frame, re-set by overlap"
+    },
+    {
+      "id": "movement-swimming",
+      "keywords": ["swim", "water", "buoyancy", "underwater", "游泳", "水中", "浮力", "潜水"],
+      "title": "Underwater Swimming with Buoyancy",
+      "category": "movement",
+      "code": "// Underwater swimming with buoyancy\nlet inWater = false;\nconst SWIM_SPEED = 100;\nconst BUOYANCY = -60; // float upward\nconst WATER_DRAG = 200;\n\nthis.physics.add.overlap(player, waterZone, () => { inWater = true; });\n\n// In update():\nif (inWater) {\n  player.body!.setGravityY(BUOYANCY);\n  player.body!.setDragY(WATER_DRAG);\n  player.body!.setDragX(WATER_DRAG);\n  player.body!.setMaxVelocity(SWIM_SPEED);\n  if (cursors.up.isDown) player.body!.setAccelerationY(-200);\n  else if (cursors.down.isDown) player.body!.setAccelerationY(150);\n  else player.body!.setAccelerationY(0);\n  if (cursors.left.isDown) player.body!.setAccelerationX(-200);\n  else if (cursors.right.isDown) player.body!.setAccelerationX(200);\n  else player.body!.setAccelerationX(0);\n} else {\n  player.body!.setGravityY(300);\n  player.body!.setDragY(0);\n  player.body!.setMaxVelocity(300, 500);\n}\ninWater = false;"
+    },
+    {
+      "id": "ai-state-machine",
+      "keywords": ["state machine", "enemy", "AI", "patrol", "chase", "attack", "flee", "状态机", "敌人", "巡逻", "追击", "攻击", "逃跑"],
+      "title": "Enemy State Machine",
+      "category": "ai",
+      "code": "// Enemy state machine: idle → patrol → chase → attack → flee\ntype EnemyState = \"idle\" | \"patrol\" | \"chase\" | \"attack\" | \"flee\";\nlet state: EnemyState = \"patrol\";\nconst DETECT_RANGE = 200;\nconst ATTACK_RANGE = 40;\nconst FLEE_HP = 20;\n\n// In update():\nconst dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, player.x, player.y);\n\nswitch (state) {\n  case \"patrol\":\n    enemy.body!.setVelocityX(enemy.flipX ? -60 : 60);\n    if (dist < DETECT_RANGE) state = \"chase\";\n    break;\n  case \"chase\":\n    const dir = player.x < enemy.x ? -1 : 1;\n    enemy.body!.setVelocityX(dir * 120);\n    enemy.setFlipX(dir < 0);\n    if (dist < ATTACK_RANGE) state = \"attack\";\n    if (dist > DETECT_RANGE * 1.5) state = \"patrol\";\n    if (enemyHP < FLEE_HP) state = \"flee\";\n    break;\n  case \"attack\":\n    enemy.body!.setVelocityX(0);\n    // attack logic...\n    if (dist > ATTACK_RANGE * 2) state = \"chase\";\n    break;\n  case \"flee\":\n    const fleeDir = player.x < enemy.x ? 1 : -1;\n    enemy.body!.setVelocityX(fleeDir * 150);\n    break;\n}"
+    },
+    {
+      "id": "ai-flocking",
+      "keywords": ["flock", "boids", "swarm", "separation", "alignment", "cohesion", "鸟群", "群聚", "分离", "对齐", "聚合", "蜂群"],
+      "title": "Boids Flocking Behavior",
+      "category": "ai",
+      "code": "// Boids flocking: separation + alignment + cohesion\ninterface Boid { sprite: Phaser.Physics.Arcade.Sprite; vx: number; vy: number; }\nconst boids: Boid[] = [];\nconst NEIGHBOR_DIST = 100;\nconst SEP_DIST = 30;\n\nfunction updateBoids() {\n  for (const b of boids) {\n    let sepX = 0, sepY = 0, aliX = 0, aliY = 0, cohX = 0, cohY = 0, count = 0;\n    for (const other of boids) {\n      if (other === b) continue;\n      const d = Phaser.Math.Distance.Between(b.sprite.x, b.sprite.y, other.sprite.x, other.sprite.y);\n      if (d < NEIGHBOR_DIST) {\n        aliX += other.vx; aliY += other.vy;\n        cohX += other.sprite.x; cohY += other.sprite.y;\n        count++;\n        if (d < SEP_DIST) { sepX += b.sprite.x - other.sprite.x; sepY += b.sprite.y - other.sprite.y; }\n      }\n    }\n    if (count > 0) {\n      b.vx += sepX * 0.05 + (aliX / count - b.vx) * 0.02 + (cohX / count - b.sprite.x) * 0.01;\n      b.vy += sepY * 0.05 + (aliY / count - b.vy) * 0.02 + (cohY / count - b.sprite.y) * 0.01;\n    }\n    const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);\n    if (speed > 150) { b.vx = (b.vx / speed) * 150; b.vy = (b.vy / speed) * 150; }\n    b.sprite.body!.setVelocity(b.vx, b.vy);\n  }\n}"
+    },
+    {
+      "id": "ai-boss-phases",
+      "keywords": ["boss", "phase", "boss fight", "multi phase", "BOSS", "阶段", "boss战", "多阶段"],
+      "title": "Boss Fight with Multiple Phases",
+      "category": "ai",
+      "code": "// Boss fight with multiple phases\nconst BOSS_MAX_HP = 300;\nlet bossHP = BOSS_MAX_HP;\nlet bossPhase = 1;\n\nfunction updateBoss(boss: Phaser.Physics.Arcade.Sprite, player: Phaser.Physics.Arcade.Sprite, scene: Phaser.Scene) {\n  const hpRatio = bossHP / BOSS_MAX_HP;\n  if (hpRatio > 0.66) bossPhase = 1;\n  else if (hpRatio > 0.33) bossPhase = 2;\n  else bossPhase = 3;\n\n  switch (bossPhase) {\n    case 1: // Slow chase\n      scene.physics.moveToObject(boss, player, 60);\n      break;\n    case 2: // Shoot projectiles\n      scene.physics.moveToObject(boss, player, 40);\n      if (Phaser.Math.Between(0, 60) === 0) spawnBossProjectile(boss, player, scene);\n      break;\n    case 3: // Enraged — fast + shoot\n      scene.physics.moveToObject(boss, player, 140);\n      boss.setTint(0xff4444);\n      if (Phaser.Math.Between(0, 30) === 0) spawnBossProjectile(boss, player, scene);\n      break;\n  }\n}\n\nfunction spawnBossProjectile(boss: Phaser.Physics.Arcade.Sprite, player: Phaser.Physics.Arcade.Sprite, scene: Phaser.Scene) {\n  const proj = scene.physics.add.sprite(boss.x, boss.y, \"projectile\");\n  scene.physics.moveToObject(proj, player, 200);\n  scene.time.delayedCall(3000, () => proj.destroy());\n}"
+    },
+    {
+      "id": "ai-turret",
+      "keywords": ["turret", "tower", "aim", "track", "炮塔", "塔", "瞄准", "追踪"],
+      "title": "Stationary Turret Tracking Player",
+      "category": "ai",
+      "code": "// Turret that rotates and shoots at player\nconst TURRET_RANGE = 300;\nconst FIRE_RATE = 1500; // ms\nlet lastFired = 0;\n\nfunction updateTurret(turret: Phaser.GameObjects.Sprite, player: Phaser.Physics.Arcade.Sprite, scene: Phaser.Scene, time: number) {\n  const dist = Phaser.Math.Distance.Between(turret.x, turret.y, player.x, player.y);\n  if (dist > TURRET_RANGE) return;\n\n  const angle = Phaser.Math.Angle.Between(turret.x, turret.y, player.x, player.y);\n  turret.setRotation(angle);\n\n  if (time - lastFired > FIRE_RATE) {\n    lastFired = time;\n    const bullet = scene.physics.add.sprite(turret.x, turret.y, \"bullet\");\n    scene.physics.velocityFromRotation(angle, 300, bullet.body!.velocity as Phaser.Math.Vector2);\n    scene.time.delayedCall(2000, () => bullet.destroy());\n  }\n}"
+    },
+    {
+      "id": "ai-spawner-waves",
+      "keywords": ["spawner", "wave", "enemy wave", "horde", "刷怪", "波次", "敌人生成", "怪物波"],
+      "title": "Wave-Based Enemy Spawner",
+      "category": "ai",
+      "code": "// Wave-based enemy spawner with increasing difficulty\nlet currentWave = 0;\nlet enemiesAlive = 0;\nconst enemies = this.physics.add.group();\n\nfunction startWave(scene: Phaser.Scene) {\n  currentWave++;\n  const count = 3 + currentWave * 2;\n  const speed = 50 + currentWave * 15;\n  enemiesAlive = count;\n\n  for (let i = 0; i < count; i++) {\n    scene.time.delayedCall(i * 500, () => {\n      const x = Phaser.Math.Between(50, scene.scale.width - 50);\n      const enemy = enemies.create(x, -20, \"enemy\") as Phaser.Physics.Arcade.Sprite;\n      enemy.body!.setVelocityY(speed);\n      (enemy as any).hp = 1 + Math.floor(currentWave / 3);\n    });\n  }\n}\n\nfunction onEnemyKilled() {\n  enemiesAlive--;\n  if (enemiesAlive <= 0) {\n    // Next wave after brief delay\n    this.time.delayedCall(2000, () => startWave(this));\n  }\n}\n\nstartWave(this);"
+    },
+    {
+      "id": "procedural-dungeon",
+      "keywords": ["dungeon", "procedural", "room", "generation", "random map", "地牢", "随机生成", "房间", "程序生成"],
+      "title": "Simple Dungeon Room Generation",
+      "category": "procedural",
+      "code": "// Simple dungeon generation with connected rooms\ninterface Room { x: number; y: number; w: number; h: number; }\nconst TILE = 32;\nconst rooms: Room[] = [];\n\nfunction generateDungeon(cols: number, rows: number, roomCount: number): number[][] {\n  const map = Array.from({ length: rows }, () => Array(cols).fill(1)); // 1=wall\n  for (let i = 0; i < roomCount; i++) {\n    const w = Phaser.Math.Between(4, 8);\n    const h = Phaser.Math.Between(4, 8);\n    const x = Phaser.Math.Between(1, cols - w - 1);\n    const y = Phaser.Math.Between(1, rows - h - 1);\n    rooms.push({ x, y, w, h });\n    for (let ry = y; ry < y + h; ry++)\n      for (let rx = x; rx < x + w; rx++) map[ry][rx] = 0; // carve room\n  }\n  // Connect rooms with corridors\n  for (let i = 1; i < rooms.length; i++) {\n    const a = rooms[i - 1], b = rooms[i];\n    const ax = Math.floor(a.x + a.w / 2), ay = Math.floor(a.y + a.h / 2);\n    const bx = Math.floor(b.x + b.w / 2), by = Math.floor(b.y + b.h / 2);\n    for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x++) map[ay][x] = 0;\n    for (let y = Math.min(ay, by); y <= Math.max(ay, by); y++) map[y][bx] = 0;\n  }\n  return map;\n}"
+    },
+    {
+      "id": "procedural-terrain",
+      "keywords": ["terrain", "procedural", "scroll", "landscape", "地形", "程序地形", "横版地形", "随机地面"],
+      "title": "Side-Scrolling Procedural Terrain",
+      "category": "procedural",
+      "code": "// Procedural side-scrolling terrain using midpoint displacement\nconst TERRAIN_SEGMENTS = 40;\nconst TERRAIN_WIDTH = 50;\nlet terrainHeights: number[] = [];\n\nfunction generateTerrain(scene: Phaser.Scene, baseY: number) {\n  terrainHeights = [baseY];\n  for (let i = 1; i <= TERRAIN_SEGMENTS; i++) {\n    const prev = terrainHeights[i - 1];\n    const delta = Phaser.Math.Between(-30, 30);\n    terrainHeights.push(Phaser.Math.Clamp(prev + delta, baseY - 100, baseY + 60));\n  }\n  const gfx = scene.add.graphics();\n  gfx.fillStyle(0x4a7c59);\n  gfx.beginPath();\n  gfx.moveTo(0, scene.scale.height);\n  for (let i = 0; i < terrainHeights.length; i++) {\n    gfx.lineTo(i * TERRAIN_WIDTH, terrainHeights[i]);\n  }\n  gfx.lineTo(TERRAIN_SEGMENTS * TERRAIN_WIDTH, scene.scale.height);\n  gfx.closePath();\n  gfx.fillPath();\n  return gfx;\n}"
+    },
+    {
+      "id": "procedural-loot-table",
+      "keywords": ["loot", "drop", "random", "reward", "weighted", "掉落", "战利品", "权重随机", "奖励"],
+      "title": "Weighted Random Loot Drops",
+      "category": "procedural",
+      "code": "// Weighted random loot table\ninterface LootEntry { id: string; name: string; weight: number; rarity: string; }\n\nconst LOOT_TABLE: LootEntry[] = [\n  { id: \"coin\", name: \"Gold Coin\", weight: 50, rarity: \"common\" },\n  { id: \"potion\", name: \"Health Potion\", weight: 25, rarity: \"uncommon\" },\n  { id: \"gem\", name: \"Ruby Gem\", weight: 15, rarity: \"rare\" },\n  { id: \"sword\", name: \"Magic Sword\", weight: 8, rarity: \"epic\" },\n  { id: \"crown\", name: \"Ancient Crown\", weight: 2, rarity: \"legendary\" },\n];\n\nfunction rollLoot(count: number = 1): LootEntry[] {\n  const totalWeight = LOOT_TABLE.reduce((sum, e) => sum + e.weight, 0);\n  const results: LootEntry[] = [];\n  for (let i = 0; i < count; i++) {\n    let roll = Math.random() * totalWeight;\n    for (const entry of LOOT_TABLE) {\n      roll -= entry.weight;\n      if (roll <= 0) { results.push(entry); break; }\n    }\n  }\n  return results;\n}\n\n// Usage: const drops = rollLoot(3);"
+    },
+    {
+      "id": "multiplayer-local-split",
+      "keywords": ["local", "multiplayer", "split screen", "two player", "couch", "本地多人", "双人", "分屏", "合作"],
+      "title": "Local 2-Player Shared Screen",
+      "category": "multiplayer",
+      "code": "// Local 2-player on shared screen\nconst keys1 = this.input.keyboard!.addKeys({\n  up: Phaser.Input.Keyboard.KeyCodes.W,\n  down: Phaser.Input.Keyboard.KeyCodes.S,\n  left: Phaser.Input.Keyboard.KeyCodes.A,\n  right: Phaser.Input.Keyboard.KeyCodes.D,\n  fire: Phaser.Input.Keyboard.KeyCodes.SPACE\n}) as Record<string, Phaser.Input.Keyboard.Key>;\n\nconst keys2 = this.input.keyboard!.addKeys({\n  up: Phaser.Input.Keyboard.KeyCodes.UP,\n  down: Phaser.Input.Keyboard.KeyCodes.DOWN,\n  left: Phaser.Input.Keyboard.KeyCodes.LEFT,\n  right: Phaser.Input.Keyboard.KeyCodes.RIGHT,\n  fire: Phaser.Input.Keyboard.KeyCodes.SHIFT\n}) as Record<string, Phaser.Input.Keyboard.Key>;\n\nconst player1 = this.physics.add.sprite(200, 300, \"player1\");\nconst player2 = this.physics.add.sprite(600, 300, \"player2\").setTint(0x44aaff);\n\n// In update():\nfunction handlePlayer(p: Phaser.Physics.Arcade.Sprite, k: Record<string, Phaser.Input.Keyboard.Key>) {\n  p.body!.setVelocity(0);\n  if (k.left.isDown) p.body!.setVelocityX(-200);\n  if (k.right.isDown) p.body!.setVelocityX(200);\n  if (k.up.isDown) p.body!.setVelocityY(-200);\n  if (k.down.isDown) p.body!.setVelocityY(200);\n}\nhandlePlayer(player1, keys1);\nhandlePlayer(player2, keys2);"
+    },
+    {
+      "id": "multiplayer-websocket",
+      "keywords": ["websocket", "online", "multiplayer", "sync", "network", "联机", "网络", "同步", "在线多人"],
+      "title": "Basic WebSocket Game State Sync",
+      "category": "multiplayer",
+      "code": "// Basic WebSocket multiplayer sync\nconst ws = new WebSocket(\"wss://your-server.com/game\");\nconst remotePlayers = new Map<string, Phaser.GameObjects.Sprite>();\n\nws.onmessage = (event) => {\n  const msg = JSON.parse(event.data);\n  if (msg.type === \"state\") {\n    // Update or create remote players\n    for (const [id, data] of Object.entries(msg.players) as [string, any][]) {\n      if (id === myId) continue;\n      if (!remotePlayers.has(id)) {\n        remotePlayers.set(id, this.add.sprite(data.x, data.y, \"player\").setTint(0xaaaaff));\n      } else {\n        const rp = remotePlayers.get(id)!;\n        rp.setPosition(data.x, data.y);\n      }\n    }\n  }\n  if (msg.type === \"leave\") {\n    remotePlayers.get(msg.id)?.destroy();\n    remotePlayers.delete(msg.id);\n  }\n};\n\n// Send local state at 20fps\nthis.time.addEvent({\n  delay: 50,\n  loop: true,\n  callback: () => ws.send(JSON.stringify({ type: \"move\", x: player.x, y: player.y }))\n});"
+    },
+    {
+      "id": "mobile-virtual-joystick",
+      "keywords": ["joystick", "virtual", "analog", "mobile", "touch", "虚拟摇杆", "移动端", "触屏", "手柄"],
+      "title": "Virtual Analog Joystick",
+      "category": "mobile",
+      "code": "// Virtual analog joystick for mobile\nconst JOYSTICK_RADIUS = 50;\nlet joystickActive = false;\nlet joystickDir = { x: 0, y: 0 };\n\nconst base = this.add.circle(120, this.scale.height - 120, JOYSTICK_RADIUS, 0x333333, 0.5).setScrollFactor(0).setDepth(1000);\nconst knob = this.add.circle(120, this.scale.height - 120, 20, 0xffffff, 0.8).setScrollFactor(0).setDepth(1001);\n\nbase.setInteractive({ draggable: false });\nthis.input.on(\"pointerdown\", (p: Phaser.Input.Pointer) => {\n  if (p.x < this.scale.width / 2) { joystickActive = true; }\n});\nthis.input.on(\"pointermove\", (p: Phaser.Input.Pointer) => {\n  if (!joystickActive) return;\n  const dx = p.x - base.x, dy = p.y - base.y;\n  const dist = Math.min(Math.sqrt(dx * dx + dy * dy), JOYSTICK_RADIUS);\n  const angle = Math.atan2(dy, dx);\n  knob.setPosition(base.x + Math.cos(angle) * dist, base.y + Math.sin(angle) * dist);\n  joystickDir = { x: Math.cos(angle) * (dist / JOYSTICK_RADIUS), y: Math.sin(angle) * (dist / JOYSTICK_RADIUS) };\n});\nthis.input.on(\"pointerup\", () => { joystickActive = false; knob.setPosition(base.x, base.y); joystickDir = { x: 0, y: 0 }; });\n\n// In update(): player.body!.setVelocity(joystickDir.x * 200, joystickDir.y * 200);"
+    },
+    {
+      "id": "mobile-swipe-gesture",
+      "keywords": ["swipe", "gesture", "touch", "direction", "滑动", "手势", "方向", "触摸"],
+      "title": "Swipe Gesture Detection",
+      "category": "mobile",
+      "code": "// Swipe gesture detection\nlet swipeStart: { x: number; y: number; time: number } | null = null;\nconst MIN_SWIPE_DIST = 50;\nconst MAX_SWIPE_TIME = 300;\n\nthis.input.on(\"pointerdown\", (p: Phaser.Input.Pointer) => {\n  swipeStart = { x: p.x, y: p.y, time: p.time };\n});\n\nthis.input.on(\"pointerup\", (p: Phaser.Input.Pointer) => {\n  if (!swipeStart) return;\n  const dx = p.x - swipeStart.x;\n  const dy = p.y - swipeStart.y;\n  const dt = p.time - swipeStart.time;\n  const dist = Math.sqrt(dx * dx + dy * dy);\n\n  if (dist >= MIN_SWIPE_DIST && dt <= MAX_SWIPE_TIME) {\n    if (Math.abs(dx) > Math.abs(dy)) {\n      // Horizontal swipe\n      if (dx > 0) onSwipe(\"right\");\n      else onSwipe(\"left\");\n    } else {\n      // Vertical swipe\n      if (dy > 0) onSwipe(\"down\");\n      else onSwipe(\"up\");\n    }\n  }\n  swipeStart = null;\n});\n\nfunction onSwipe(dir: \"left\" | \"right\" | \"up\" | \"down\") {\n  console.log(\"Swipe:\", dir);\n}"
+    },
+    {
+      "id": "mobile-tap-hold",
+      "keywords": ["tap", "hold", "long press", "press", "点击", "长按", "触摸", "按住"],
+      "title": "Tap vs Hold Detection",
+      "category": "mobile",
+      "code": "// Tap vs long-press (hold) detection\nconst HOLD_THRESHOLD = 500; // ms\nlet pressTimer: Phaser.Time.TimerEvent | null = null;\nlet isHolding = false;\n\nthis.input.on(\"pointerdown\", (p: Phaser.Input.Pointer) => {\n  isHolding = false;\n  pressTimer = this.time.delayedCall(HOLD_THRESHOLD, () => {\n    isHolding = true;\n    onHold(p.x, p.y);\n  });\n});\n\nthis.input.on(\"pointerup\", (p: Phaser.Input.Pointer) => {\n  if (pressTimer) { pressTimer.remove(); pressTimer = null; }\n  if (!isHolding) {\n    onTap(p.x, p.y);\n  }\n  isHolding = false;\n});\n\nfunction onTap(x: number, y: number) {\n  console.log(\"Tap at\", x, y);\n}\nfunction onHold(x: number, y: number) {\n  console.log(\"Hold at\", x, y);\n}"
+    },
+    {
+      "id": "mobile-safe-area",
+      "keywords": ["safe area", "notch", "inset", "mobile layout", "安全区域", "刘海", "适配", "布局"],
+      "title": "Safe Area Layout for Notched Phones",
+      "category": "mobile",
+      "code": "// Safe area layout for notched phones\nfunction getSafeArea() {\n  const style = getComputedStyle(document.documentElement);\n  return {\n    top: parseInt(style.getPropertyValue('env(safe-area-inset-top)') || '0', 10) || 44,\n    bottom: parseInt(style.getPropertyValue('env(safe-area-inset-bottom)') || '0', 10) || 34,\n    left: parseInt(style.getPropertyValue('env(safe-area-inset-left)') || '0', 10),\n    right: parseInt(style.getPropertyValue('env(safe-area-inset-right)') || '0', 10),\n  };\n}\n\n// Position UI elements within safe area\nconst safe = getSafeArea();\nconst scoreText = this.add.text(16 + safe.left, 16 + safe.top, \"Score: 0\", {\n  fontSize: \"20px\", color: \"#fff\"\n}).setScrollFactor(0).setDepth(100);\n\n// Bottom buttons avoid bottom notch\nconst btnY = this.scale.height - safe.bottom - 40;\nconst jumpBtn = this.add.circle(this.scale.width - 60 - safe.right, btnY, 30, 0x44aaff, 0.6)\n  .setScrollFactor(0).setDepth(100).setInteractive();\njumpBtn.on(\"pointerdown\", () => { /* jump */ });"
+    },
+    {
+      "id": "ui-scroll-list",
+      "keywords": ["scroll", "list", "inventory", "grid", "scrollable", "滚动", "列表", "物品栏", "网格"],
+      "title": "Scrollable List / Inventory Grid",
+      "category": "ui-advanced",
+      "code": "// Scrollable inventory grid\nconst SLOT_SIZE = 60;\nconst COLS = 4;\nconst VISIBLE_ROWS = 4;\nconst items = Array.from({ length: 24 }, (_, i) => `Item ${i + 1}`);\nlet scrollY = 0;\n\nconst mask = this.add.graphics().fillRect(20, 80, COLS * SLOT_SIZE, VISIBLE_ROWS * SLOT_SIZE);\nconst container = this.add.container(20, 80);\ncontainer.setMask(new Phaser.Display.Masks.GeometryMask(this, mask));\n\nitems.forEach((item, i) => {\n  const col = i % COLS, row = Math.floor(i / COLS);\n  const bg = this.add.rectangle(col * SLOT_SIZE + SLOT_SIZE / 2, row * SLOT_SIZE + SLOT_SIZE / 2, SLOT_SIZE - 4, SLOT_SIZE - 4, 0x333333);\n  const txt = this.add.text(col * SLOT_SIZE + SLOT_SIZE / 2, row * SLOT_SIZE + SLOT_SIZE / 2, item, { fontSize: \"11px\", color: \"#fff\" }).setOrigin(0.5);\n  container.add([bg, txt]);\n});\n\n// Mouse wheel scroll\nthis.input.on(\"wheel\", (_p: any, _gos: any, _dx: number, dy: number) => {\n  const maxScroll = Math.max(0, Math.ceil(items.length / COLS) * SLOT_SIZE - VISIBLE_ROWS * SLOT_SIZE);\n  scrollY = Phaser.Math.Clamp(scrollY + dy * 0.5, 0, maxScroll);\n  container.y = 80 - scrollY;\n});"
+    },
+    {
+      "id": "ui-toast-notification",
+      "keywords": ["toast", "notification", "message", "popup", "提示", "通知", "消息", "弹窗"],
+      "title": "Toast Notification System",
+      "category": "ui-advanced",
+      "code": "// Toast notification system\nconst toastQueue: string[] = [];\nlet toastActive = false;\n\nfunction showToast(scene: Phaser.Scene, message: string) {\n  toastQueue.push(message);\n  if (!toastActive) processToast(scene);\n}\n\nfunction processToast(scene: Phaser.Scene) {\n  if (toastQueue.length === 0) { toastActive = false; return; }\n  toastActive = true;\n  const msg = toastQueue.shift()!;\n  const { width } = scene.scale;\n  const bg = scene.add.rectangle(width / 2, -30, 280, 40, 0x222222, 0.9)\n    .setStrokeStyle(1, 0x4ade80).setScrollFactor(0).setDepth(9999);\n  const txt = scene.add.text(width / 2, -30, msg, { fontSize: \"16px\", color: \"#4ade80\" })\n    .setOrigin(0.5).setScrollFactor(0).setDepth(10000);\n\n  scene.tweens.add({ targets: [bg, txt], y: 40, duration: 300, ease: \"Back.easeOut\",\n    onComplete: () => {\n      scene.time.delayedCall(1500, () => {\n        scene.tweens.add({ targets: [bg, txt], y: -30, alpha: 0, duration: 300,\n          onComplete: () => { bg.destroy(); txt.destroy(); processToast(scene); }\n        });\n      });\n    }\n  });\n}\n\n// Usage: showToast(this, \"+100 Gold!\");"
+    },
+    {
+      "id": "ui-radial-menu",
+      "keywords": ["radial", "pie", "wheel", "menu", "ring", "径向菜单", "轮盘", "圆形菜单", "环形"],
+      "title": "Radial / Pie Menu",
+      "category": "ui-advanced",
+      "code": "// Radial / pie menu\nconst MENU_ITEMS = [\"Attack\", \"Magic\", \"Item\", \"Defend\", \"Run\"];\nconst RADIUS = 80;\nlet menuContainer: Phaser.GameObjects.Container | null = null;\n\nfunction openRadialMenu(scene: Phaser.Scene, cx: number, cy: number) {\n  closeRadialMenu();\n  menuContainer = scene.add.container(cx, cy).setDepth(5000).setScrollFactor(0);\n  // Center circle\n  menuContainer.add(scene.add.circle(0, 0, 20, 0x333333, 0.8));\n\n  MENU_ITEMS.forEach((item, i) => {\n    const angle = (i / MENU_ITEMS.length) * Math.PI * 2 - Math.PI / 2;\n    const x = Math.cos(angle) * RADIUS;\n    const y = Math.sin(angle) * RADIUS;\n    const btn = scene.add.circle(x, y, 28, 0x444444, 0.9).setInteractive({ useHandCursor: true });\n    const label = scene.add.text(x, y, item, { fontSize: \"12px\", color: \"#fff\" }).setOrigin(0.5);\n    btn.on(\"pointerdown\", () => { onMenuSelect(item); closeRadialMenu(); });\n    btn.on(\"pointerover\", () => btn.setFillStyle(0x666666));\n    btn.on(\"pointerout\", () => btn.setFillStyle(0x444444));\n    menuContainer!.add([btn, label]);\n  });\n}\n\nfunction closeRadialMenu() { menuContainer?.destroy(); menuContainer = null; }\nfunction onMenuSelect(item: string) { console.log(\"Selected:\", item); }"
+    },
+    {
+      "id": "ui-drag-drop-inventory",
+      "keywords": ["drag", "drop", "inventory", "slot", "swap", "拖拽", "拖放", "物品栏", "交换"],
+      "title": "Drag-and-Drop Inventory Slots",
+      "category": "ui-advanced",
+      "code": "// Drag-and-drop inventory with slot swapping\nconst SLOT_COUNT = 8;\nconst SLOT_W = 56;\ninterface InvSlot { bg: Phaser.GameObjects.Rectangle; item: Phaser.GameObjects.Sprite | null; index: number; }\nconst slots: InvSlot[] = [];\n\nfor (let i = 0; i < SLOT_COUNT; i++) {\n  const x = 40 + i * (SLOT_W + 8);\n  const bg = this.add.rectangle(x, 40, SLOT_W, SLOT_W, 0x333333).setStrokeStyle(1, 0x666666);\n  slots.push({ bg, item: null, index: i });\n}\n\nfunction placeItem(slotIdx: number, key: string, scene: Phaser.Scene) {\n  const s = slots[slotIdx];\n  const item = scene.add.sprite(s.bg.x, s.bg.y, key).setInteractive({ draggable: true });\n  s.item = item;\n\n  scene.input.setDraggable(item);\n  item.on(\"drag\", (_p: any, dx: number, dy: number) => item.setPosition(dx, dy));\n  item.on(\"dragend\", () => {\n    const target = slots.find(sl => {\n      const d = Phaser.Math.Distance.Between(item.x, item.y, sl.bg.x, sl.bg.y);\n      return d < SLOT_W / 2;\n    });\n    if (target && target !== s) {\n      // Swap\n      const tmp = target.item;\n      target.item = item;\n      s.item = tmp;\n      item.setPosition(target.bg.x, target.bg.y);\n      if (tmp) tmp.setPosition(s.bg.x, s.bg.y);\n    } else {\n      item.setPosition(s.bg.x, s.bg.y); // snap back\n    }\n  });\n}"
+    },
+    {
+      "id": "mechanics-crafting",
+      "keywords": ["craft", "recipe", "ingredient", "combine", "合成", "配方", "材料", "制作"],
+      "title": "Basic Crafting System",
+      "category": "mechanics",
+      "code": "// Crafting system with recipes\ninterface Recipe { result: string; ingredients: Record<string, number>; }\nconst RECIPES: Recipe[] = [\n  { result: \"torch\", ingredients: { stick: 1, coal: 1 } },\n  { result: \"sword\", ingredients: { iron: 2, stick: 1 } },\n  { result: \"health_potion\", ingredients: { herb: 3, water: 1 } },\n  { result: \"shield\", ingredients: { iron: 3, wood: 2 } },\n];\n\nconst inventory: Record<string, number> = { stick: 5, coal: 3, iron: 4, herb: 6, water: 2, wood: 3 };\n\nfunction canCraft(recipe: Recipe): boolean {\n  return Object.entries(recipe.ingredients).every(([item, qty]) => (inventory[item] ?? 0) >= qty);\n}\n\nfunction craft(recipe: Recipe): boolean {\n  if (!canCraft(recipe)) return false;\n  for (const [item, qty] of Object.entries(recipe.ingredients)) {\n    inventory[item] -= qty;\n  }\n  inventory[recipe.result] = (inventory[recipe.result] ?? 0) + 1;\n  return true;\n}\n\n// Usage: craft(RECIPES[1]); // craft a sword"
+    },
+    {
+      "id": "mechanics-farming",
+      "keywords": ["farm", "plant", "grow", "harvest", "crop", "农场", "种植", "生长", "收获", "庄稼"],
+      "title": "Farming / Planting Mechanic",
+      "category": "mechanics",
+      "code": "// Farming: plant → grow → harvest\ntype CropStage = \"seed\" | \"sprout\" | \"mature\" | \"harvestable\";\ninterface Crop { sprite: Phaser.GameObjects.Sprite; stage: CropStage; timer: number; growTime: number; }\nconst crops: Crop[] = [];\nconst GROW_TIMES: Record<string, number> = { wheat: 5000, carrot: 8000, tomato: 12000 };\n\nfunction plantCrop(scene: Phaser.Scene, x: number, y: number, type: string) {\n  const sprite = scene.add.sprite(x, y, `${type}_seed`).setInteractive();\n  const crop: Crop = { sprite, stage: \"seed\", timer: 0, growTime: GROW_TIMES[type] || 5000 };\n  crops.push(crop);\n  sprite.on(\"pointerdown\", () => { if (crop.stage === \"harvestable\") harvest(crop); });\n}\n\n// In update(time, delta):\nfor (const crop of crops) {\n  if (crop.stage === \"harvestable\") continue;\n  crop.timer += delta;\n  const progress = crop.timer / crop.growTime;\n  if (progress >= 1) { crop.stage = \"harvestable\"; crop.sprite.setTint(0xffdd44); }\n  else if (progress >= 0.6) { crop.stage = \"mature\"; crop.sprite.setScale(1.2); }\n  else if (progress >= 0.2) { crop.stage = \"sprout\"; crop.sprite.setScale(0.8); }\n}\n\nfunction harvest(crop: Crop) {\n  crop.sprite.destroy();\n  crops.splice(crops.indexOf(crop), 1);\n  // Add to inventory...\n}"
+    },
+    {
+      "id": "mechanics-fishing",
+      "keywords": ["fish", "fishing", "minigame", "rod", "catch", "钓鱼", "小游戏", "鱼竿", "垂钓"],
+      "title": "Fishing Mini-Game",
+      "category": "mechanics",
+      "code": "// Fishing mini-game\nlet fishingState: \"idle\" | \"casting\" | \"waiting\" | \"reeling\" = \"idle\";\nlet biteTimer = 0;\nlet reelProgress = 0;\nconst REEL_TARGET = 100;\n\nfunction castLine(scene: Phaser.Scene) {\n  fishingState = \"casting\";\n  scene.tweens.add({\n    targets: bobber, y: bobber.y + 40, duration: 500, ease: \"Bounce.easeOut\",\n    onComplete: () => {\n      fishingState = \"waiting\";\n      biteTimer = Phaser.Math.Between(2000, 6000);\n    }\n  });\n}\n\n// In update(time, delta):\nif (fishingState === \"waiting\") {\n  biteTimer -= delta;\n  if (biteTimer <= 0) {\n    fishingState = \"reeling\";\n    reelProgress = 0;\n    bobber.setTint(0xff4444); // visual cue: fish biting!\n  }\n}\nif (fishingState === \"reeling\") {\n  // Player must press SPACE rapidly to reel in\n  if (Phaser.Input.Keyboard.JustDown(spaceKey)) {\n    reelProgress += 10 + Phaser.Math.Between(0, 5);\n  }\n  reelProgress -= delta * 0.02; // fish fights back\n  reelProgress = Math.max(0, reelProgress);\n  if (reelProgress >= REEL_TARGET) {\n    // Caught!\n    fishingState = \"idle\";\n    const fish = [\"Trout\", \"Bass\", \"Salmon\", \"Goldfish\"][Phaser.Math.Between(0, 3)];\n    console.log(\"Caught:\", fish);\n  }\n}"
+    },
+    {
+      "id": "mechanics-stealth",
+      "keywords": ["stealth", "detection", "cone", "vision", "sneak", "潜行", "视野", "侦测", "锥形", "隐身"],
+      "title": "Stealth Detection Cone",
+      "category": "mechanics",
+      "code": "// Stealth detection cone\nconst CONE_RANGE = 200;\nconst CONE_ANGLE = Math.PI / 3; // 60 degrees\n\nfunction isPlayerDetected(enemy: Phaser.GameObjects.Sprite, player: Phaser.GameObjects.Sprite): boolean {\n  const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, player.x, player.y);\n  if (dist > CONE_RANGE) return false;\n\n  const facingAngle = enemy.flipX ? Math.PI : 0; // direction enemy faces\n  const angleToPlayer = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);\n  const diff = Phaser.Math.Angle.Wrap(angleToPlayer - facingAngle);\n\n  return Math.abs(diff) < CONE_ANGLE / 2;\n}\n\n// Draw debug vision cone\nfunction drawCone(scene: Phaser.Scene, enemy: Phaser.GameObjects.Sprite, detected: boolean) {\n  const gfx = scene.add.graphics();\n  const facing = enemy.flipX ? Math.PI : 0;\n  gfx.fillStyle(detected ? 0xff4444 : 0x44ff44, 0.15);\n  gfx.beginPath();\n  gfx.moveTo(enemy.x, enemy.y);\n  gfx.arc(enemy.x, enemy.y, CONE_RANGE, facing - CONE_ANGLE / 2, facing + CONE_ANGLE / 2);\n  gfx.closePath();\n  gfx.fillPath();\n  return gfx;\n}"
+    },
+    {
+      "id": "mechanics-grapple-point",
+      "keywords": ["grapple", "zipline", "hookshot", "swing point", "抓取点", "飞索", "钩锁", "弹射"],
+      "title": "Grapple Point / Zip-Line",
+      "category": "mechanics",
+      "code": "// Grapple point / zip-line mechanic\nconst grapplePoints = this.physics.add.staticGroup();\n// Add points: grapplePoints.create(300, 100, 'hook');\n\nlet isGrappling = false;\nlet grappleTarget: { x: number; y: number } | null = null;\nconst GRAPPLE_SPEED = 400;\n\nfunction findNearestGrapple(px: number, py: number, maxDist: number) {\n  let nearest: Phaser.Physics.Arcade.Sprite | null = null;\n  let minDist = maxDist;\n  grapplePoints.getChildren().forEach((g) => {\n    const gp = g as Phaser.Physics.Arcade.Sprite;\n    const d = Phaser.Math.Distance.Between(px, py, gp.x, gp.y);\n    if (d < minDist) { minDist = d; nearest = gp; }\n  });\n  return nearest;\n}\n\nfunction startGrapple(player: Phaser.Physics.Arcade.Sprite) {\n  const target = findNearestGrapple(player.x, player.y, 250);\n  if (!target) return;\n  isGrappling = true;\n  grappleTarget = { x: target.x, y: target.y };\n  player.body!.setAllowGravity(false);\n  this.physics.moveToObject(player, target, GRAPPLE_SPEED);\n}\n\n// In update():\nif (isGrappling && grappleTarget) {\n  const dist = Phaser.Math.Distance.Between(player.x, player.y, grappleTarget.x, grappleTarget.y);\n  if (dist < 10) {\n    isGrappling = false;\n    grappleTarget = null;\n    player.body!.setAllowGravity(true);\n    player.body!.setVelocityY(-200); // launch upward\n  }\n}"
+    },
+    {
+      "id": "camera-split-screen",
+      "keywords": ["split screen", "two camera", "viewport", "dual", "分屏", "双摄像头", "视口", "双屏"],
+      "title": "Split Screen for Two Players",
+      "category": "camera-advanced",
+      "code": "// Split screen: two cameras side by side\nconst cam1 = this.cameras.main;\ncam1.setViewport(0, 0, this.scale.width / 2, this.scale.height);\ncam1.startFollow(player1, true, 0.1, 0.1);\ncam1.setBounds(0, 0, worldWidth, worldHeight);\n\nconst cam2 = this.cameras.add(this.scale.width / 2, 0, this.scale.width / 2, this.scale.height);\ncam2.startFollow(player2, true, 0.1, 0.1);\ncam2.setBounds(0, 0, worldWidth, worldHeight);\n\n// Add divider line\nconst divider = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, 2, this.scale.height, 0xffffff)\n  .setScrollFactor(0).setDepth(9999);\n// Make divider visible on both cameras\ncam1.ignore(divider); // only show on main overlay if needed"
+    },
+    {
+      "id": "camera-cinematic",
+      "keywords": ["cinematic", "camera path", "cutscene", "pan", "过场", "电影", "镜头路径", "摄像机移动"],
+      "title": "Cinematic Camera Path",
+      "category": "camera-advanced",
+      "code": "// Cinematic camera path through waypoints\nconst WAYPOINTS = [\n  { x: 100, y: 200, zoom: 1, duration: 2000 },\n  { x: 600, y: 150, zoom: 1.5, duration: 3000 },\n  { x: 400, y: 400, zoom: 1, duration: 2000 },\n];\n\nfunction playCinematic(scene: Phaser.Scene) {\n  const cam = scene.cameras.main;\n  cam.stopFollow();\n  let delay = 0;\n\n  WAYPOINTS.forEach((wp) => {\n    scene.time.delayedCall(delay, () => {\n      cam.pan(wp.x, wp.y, wp.duration, \"Sine.easeInOut\");\n      cam.zoomTo(wp.zoom, wp.duration, \"Sine.easeInOut\");\n    });\n    delay += wp.duration;\n  });\n\n  // Return to player after cinematic\n  scene.time.delayedCall(delay + 500, () => {\n    cam.zoomTo(1, 1000);\n    cam.startFollow(player, true, 0.1, 0.1);\n  });\n}\n\n// Usage: playCinematic(this);"
+    },
+    {
+      "id": "camera-minimap",
+      "keywords": ["minimap", "map", "overview", "radar", "小地图", "雷达", "缩略图", "全局地图"],
+      "title": "Minimap Camera Overlay",
+      "category": "camera-advanced",
+      "code": "// Minimap using a second camera\nconst MINIMAP_SIZE = 150;\nconst MINIMAP_ZOOM = 0.15;\n\nconst minimap = this.cameras.add(\n  this.scale.width - MINIMAP_SIZE - 10, 10,\n  MINIMAP_SIZE, MINIMAP_SIZE\n).setZoom(MINIMAP_ZOOM).setName(\"minimap\");\n\nminimap.startFollow(player, true);\nminimap.setBackgroundColor(0x002211);\nminimap.setBounds(0, 0, worldWidth, worldHeight);\n\n// Add border around minimap\nconst border = this.add.rectangle(\n  this.scale.width - MINIMAP_SIZE / 2 - 10, 10 + MINIMAP_SIZE / 2,\n  MINIMAP_SIZE + 4, MINIMAP_SIZE + 4\n).setStrokeStyle(2, 0xffffff).setFillStyle(0x000000, 0).setScrollFactor(0).setDepth(999);\n\n// Ignore HUD elements from minimap\nminimap.ignore([border, scoreText]);\n// Main camera ignores minimap-only markers\n// this.cameras.main.ignore(minimapOnlyMarkers);"
+    },
+    {
+      "id": "structure-plugin-pattern",
+      "keywords": ["plugin", "reusable", "module", "system", "extend", "插件", "可复用", "模块", "系统", "扩展"],
+      "title": "Phaser Plugin Pattern",
+      "category": "structure",
+      "code": "// Reusable Phaser plugin pattern\nclass DamageNumberPlugin extends Phaser.Plugins.ScenePlugin {\n  constructor(scene: Phaser.Scene, pluginManager: Phaser.Plugins.PluginManager, pluginKey: string) {\n    super(scene, pluginManager, pluginKey);\n  }\n\n  boot() {\n    this.scene!.events.on(\"shutdown\", this.shutdown, this);\n  }\n\n  show(x: number, y: number, amount: number, color = \"#ff4444\") {\n    const txt = this.scene!.add.text(x, y, `-${amount}`, {\n      fontSize: \"20px\", color, fontStyle: \"bold\"\n    }).setOrigin(0.5).setDepth(9999);\n\n    this.scene!.tweens.add({\n      targets: txt, y: y - 50, alpha: 0, duration: 800,\n      ease: \"Power2\", onComplete: () => txt.destroy()\n    });\n  }\n\n  shutdown() { /* cleanup */ }\n}\n\n// Register in game config:\n// plugins: { scene: [{ key: 'DamageNumbers', plugin: DamageNumberPlugin, mapping: 'dmgNumbers' }] }\n// Usage in scene: (this as any).dmgNumbers.show(enemy.x, enemy.y, 25);"
     }
   ]
 }

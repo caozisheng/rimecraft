@@ -1,10 +1,16 @@
 import type { ToolDefinition } from "./types";
 
+export interface ToolSuggestion {
+	type: "similar_id" | "similar_file" | "syntax_hint" | "alternative";
+	text: string;
+}
+
 export interface AgentToolResult {
 	success: boolean;
 	message: string;
 	data?: Record<string, unknown>;
 	undoable?: boolean;
+	suggestions?: ToolSuggestion[];
 }
 
 export interface AgentTool {

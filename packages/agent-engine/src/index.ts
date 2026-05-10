@@ -3,13 +3,14 @@ export type {
 	AgentEvent,
 	AgentStatus,
 	AgentLLMConfig,
+	LLMProvider,
 	TokenUsage,
 	ToolDefinition,
 	ToolCallInfo,
 	ToolResultSummary,
 } from "./types";
 
-export type { AgentTool, AgentToolResult } from "./tool-types";
+export type { AgentTool, AgentToolResult, ToolSuggestion } from "./tool-types";
 
 export { ToolRegistry } from "./tool-registry";
 export { runAgentLoop, type RunAgentLoopParams } from "./service";

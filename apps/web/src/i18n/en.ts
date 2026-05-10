@@ -438,7 +438,9 @@ const en: Messages = {
 			potions: "Potions",
 			gems: "Gems",
 			hero: "Hero",
-			defeated: "💀 Defeated!",
+			defeated: "Defeated!",
+			flee: "Flee",
+			bossDefeated: "The curse is lifted! You won!",
 		},
 		puzzle: {
 			subtitle: "🧩 2048",

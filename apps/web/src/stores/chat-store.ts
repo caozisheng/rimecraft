@@ -8,6 +8,18 @@ import type {
 } from "@rimecraft/agent-engine";
 import { runChatAgentLoop } from "./agent-loop";
 
+let _saveChatTimer: ReturnType<typeof setTimeout> | null = null;
+
+function debouncedPersistChat() {
+	if (_saveChatTimer) clearTimeout(_saveChatTimer);
+	_saveChatTimer = setTimeout(async () => {
+		try {
+			const { getEditorCore } = await import("@/core/editor-core");
+			await getEditorCore().project.saveChatMessages();
+		} catch {}
+	}, 1000);
+}
+
 interface ChatState {
 	messages: AgentMessage[];
 	status: AgentStatus;
@@ -59,6 +71,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 			...extra,
 		};
 		set((s) => ({ messages: [...s.messages, msg] }));
+		debouncedPersistChat();
 		return msg;
 	},
 
@@ -108,7 +121,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		try {
 			const { getEditorCore } = await import("@/core/editor-core");
 			const core = getEditorCore();
+			const pointerBefore = core.command.currentPointer;
 			await core.command.undoToCheckpoint(checkpointMsg.commandCheckpoint);
+			const undoneCount = pointerBefore - core.command.currentPointer;
 			core.preview.requestCompilation();
 
 			const kept = state.messages.slice(0, msgIndex);
@@ -118,10 +133,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 					{
 						id: nanoid(),
 						role: "system",
-						content: getMessages().chat.undoSuccess,
+						content: `${getMessages().chat.undoSuccess} (${undoneCount})`,
 						createdAt: Date.now(),
 					},
 				],
+				activeRoleId: null,
 			});
 		} catch {
 			state.addMessage("system", getMessages().chat.undoFailed);
@@ -152,3 +168,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		});
 	},
 }));
+
+if (typeof window !== "undefined") {
+	window.addEventListener("beforeunload", () => {
+		const messages = useChatStore.getState().messages;
+		if (messages.length === 0) return;
+		try {
+			const { getEditorCore } = require("@/core/editor-core");
+			getEditorCore().project.persistCurrentChat();
+		} catch {}
+	});
+}

@@ -3,7 +3,7 @@ import type { ToolContext, Command } from "./tool-context";
 import { refreshFileList, getMessages, t, normalizeError } from "./tool-context";
 import { sceneBridge } from "../scene-bridge";
 import { useVisualEditorStore } from "@/stores/visual-editor-store";
-import { generateObjectId } from "../scene-graph";
+import { generateObjectId, resolveObjectId, getSimilarObjects } from "../scene-graph";
 import type { SceneObject, SceneObjectBounds } from "../scene-graph";
 
 export function createSceneTools(ctx: ToolContext): AgentTool[] {
@@ -256,7 +256,28 @@ export function createSceneTools(ctx: ToolContext): AgentTool[] {
 			async execute(args) {
 				const m = getMessages();
 				try {
-					const id = args.id as string;
+					const idOrName = args.id as string;
+					const veStore = useVisualEditorStore.getState();
+					const objects = veStore.sceneGraph?.objects ?? [];
+
+					const resolved = resolveObjectId(objects, idOrName);
+					if (!resolved) {
+						const similar = getSimilarObjects(objects, idOrName);
+						const suggestions = similar.map((s) => ({
+							type: "similar_id" as const,
+							text: `${s.name} (${s.id})`,
+						}));
+						const hint = similar.length > 0
+							? `\n\nAvailable objects:\n${similar.map((s) => `  - ${s.name} [${s.type}] id=${s.id}`).join("\n")}`
+							: "";
+						return {
+							success: false,
+							message: `${m.tools.updateObjectFailed}: object "${idOrName}" not found${hint}`,
+							suggestions,
+						};
+					}
+
+					const id = resolved.id;
 					const props: Partial<SceneObject> = {};
 					if (args.x !== undefined) props.x = args.x as number;
 					if (args.y !== undefined) props.y = args.y as number;
@@ -268,11 +289,12 @@ export function createSceneTools(ctx: ToolContext): AgentTool[] {
 					if (args.depth !== undefined) props.depth = args.depth as number;
 
 					sceneBridge.updateObject(id, props);
-					useVisualEditorStore.getState().updateObject(id, props);
+					veStore.updateObject(id, props);
 
+					const resolvedNote = id !== idOrName ? ` (resolved: ${resolved.name})` : "";
 					return {
 						success: true,
-						message: m.tools.updateObjectSuccess.replace("{id}", id),
+						message: m.tools.updateObjectSuccess.replace("{id}", id) + resolvedNote,
 						data: { id, updatedProps: Object.keys(props) },
 					};
 				} catch (e) {
@@ -299,10 +321,30 @@ export function createSceneTools(ctx: ToolContext): AgentTool[] {
 			async execute(args) {
 				const m = getMessages();
 				try {
-					const id = args.id as string;
+					const idOrName = args.id as string;
+					const veStore = useVisualEditorStore.getState();
+					const objects = veStore.sceneGraph?.objects ?? [];
 
+					const resolved = resolveObjectId(objects, idOrName);
+					if (!resolved) {
+						const similar = getSimilarObjects(objects, idOrName);
+						const suggestions = similar.map((s) => ({
+							type: "similar_id" as const,
+							text: `${s.name} (${s.id})`,
+						}));
+						const hint = similar.length > 0
+							? `\n\nAvailable objects:\n${similar.map((s) => `  - ${s.name} [${s.type}] id=${s.id}`).join("\n")}`
+							: "";
+						return {
+							success: false,
+							message: `${m.tools.removeObjectFailed}: object "${idOrName}" not found${hint}`,
+							suggestions,
+						};
+					}
+
+					const id = resolved.id;
 					sceneBridge.deleteObject(id);
-					useVisualEditorStore.getState().removeObject(id);
+					veStore.removeObject(id);
 
 					return {
 						success: true,

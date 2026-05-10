@@ -149,14 +149,40 @@ const ROOMS = [
 			[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
 			[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
 			[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-			[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+			[1,1,1,1,1,1,1,1,1,5,5,1,1,1,1,1,1,1,1,1],
 		],
 		npcs: [{ r: 5, c: 3, dialog: ["${g.rpg.npcDialog2a}", "${g.rpg.npcDialog2b}"] }],
 		enemies: [{ r: 8, c: 10, type: "skull" }, { r: 3, c: 16, type: "ghost" }],
 		gems: [{ r: 1, c: 17 }, { r: 12, c: 2 }, { r: 9, c: 9 }],
 		potions: [{ r: 6, c: 9 }],
 		playerStart: { r: 1, c: 10 },
-		doors: [{ r: 0, c: 9, toRoom: 0, toR: 13, toC: 10 }, { r: 0, c: 10, toRoom: 0, toR: 13, toC: 10 }],
+		doors: [{ r: 0, c: 9, toRoom: 0, toR: 13, toC: 10 }, { r: 0, c: 10, toRoom: 0, toR: 13, toC: 10 }, { r: 14, c: 9, toRoom: 2, toR: 1, toC: 10 }, { r: 14, c: 10, toRoom: 2, toR: 1, toC: 10 }],
+	},
+	{
+		name: "Dungeon",
+		map: [
+			[1,1,1,1,1,1,1,1,1,5,5,1,1,1,1,1,1,1,1,1],
+			[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+			[1,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1],
+			[1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+			[1,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,1],
+			[1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1],
+			[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+			[1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],
+			[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+			[1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+			[1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+			[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+			[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+			[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+			[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+		],
+		npcs: [],
+		enemies: [{ r: 6, c: 10, type: "skull" }, { r: 3, c: 3, type: "ghost" }, { r: 11, c: 15, type: "skull" }],
+		gems: [{ r: 8, c: 2 }, { r: 12, c: 17 }, { r: 4, c: 15 }],
+		potions: [{ r: 12, c: 5 }, { r: 2, c: 17 }],
+		playerStart: { r: 1, c: 10 },
+		doors: [{ r: 0, c: 9, toRoom: 1, toR: 13, toC: 10 }, { r: 0, c: 10, toRoom: 1, toR: 13, toC: 10 }],
 	},
 ];
 
@@ -424,7 +450,7 @@ export class CombatScene extends Phaser.Scene {
 		this.inventory = data.inventory ?? { gems: 0, potions: 2 };
 		this.room = data.room ?? 0;
 		this.enemyType = data.enemyType ?? "skull";
-		this.enemyMaxHP = this.enemyType === "ghost" ? 40 : 30;
+		this.enemyMaxHP = this.enemyType === "ghost" ? 45 : 30;
 		this.enemyHP = this.enemyMaxHP;
 		this.isPlayerTurn = true;
 	}
@@ -452,16 +478,30 @@ export class CombatScene extends Phaser.Scene {
 			fontSize: "15px", color: "#94a3b8", fontFamily: "Arial",
 		}).setOrigin(0.5);
 
-		this.attackBtn = this.add.text(300, 480, "${g.rpg.attack}", {
+		this.attackBtn = this.add.text(200, 480, "${g.rpg.attack}", {
 			fontSize: "22px", color: "#ef4444", fontFamily: "Arial",
 		}).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-		this.potionBtn = this.add.text(500, 480, "${g.rpg.usePotion}", {
+		this.potionBtn = this.add.text(400, 480, "${g.rpg.usePotion}", {
 			fontSize: "22px", color: "#22c55e", fontFamily: "Arial",
+		}).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+		const fleeBtn = this.add.text(600, 480, "${g.rpg.flee}", {
+			fontSize: "22px", color: "#94a3b8", fontFamily: "Arial",
 		}).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
 		this.attackBtn.on("pointerdown", () => this.playerAttack());
 		this.potionBtn.on("pointerdown", () => this.usePotion());
+		fleeBtn.on("pointerdown", () => {
+			if (!this.isPlayerTurn) return;
+			if (Math.random() < 0.5) {
+				this.scene.start("GameScene", { room: this.room, hp: this.playerHP, inventory: this.inventory });
+			} else {
+				this.logText.setText("Can't escape!");
+				this.isPlayerTurn = false;
+				this.time.delayedCall(800, () => this.enemyTurn());
+			}
+		});
 
 		this.updateButtons();
 	}
@@ -517,7 +557,7 @@ export class CombatScene extends Phaser.Scene {
 		this.updateButtons();
 
 		this.time.delayedCall(600, () => {
-			const dmg = Phaser.Math.Between(5, 15);
+			const dmg = this.enemyType === "ghost" ? Phaser.Math.Between(8, 18) : Phaser.Math.Between(5, 15);
 			this.playerHP = Math.max(0, this.playerHP - dmg);
 			this.playerHPText.setText("${g.rpg.hp}: " + this.playerHP);
 			this.logText.setText("-" + dmg + " dmg!");

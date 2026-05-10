@@ -107,6 +107,8 @@ const WAVES = [
 	{ count: 6, speed: 120, hp: 1, type: "invader", interval: 800 },
 	{ count: 8, speed: 150, hp: 1, type: "invader", interval: 600 },
 	{ count: 5, speed: 100, hp: 2, type: "ufo", interval: 1000 },
+	{ count: 10, speed: 160, hp: 1, type: "invader", interval: 500 },
+	{ count: 6, speed: 120, hp: 3, type: "ufo", interval: 900 },
 ];
 
 export class GameScene extends Phaser.Scene {
@@ -132,6 +134,9 @@ export class GameScene extends Phaser.Scene {
 	private bossMaxHP = 0;
 	private bossBar!: Phaser.GameObjects.Graphics;
 	private isBossWave = false;
+	private shielded = false;
+	private shieldTimer = 0;
+	private shieldGfx!: Phaser.GameObjects.Arc;
 
 	constructor() {
 		super("GameScene");
@@ -144,6 +149,7 @@ export class GameScene extends Phaser.Scene {
 		this.tripleShot = false;
 		this.isBossWave = false;
 		this.lastFired = 0;
+		this.shielded = false;
 
 		this.starfield = this.add.tileSprite(400, 300, 800, 600, "starfield");
 
@@ -164,10 +170,11 @@ export class GameScene extends Phaser.Scene {
 		this.fireKey = this.input.keyboard!.addKey("SPACE");
 
 		this.scoreText = this.add.text(16, 16, "${g.common.score}: 0", { fontSize: "22px", color: "#ffffff", fontFamily: "Arial" }).setDepth(100);
-		this.livesText = this.add.text(784, 16, "❤️ " + this.lives, { fontSize: "22px", color: "#ef4444", fontFamily: "Arial" }).setOrigin(1, 0).setDepth(100);
+		this.livesText = this.add.text(784, 16, "\\u2764\\uFE0F " + this.lives, { fontSize: "22px", color: "#ef4444", fontFamily: "Arial" }).setOrigin(1, 0).setDepth(100);
 		this.waveText = this.add.text(400, 16, "${g.spaceShooter.wave} 1", { fontSize: "20px", color: "#a3e635", fontFamily: "Arial" }).setOrigin(0.5, 0).setDepth(100);
 
 		this.bossBar = this.add.graphics().setDepth(100);
+		this.shieldGfx = this.add.circle(0, 0, 28, 0x06b6d4, 0.25).setVisible(false).setDepth(50);
 
 		this.startWave();
 	}
@@ -196,6 +203,14 @@ export class GameScene extends Phaser.Scene {
 		this.enemyBullets.getChildren().forEach((b: any) => { if (b.active && b.y > 620) { this.enemyBullets.killAndHide(b); b.body.stop(); } });
 		this.enemies.getChildren().forEach((e: any) => { if (e.active && e.y > 650) { this.enemies.killAndHide(e); e.body.stop(); e.body.enable = false; if (this.enemiesLeft > 0) this.enemiesLeft--; } });
 		this.powerups.getChildren().forEach((p: any) => { if (p.active && p.y > 620) { this.powerups.killAndHide(p); p.body.stop(); } });
+
+		if (this.shielded) {
+			this.shieldGfx.setPosition(this.ship.x, this.ship.y).setVisible(true);
+			if (time > this.shieldTimer) {
+				this.shielded = false;
+				this.shieldGfx.setVisible(false);
+			}
+		}
 
 		if (this.isBossWave) {
 			this.bossBar.clear();
@@ -253,8 +268,8 @@ export class GameScene extends Phaser.Scene {
 		this.isBossWave = true;
 		this.waveText.setText("${g.spaceShooter.boss}");
 
-		this.bossHP = 15;
-		this.bossMaxHP = 15;
+		this.bossHP = 25;
+		this.bossMaxHP = 25;
 
 		const boss = this.enemies.create(400, -60, "ufo") as Phaser.Physics.Arcade.Sprite;
 		boss.setActive(true).setVisible(true);
@@ -268,7 +283,19 @@ export class GameScene extends Phaser.Scene {
 
 		this.tweens.add({ targets: boss, y: 80, duration: 1500, ease: "Sine.easeOut", onComplete: () => {
 			this.tweens.add({ targets: boss, x: 650, duration: 2000, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-			this.time.addEvent({ delay: 800, loop: true, callback: () => { if (boss.active) this.enemyShoot(boss); } });
+			this.time.addEvent({ delay: 600, loop: true, callback: () => {
+				if (!boss.active) return;
+				this.enemyShoot(boss);
+				if (Math.random() < 0.3) {
+					for (const offsetX of [-30, 0, 30]) {
+						const sb = this.enemyBullets.getFirst(false, true, boss.x + offsetX, boss.y + 30, "enemy-bullet");
+						if (sb) {
+							sb.setActive(true).setVisible(true).setScale(0.8);
+							(sb.body as Phaser.Physics.Arcade.Body).setVelocity(offsetX * 3, 280);
+						}
+					}
+				}
+			}});
 		}});
 
 		this.enemiesLeft = 1;
@@ -312,6 +339,21 @@ export class GameScene extends Phaser.Scene {
 			ex.play("explode");
 			ex.once("animationcomplete", () => ex.destroy());
 			this.time.delayedCall(1000, () => { if (ex.active) ex.destroy(); });
+
+			for (let i = 0; i < 6; i++) {
+				const spark = this.add.circle(
+					enemyObj.x + Phaser.Math.Between(-15, 15),
+					enemyObj.y + Phaser.Math.Between(-15, 15),
+					Phaser.Math.Between(2, 5), 0xfbbf24, 1
+				);
+				this.tweens.add({
+					targets: spark,
+					y: spark.y + Phaser.Math.Between(-30, 30),
+					x: spark.x + Phaser.Math.Between(-30, 30),
+					alpha: 0, duration: 400,
+					onComplete: () => spark.destroy(),
+				});
+			}
 
 			if (enemyObj.getData("isBoss")) {
 				this.bossBar.clear();
@@ -357,10 +399,13 @@ export class GameScene extends Phaser.Scene {
 
 		if (type === "firstaid") {
 			this.lives = Math.min(this.lives + 1, 5);
-			this.livesText.setText("❤️ " + this.lives);
+			this.livesText.setText("\\u2764\\uFE0F " + this.lives);
 		} else {
 			this.tripleShot = true;
 			this.tripleShotTimer = this.time.now + 8000;
+			this.shielded = true;
+			this.shieldTimer = this.time.now + 5000;
+			this.shieldGfx.setVisible(true);
 		}
 	}
 
@@ -381,8 +426,15 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private takeDamage() {
+		if (this.shielded) {
+			this.shielded = false;
+			this.shieldGfx.setVisible(false);
+			this.cameras.main.shake(100, 0.005);
+			return;
+		}
+
 		this.lives--;
-		this.livesText.setText("❤️ " + this.lives);
+		this.livesText.setText("\\u2764\\uFE0F " + this.lives);
 		this.cameras.main.shake(150, 0.01);
 		this.ship.setTint(0xff0000);
 		this.time.delayedCall(100, () => this.ship.clearTint());

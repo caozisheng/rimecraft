@@ -42,6 +42,8 @@ export class MenuScene extends Phaser.Scene {
 	preload() {
 		this.load.image("ball", "/assets/games/breakout/ball1.png");
 		this.load.image("block", "/assets/sprites/block.png");
+		this.load.image("firstaid", "/assets/sprites/firstaid.png");
+		this.load.image("shinyball", "/assets/sprites/shinyball.png");
 	}
 
 	create() {
@@ -115,9 +117,13 @@ export class GameScene extends Phaser.Scene {
 	private score = 0;
 	private lives = 3;
 	private level = 1;
+	private combo = 0;
+	private paddleWidth = 120;
+	private powerups!: Phaser.Physics.Arcade.Group;
 	private scoreText!: Phaser.GameObjects.Text;
 	private livesText!: Phaser.GameObjects.Text;
 	private levelText!: Phaser.GameObjects.Text;
+	private comboText!: Phaser.GameObjects.Text;
 	private onPaddle = true;
 
 	constructor() {
@@ -128,12 +134,14 @@ export class GameScene extends Phaser.Scene {
 		this.score = 0;
 		this.lives = 3;
 		this.level = 1;
+		this.combo = 0;
+		this.paddleWidth = 120;
 
 		this.physics.world.setBoundsCollision(true, true, true, false);
 
 		this.createBricks();
 
-		this.paddle = this.add.rectangle(400, 560, 120, 16, 0x06b6d4);
+		this.paddle = this.add.rectangle(400, 560, this.paddleWidth, 16, 0x06b6d4);
 		this.physics.add.existing(this.paddle, true);
 
 		this.ball = this.physics.add.image(400, 540, "ball");
@@ -142,8 +150,11 @@ export class GameScene extends Phaser.Scene {
 		this.ball.setScale(0.8);
 		this.onPaddle = true;
 
+		this.powerups = this.physics.add.group({ allowGravity: false, maxSize: 5 });
+
 		this.physics.add.collider(this.ball, this.paddle, this.hitPaddle, undefined, this);
 		this.physics.add.collider(this.ball, this.bricks, this.hitBrick, undefined, this);
+		this.physics.add.overlap(this.paddle, this.powerups, this.collectPowerup as any, undefined, this);
 
 		this.cursors = this.input.keyboard!.createCursorKeys();
 
@@ -161,6 +172,7 @@ export class GameScene extends Phaser.Scene {
 		this.scoreText = this.add.text(16, 16, "${g.common.score}: 0", { fontSize: "22px", color: "#fbbf24", fontFamily: "Arial" }).setDepth(100);
 		this.livesText = this.add.text(784, 16, "${g.breakout.lives}: 3", { fontSize: "22px", color: "#ef4444", fontFamily: "Arial" }).setOrigin(1, 0).setDepth(100);
 		this.levelText = this.add.text(400, 16, "${g.breakout.level}: 1", { fontSize: "22px", color: "#a3e635", fontFamily: "Arial" }).setOrigin(0.5, 0).setDepth(100);
+		this.comboText = this.add.text(400, 50, "", { fontSize: "18px", color: "#f472b6", fontFamily: "Arial" }).setOrigin(0.5, 0).setDepth(100).setAlpha(0);
 	}
 
 	update() {
@@ -218,14 +230,48 @@ export class GameScene extends Phaser.Scene {
 		const diff = this.ball.x - this.paddle.x;
 		const body = this.ball.body as Phaser.Physics.Arcade.Body;
 		body.setVelocityX(diff * 5);
+		this.combo = 0;
 	}
 
 	private hitBrick(_ball: any, brick: any) {
+		const bx = brick.x;
+		const by = brick.y;
+		const color = brick.fillColor ?? 0xffffff;
 		(brick.body as Phaser.Physics.Arcade.StaticBody).enable = false;
 		brick.setVisible(false);
 		brick.setActive(false);
-		this.score += 10 * this.level;
+
+		this.combo++;
+		const multiplier = Math.min(this.combo, 5);
+		this.score += 10 * this.level * multiplier;
 		this.scoreText.setText("${g.common.score}: " + this.score);
+
+		if (this.combo >= 3) {
+			this.comboText.setText("x" + multiplier + " Combo!");
+			this.comboText.setAlpha(1);
+			this.tweens.add({ targets: this.comboText, alpha: 0, duration: 800, delay: 400 });
+		}
+
+		for (let i = 0; i < 4; i++) {
+			const p = this.add.circle(bx + Phaser.Math.Between(-15, 15), by + Phaser.Math.Between(-5, 5), Phaser.Math.Between(2, 5), color, 1);
+			this.tweens.add({
+				targets: p,
+				y: p.y + Phaser.Math.Between(15, 40),
+				x: p.x + Phaser.Math.Between(-20, 20),
+				alpha: 0, duration: 350,
+				onComplete: () => p.destroy(),
+			});
+		}
+
+		if (Math.random() < 0.08) {
+			const type = Math.random() < 0.5 ? "firstaid" : "shinyball";
+			const pu = this.powerups.getFirst(false, true, bx, by, type);
+			if (pu) {
+				pu.setActive(true).setVisible(true).setScale(0.5);
+				pu.setData("type", type);
+				(pu.body as Phaser.Physics.Arcade.Body).setVelocityY(100);
+			}
+		}
 
 		if (this.bricks.countActive() === 0) {
 			if (this.level >= 3) {
@@ -237,6 +283,20 @@ export class GameScene extends Phaser.Scene {
 				this.physics.add.collider(this.ball, this.bricks, this.hitBrick, undefined, this);
 				this.resetBall();
 			}
+		}
+	}
+
+	private collectPowerup(_paddle: any, pu: any) {
+		const type = pu.getData("type");
+		pu.destroy();
+
+		if (type === "firstaid") {
+			this.lives = Math.min(this.lives + 1, 5);
+			this.livesText.setText("${g.breakout.lives}: " + this.lives);
+		} else {
+			this.paddleWidth = Math.min(this.paddleWidth + 30, 200);
+			this.paddle.width = this.paddleWidth;
+			(this.paddle.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
 		}
 	}
 }

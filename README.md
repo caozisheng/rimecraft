@@ -16,12 +16,16 @@
 
 - **Chat-driven game creation** — Describe your game in natural language; multi-agent engine writes and iterates on the code
 - **Live preview** — Phaser games compile and run in a sandboxed iframe as you chat
-- **5 built-in templates** — Endless Runner, Platformer, Space Shooter, RPG, Puzzle (Sokoban), plus a blank starter, assets are from <a href="https://github.com/channingbreeze/games">channingbreeze/games</a>
+- **6 built-in templates** — Endless Runner, Platformer, Space Shooter, RPG, Puzzle (2048), Breakout, plus a blank starter, assets are from <a href="https://github.com/channingbreeze/games">channingbreeze/games</a>
 - **Asset library** — 40+ built-in assets with preview, search, upload, and AI-generated asset support
+- **Visual scene editor** — Drag-and-drop scene graph editor with inspector and auto-save
 - **Turn-level undo** — Roll back any agent turn without losing context
 - **Clickable options** — Agent replies include interactive suggestions you can click to continue
 - **Auto error detection** — Runtime errors are caught and fed back to the agent for self-repair
-- **i18n** — Full Chinese / English UI and game template localization
+- **RAG-enhanced AI** — Phaser 4 official skills knowledge base (34 domains), API index, architecture patterns, error-fix library, and docs guides for higher quality code generation
+- **Multi-provider LLM routing** — Configurable LLM providers with unified config store
+- **i18n** — Full Chinese / English / Japanese UI and game template localization
+- **Chat history persistence** — Conversations are auto-saved per project to IndexedDB and restored on reopen
 - **Desktop app** — Tauri-based native desktop build with export support
 - **OpenAI-compatible API** — Works with OpenAI, Claude, DeepSeek, Ollama, and any compatible provider
 
@@ -112,21 +116,21 @@ Supports any OpenAI-compatible API (OpenAI, Claude, DeepSeek, Ollama, etc.)
 
 <img width="966" height="748" alt="image" src="https://github.com/user-attachments/assets/3d1e200d-c9ba-4721-9c0f-b2859687c697" />
 
-
 ## File Storage
 
 RimeCraft uses different storage backends depending on the runtime environment.
 
 ### Web (Browser)
 
-All data is stored in **IndexedDB**, database name `rimecraft` (version 2).
+All data is stored in **IndexedDB**, database name `rimecraft` (version 3).
 
-| Store          | Content                          |
-| -------------- | -------------------------------- |
-| `projects`     | Project metadata and manifests   |
-| `files`        | Source files (keyed by `projectId:path`) |
-| `assets`       | Binary assets (images, audio)    |
-| `user_assets`  | User-uploaded and AI-generated assets |
+| Store            | Content                                  |
+| ---------------- | ---------------------------------------- |
+| `projects`       | Project metadata and manifests           |
+| `files`          | Source files (keyed by `projectId:path`) |
+| `assets`         | Binary assets (images, audio)            |
+| `user_assets`    | User-uploaded and AI-generated assets    |
+| `chat_messages`  | Per-project chat history (auto-saved)    |
 
 Data is scoped per browser origin and managed automatically by the browser. No filesystem access is required.
 
@@ -134,10 +138,10 @@ Data is scoped per browser origin and managed automatically by the browser. No f
 
 Projects are stored on the local filesystem under the OS **app data directory** (`appDataDir`), identifier `com.rimecraft.desktop`.
 
-| Platform | Path                                                                 |
-| -------- | -------------------------------------------------------------------- |
-| Windows  | `%APPDATA%\com.rimecraft.desktop\projects\`                          |
-| macOS    | `~/Library/Application Support/com.rimecraft.desktop/projects/`      |
+| Platform | Path                                                                |
+| -------- | ------------------------------------------------------------------- |
+| Windows  | `%APPDATA%\com.rimecraft.desktop\projects\`                         |
+| macOS    | `~/Library/Application Support/com.rimecraft.desktop/projects/`     |
 | Linux    | `~/.config/com.rimecraft.desktop/projects/` (or `$XDG_CONFIG_HOME`) |
 
 Each project is a directory containing:

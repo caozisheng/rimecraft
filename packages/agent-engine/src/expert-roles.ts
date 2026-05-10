@@ -133,15 +133,21 @@ Scene planning template:
 
 ## 代码生成策略
 
+### 新建游戏必须按此顺序生成文件
+1. src/config.ts — 所有游戏常量（速度、大小、颜色、规则参数），使用 as const
+2. src/main.ts — 入口，import 所有场景类，创建 Phaser.Game
+3. src/scenes/*.ts — 各场景文件，import { GAME_CONFIG } from "../config"
+
 ### 场景生命周期（严格顺序）
 1. constructor() → 只调用 super("SceneName")，不做其他事
 2. init(data?) → 接收 scene.start() 传入的数据，重置状态变量
 3. preload() → 加载所有资源（image, spritesheet, audio, tilemapJSON）
-4. create() → 创建游戏对象、物理体、碰撞器、输入、动画、UI
-5. update(time, delta) → 每帧逻辑（移动、检测、状态更新）
+4. create() → 分组调用子方法：createTextures → createWorld → createPlayer → createEnemies → setupCollisions → setupInput → createUI
+5. update(time, delta) → 分组调用：handleInput → updateGameLogic → updateUI
 
 ### 代码组织原则
 - 类属性声明在顶部，用 ! 断言（如 player!: Phaser.Physics.Arcade.Sprite）
+- 数值参数必须引用 GAME_CONFIG，不允许魔法数字
 - preload 中资源 key 与 create 中引用必须一一对应
 - 物理对象必须用 this.physics.add.sprite()，不是 this.add.sprite()
 - 碰撞回调的 this 绑定：传第 5 个参数 this
@@ -166,10 +172,12 @@ Scene planning template:
 - 暂停/恢复：this.scene.pause() / this.scene.resume()
 
 ### 代码质量检查清单（生成代码后自查）
+□ config.ts 存在且包含所有游戏常量，场景代码中无魔法数字
 □ main.ts 中 scene 数组包含了所有场景类
 □ 所有 preload 资源在 create 中有对应引用
 □ 物理对象使用 physics.add 而非 add
 □ update() 中无重复创建对象（应在 create 中创建）
+□ create() 已拆分为子方法（createWorld, createPlayer, setupCollisions 等）
 □ 碰撞回调的类型断言正确
 □ 没有使用任何 Phaser 3 废弃 API（children.each, RND, addParticleEmitter 等）
 □ 所有场景 import 使用相对路径 ./scenes/xxx
@@ -178,15 +186,21 @@ Scene planning template:
 
 ## Code Generation Strategy
 
+### New games must generate files in this order
+1. src/config.ts — all game constants (speed, size, color, rule params), use as const
+2. src/main.ts — entry, import all scene classes, create Phaser.Game
+3. src/scenes/*.ts — each scene file, import { GAME_CONFIG } from "../config"
+
 ### Scene Lifecycle (strict order)
 1. constructor() → only call super("SceneName"), nothing else
 2. init(data?) → receive data from scene.start(), reset state variables
 3. preload() → load all resources (image, spritesheet, audio, tilemapJSON)
-4. create() → create game objects, physics bodies, colliders, input, animations, UI
-5. update(time, delta) → per-frame logic (movement, detection, state updates)
+4. create() → call sub-methods in order: createTextures → createWorld → createPlayer → createEnemies → setupCollisions → setupInput → createUI
+5. update(time, delta) → call sub-methods: handleInput → updateGameLogic → updateUI
 
 ### Code Organization Principles
 - Declare class properties at the top with ! assertion (e.g., player!: Phaser.Physics.Arcade.Sprite)
+- Numeric parameters must reference GAME_CONFIG, no magic numbers allowed
 - Resource keys in preload must match references in create one-to-one
 - Physics objects MUST use this.physics.add.sprite(), NOT this.add.sprite()
 - Collision callback this binding: pass this as the 5th argument
@@ -211,10 +225,12 @@ Scene planning template:
 - Pause/Resume: this.scene.pause() / this.scene.resume()
 
 ### Code Quality Checklist (self-check after generating code)
+□ config.ts exists with all game constants, no magic numbers in scene code
 □ config.scene array in main.ts includes all scene classes
 □ All preloaded resources have corresponding references in create
 □ Physics objects use physics.add, not add
 □ No object creation inside update() (should be in create)
+□ create() is split into sub-methods (createWorld, createPlayer, setupCollisions, etc.)
 □ Type assertions in collision callbacks are correct
 □ No Phaser 3 deprecated APIs used (children.each, RND, addParticleEmitter, etc.)
 □ All scene imports use relative paths ./scenes/xxx
@@ -351,6 +367,7 @@ Feedback systems:
 Step 1: 信息收集
   - 调用 get_runtime_errors 获取完整错误栈
   - 调用 read_file 读取报错行所在文件的完整代码
+  - 同时读取 src/config.ts 了解游戏参数配置
   - 如果是 undefined/null 错误，同时读取该对象的创建位置
 
 Step 2: 错误分类
@@ -394,11 +411,12 @@ Step 2: 错误分类
      - scene.start 的 key 与 super() 参数不匹配
 
   E. 逻辑 Bug（~10%）
-     特征: 游戏可运行但行为异常
-     策略: 在 update() 中追踪关键变量值，检查条件判断
+     特征: 游戏可运行但行为异常（速度/大小/时间不对）
+     策略: 先检查 config.ts 参数是否合理 → 再检查 update() 条件判断
 
 Step 3: 修复执行
   - 优先用 patch_file 做精确修改，避免引入新 bug
+  - 如果是数值问题，只修改 config.ts 中的常量
   - 修复后等待系统自动编译验证
   - 如果同一错误修了 2 次没修好 → 换完全不同的实现方案
 
@@ -414,6 +432,7 @@ Step 3: 修复执行
 Step 1: Information Gathering
   - Call get_runtime_errors to get the full error stack
   - Call read_file to read the complete code of the file containing the error
+  - Also read src/config.ts to understand game parameter configuration
   - For undefined/null errors, also read where the object was created
 
 Step 2: Error Classification
@@ -457,11 +476,12 @@ Step 2: Error Classification
      - scene.start key doesn't match super() parameter
 
   E. Logic Bugs (~10%)
-     Signature: Game runs but behavior is abnormal
-     Strategy: Track key variable values in update(), check conditionals
+     Signature: Game runs but behavior is abnormal (wrong speed/size/timing)
+     Strategy: First check config.ts params are reasonable → then check update() conditionals
 
 Step 3: Fix Execution
   - Prefer patch_file for precise changes, avoid introducing new bugs
+  - If it's a numerical issue, only modify constants in config.ts
   - Wait for automatic recompilation after fix
   - If same error persists after 2 fix attempts → try a completely different approach
 

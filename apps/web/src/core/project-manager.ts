@@ -11,9 +11,12 @@ function isTauri(): boolean {
 export class ProjectManager {
 	private storage: StorageProvider;
 	private ready: Promise<void>;
+	private _idbStorage: IndexedDBStorageProvider | null = null;
 
 	constructor() {
-		this.storage = new IndexedDBStorageProvider();
+		const idb = new IndexedDBStorageProvider();
+		this._idbStorage = idb;
+		this.storage = idb;
 		this.ready = this.initStorage();
 	}
 
@@ -34,12 +37,18 @@ export class ProjectManager {
 		await this.ready;
 	}
 
+	private getIdb(): IndexedDBStorageProvider {
+		return this._idbStorage!;
+	}
+
 	getStorage(): StorageProvider {
 		return this.storage;
 	}
 
 	async createProject(meta: ProjectMeta): Promise<Project> {
 		await this.ensureReady();
+		await this.persistCurrentChat();
+
 		const project = await this.storage.createProject(meta);
 
 		const store = useProjectStore.getState();
@@ -48,11 +57,15 @@ export class ProjectManager {
 		store.setFiles(project.files);
 		store.addRecentProject(project.meta);
 
+		useChatStore.getState().clearMessages();
+
 		return project;
 	}
 
 	async openProject(id: string): Promise<Project> {
 		await this.ensureReady();
+		await this.persistCurrentChat();
+
 		const project = await this.storage.openProject(id);
 
 		const store = useProjectStore.getState();
@@ -60,6 +73,8 @@ export class ProjectManager {
 		store.setManifest(project.manifest);
 		store.setFiles(project.files);
 		store.addRecentProject(project.meta);
+
+		await this.restoreChat(id);
 
 		return project;
 	}
@@ -150,5 +165,46 @@ export class ProjectManager {
 		}
 
 		return result.project;
+	}
+
+	async persistCurrentChat(): Promise<void> {
+		const projectId = useProjectStore.getState().currentProject?.id;
+		if (!projectId) return;
+		const messages = useChatStore.getState().messages;
+		if (messages.length === 0) return;
+		try {
+			await this.getIdb().saveChatMessages(projectId, messages);
+		} catch (e) {
+			console.warn("Failed to persist chat:", e);
+		}
+	}
+
+	async saveChatMessages(): Promise<void> {
+		await this.persistCurrentChat();
+	}
+
+	private async restoreChat(projectId: string): Promise<void> {
+		try {
+			const saved = await this.getIdb().loadChatMessages(projectId);
+			const chatStore = useChatStore.getState();
+			chatStore.clearMessages();
+			if (Array.isArray(saved) && saved.length > 0) {
+				for (const msg of saved) {
+					const m = msg as any;
+					if (m && m.role && m.content !== undefined) {
+						chatStore.addMessage(m.role, m.content, {
+							id: m.id,
+							toolCalls: m.toolCalls,
+							toolCallId: m.toolCallId,
+							toolResults: m.toolResults,
+							commandCheckpoint: m.commandCheckpoint,
+							createdAt: m.createdAt,
+						});
+					}
+				}
+			}
+		} catch (e) {
+			console.warn("Failed to restore chat:", e);
+		}
 	}
 }

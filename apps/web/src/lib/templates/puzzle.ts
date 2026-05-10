@@ -109,6 +109,9 @@ export class GameScene extends Phaser.Scene {
 	private bestText!: Phaser.GameObjects.Text;
 	private canMove = true;
 	private movingCount = 0;
+	private hasWon = false;
+	private prevGrid: number[][] = [];
+	private prevScore = 0;
 
 	constructor() {
 		super("GameScene");
@@ -119,6 +122,9 @@ export class GameScene extends Phaser.Scene {
 		this.bestScore = parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10);
 		this.canMove = true;
 		this.movingCount = 0;
+		this.hasWon = false;
+		this.prevGrid = [];
+		this.prevScore = 0;
 
 		this.grid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
 		this.tileSprites = Array.from({ length: GRID }, () => Array(GRID).fill(null));
@@ -152,6 +158,7 @@ export class GameScene extends Phaser.Scene {
 		this.input.keyboard!.on("keydown-D", () => this.handleMove(0, 1));
 		this.input.keyboard!.on("keydown-W", () => this.handleMove(-1, 0));
 		this.input.keyboard!.on("keydown-S", () => this.handleMove(1, 0));
+		this.input.keyboard!.on("keydown-Z", () => this.undo());
 
 		this.input.on("pointerup", (e: Phaser.Input.Pointer) => {
 			const dx = e.upX - e.downX;
@@ -165,8 +172,11 @@ export class GameScene extends Phaser.Scene {
 			}
 		});
 
-		const restartBtn = this.add.text(480, 20, "↻", { fontSize: "28px", color: "#94a3b8", fontFamily: "Arial" }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+		const restartBtn = this.add.text(480, 20, "\\u21BB", { fontSize: "28px", color: "#94a3b8", fontFamily: "Arial" }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
 		restartBtn.on("pointerdown", () => this.scene.restart());
+
+		const undoBtn = this.add.text(440, 20, "\\u21A9", { fontSize: "28px", color: "#94a3b8", fontFamily: "Arial" }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+		undoBtn.on("pointerdown", () => this.undo());
 	}
 
 	private tilePos(r: number, c: number) {
@@ -212,6 +222,9 @@ export class GameScene extends Phaser.Scene {
 
 	private handleMove(dr: number, dc: number) {
 		if (!this.canMove) return;
+
+		this.prevGrid = this.grid.map(row => [...row]);
+		this.prevScore = this.score;
 
 		let moved = false;
 		let moveScore = 0;
@@ -313,6 +326,19 @@ export class GameScene extends Phaser.Scene {
 
 	private finishMove() {
 		this.addRandomTile();
+
+		if (!this.hasWon) {
+			for (let r = 0; r < GRID; r++) {
+				for (let c = 0; c < GRID; c++) {
+					if (this.grid[r][c] === 2048) {
+						this.hasWon = true;
+						this.showWin();
+						return;
+					}
+				}
+			}
+		}
+
 		if (!this.hasValidMoves()) {
 			this.time.delayedCall(300, () => this.showGameOver());
 		} else {
@@ -330,6 +356,44 @@ export class GameScene extends Phaser.Scene {
 			}
 		}
 		return false;
+	}
+
+	private undo() {
+		if (this.prevGrid.length === 0 || !this.canMove) return;
+		this.grid = this.prevGrid.map(row => [...row]);
+		this.score = this.prevScore;
+		this.scoreText.setText("${g.common.score}: " + this.score);
+		this.prevGrid = [];
+
+		for (let r = 0; r < GRID; r++) {
+			for (let c = 0; c < GRID; c++) {
+				if (this.tileSprites[r][c]) { this.tileSprites[r][c]!.destroy(); this.tileSprites[r][c] = null; }
+				if (this.grid[r][c] > 0) {
+					this.tileSprites[r][c] = this.createTileSprite(r, c, this.grid[r][c]);
+				}
+			}
+		}
+	}
+
+	private showWin() {
+		this.canMove = false;
+		const overlay = this.add.rectangle(250, 350, 500, 600, 0x000000, 0.6).setDepth(50);
+		this.add.text(250, 250, "\\u{1F389} 2048!", { fontSize: "52px", color: "#22c55e", fontFamily: "Arial", fontStyle: "bold" }).setOrigin(0.5).setDepth(51);
+		this.add.text(250, 310, "${g.common.score}: " + this.score, { fontSize: "24px", color: "#fbbf24", fontFamily: "Arial" }).setOrigin(0.5).setDepth(51);
+
+		for (let i = 0; i < 20; i++) {
+			const x = Phaser.Math.Between(30, 470);
+			const y = Phaser.Math.Between(100, 550);
+			const colors = [0xfbbf24, 0x22c55e, 0x06b6d4, 0xa78bfa];
+			const dot = this.add.circle(x, y, Phaser.Math.Between(3, 6), Phaser.Utils.Array.GetRandom(colors)).setDepth(52);
+			this.tweens.add({ targets: dot, y: y - 60, alpha: 0, duration: 1200, delay: i * 80, repeat: -1, repeatDelay: 500 });
+		}
+
+		const continueBtn = this.add.text(250, 380, "\\u25B6 Continue", { fontSize: "22px", color: "#06b6d4", fontFamily: "Arial" }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(51);
+		continueBtn.on("pointerdown", () => { overlay.destroy(); continueBtn.destroy(); this.canMove = true; });
+
+		const menuBtn = this.add.text(250, 430, "${g.common.backToMenu}", { fontSize: "18px", color: "#94a3b8", fontFamily: "Arial" }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(51);
+		menuBtn.on("pointerdown", () => this.scene.start("MenuScene"));
 	}
 
 	private showGameOver() {

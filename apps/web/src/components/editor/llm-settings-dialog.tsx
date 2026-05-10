@@ -12,12 +12,10 @@ import {
 import { Input, Button } from "@rimecraft/ui";
 import { useI18n } from "@/i18n";
 import type { Locale } from "@/i18n/locale";
-
-const KEYS = {
-	baseUrl: "rimecraft_llm_baseUrl",
-	apiKey: "rimecraft_llm_apiKey",
-	model: "rimecraft_llm_model",
-} as const;
+import { useLLMConfigStore, detectProvider } from "@/stores/llm-config-store";
+import { useProjectStore } from "@/stores/project-store";
+import { generateTemplateFiles } from "@/lib/templates";
+import { getEditorCore } from "@/core/editor-core";
 
 export function LLMSettingsDialog({
 	open,
@@ -27,6 +25,7 @@ export function LLMSettingsDialog({
 	onOpenChange: (open: boolean) => void;
 }) {
 	const { messages: m, locale, setLocale } = useI18n();
+	const store = useLLMConfigStore();
 	const [baseUrl, setBaseUrl] = useState("");
 	const [apiKey, setApiKey] = useState("");
 	const [model, setModel] = useState("");
@@ -34,20 +33,20 @@ export function LLMSettingsDialog({
 
 	useEffect(() => {
 		if (open) {
-			setBaseUrl(
-				localStorage.getItem(KEYS.baseUrl) ??
-					"https://api.openai.com/v1",
-			);
-			setApiKey(localStorage.getItem(KEYS.apiKey) ?? "");
-			setModel(localStorage.getItem(KEYS.model) ?? "gpt-4.1");
+			const s = useLLMConfigStore.getState();
+			setBaseUrl(s.baseUrl);
+			setApiKey(s.apiKey);
+			setModel(s.model);
 			setSaved(false);
 		}
 	}, [open]);
 
 	const handleSave = () => {
-		localStorage.setItem(KEYS.baseUrl, baseUrl.trim());
-		localStorage.setItem(KEYS.apiKey, apiKey.trim());
-		localStorage.setItem(KEYS.model, model.trim());
+		store.saveAll({
+			baseUrl: baseUrl.trim(),
+			apiKey: apiKey.trim(),
+			model: model.trim(),
+		});
 		setSaved(true);
 		setTimeout(() => onOpenChange(false), 600);
 	};
@@ -73,7 +72,20 @@ export function LLMSettingsDialog({
 								<button
 									key={l}
 									type="button"
-									onClick={() => setLocale(l)}
+									onClick={async () => {
+										setLocale(l);
+										const meta = useProjectStore.getState().currentProject;
+										if (!meta?.template) return;
+										const core = getEditorCore();
+										const storage = core.project.getStorage();
+										const newFiles = generateTemplateFiles(meta);
+										for (const f of newFiles) {
+											await storage.writeFile(meta.id, f.path, f.content);
+										}
+										const fileEntries = await storage.listFiles(meta.id);
+										useProjectStore.getState().setFiles(fileEntries);
+										core.preview.requestCompilation();
+									}}
 									className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
 										locale === l
 											? "bg-primary text-primary-foreground"
@@ -101,6 +113,11 @@ export function LLMSettingsDialog({
 						/>
 						<p className="text-xs text-muted-foreground">
 							{m.settings.baseUrlHint}
+							{baseUrl && (
+								<span className="ml-2 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+									{detectProvider(baseUrl)}
+								</span>
+							)}
 						</p>
 					</div>
 

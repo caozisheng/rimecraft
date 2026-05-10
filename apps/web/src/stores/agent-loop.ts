@@ -30,6 +30,8 @@ const FILE_WRITE_TOOLS = new Set([
 	"set_game_config",
 ]);
 
+const MAX_CONSECUTIVE_ERROR_ROUNDS = 5;
+
 async function buildGameContext(): Promise<string | null> {
 	try {
 		const { getEditorCore } = await import("@/core/editor-core");
@@ -71,6 +73,12 @@ async function buildGameContext(): Promise<string | null> {
 			`${m.agent.running}: ${gameState.isRunning ? m.agent.yes : m.agent.no}`,
 		);
 		parts.push(`FPS: ${gameState.fps}`);
+		if (gameState.activeSceneId) {
+			parts.push(`Active Scene: ${gameState.activeSceneId}`);
+		}
+		if (gameState.objectCount > 0) {
+			parts.push(`Object Count: ${gameState.objectCount}`);
+		}
 		if (gameState.errors.length > 0) {
 			parts.push(
 				`${m.agent.recentErrors} (${gameState.errors.length}):`,
@@ -79,6 +87,26 @@ async function buildGameContext(): Promise<string | null> {
 				parts.push(`  - ${err}`);
 			}
 		}
+
+		try {
+			const { sceneBridge } = await import("@/core/scene-bridge");
+			const sceneTree = await Promise.race([
+				sceneBridge.requestSceneTreeAsync(),
+				new Promise<null>((r) => setTimeout(() => r(null), 1500)),
+			]);
+			if (sceneTree && sceneTree.objects?.length > 0) {
+				parts.push(`\n=== Scene Graph (${sceneTree.objects.length} objects) ===`);
+				parts.push(`Canvas: ${sceneTree.settings.width}x${sceneTree.settings.height}`);
+				for (const obj of sceneTree.objects.slice(0, 30)) {
+					parts.push(`  - ${obj.name || obj.id} (${obj.type}) [${Math.round(obj.x)},${Math.round(obj.y)}]`);
+				}
+				if (sceneTree.objects.length > 30) {
+					parts.push(`  ... +${sceneTree.objects.length - 30} more`);
+				}
+			}
+		} catch { /* scene bridge optional */ }
+
+		parts.push(`\n[snapshot @ ${new Date().toLocaleTimeString()}]`);
 
 		return parts.join("\n");
 	} catch {
@@ -111,10 +139,16 @@ async function waitForRuntimeErrors(
 	return { all, fresh };
 }
 
+interface ErrorRound {
+	round: number;
+	errors: string[];
+}
+
 function buildDebugMessage(
 	allErrors: string[],
 	freshErrors: string[],
 	consecutiveErrorRounds: number,
+	errorHistory: ErrorRound[],
 ): string {
 	const em = getMessages();
 	const errorList =
@@ -126,15 +160,29 @@ function buildDebugMessage(
 			? t(em.agent.runtimeErrors, { count: freshErrors.length })
 			: t(em.agent.stillErrors, { count: allErrors.length });
 
-	const debugHint =
-		consecutiveErrorRounds >= 3
-			? "\n\n" + em.agent.debugHintAlt
-			: "\n\n" + em.agent.debugHint;
+	let debugHint: string;
+	if (consecutiveErrorRounds >= 5) {
+		debugHint = "\n\n" + em.agent.debugHintAlt +
+			"\n\n⚠️ CRITICAL: 5+ consecutive failed rounds. You MUST try a fundamentally different approach — rewrite the problematic section from scratch or remove it entirely.";
+	} else if (consecutiveErrorRounds >= 3) {
+		debugHint = "\n\n" + em.agent.debugHintAlt;
+	} else {
+		debugHint = "\n\n" + em.agent.debugHint;
+	}
+
+	let reflection = "";
+	if (errorHistory.length >= 2) {
+		const prev = errorHistory.slice(-3);
+		const lines = prev.map((r) =>
+			`Round ${r.round}: ${r.errors.slice(0, 2).join("; ")}`,
+		);
+		reflection = `\n\n[Error history — your previous fixes did NOT resolve these]\n${lines.join("\n")}`;
+	}
 
 	return t(em.agent.debugFixPrompt, {
 		prefix,
 		errors: errorList,
-		hint: debugHint,
+		hint: debugHint + reflection,
 	});
 }
 
@@ -156,13 +204,8 @@ export async function runChatAgentLoop(
 			"@rimecraft/agent-engine"
 		);
 
-		const llmConfig = {
-			baseUrl:
-				localStorage.getItem("rimecraft_llm_baseUrl") ??
-				"https://api.openai.com/v1",
-			apiKey: localStorage.getItem("rimecraft_llm_apiKey") ?? "",
-			model: localStorage.getItem("rimecraft_llm_model") ?? "gpt-4.1",
-		};
+		const { getLLMConfig } = await import("@/stores/llm-config-store");
+		const llmConfig = getLLMConfig();
 
 		const maxIterations = state.expertRole === "director" ? 20 : 10;
 		let iterations = 0;
@@ -233,9 +276,12 @@ export async function runChatAgentLoop(
 
 		const previousErrorSignatures = new Set<string>();
 		let consecutiveErrorRounds = 0;
+		const errorHistory: ErrorRound[] = [];
 
 		while (iterations < maxIterations) {
 			if (abortController.signal.aborted) break;
+
+			let isDebugRound = false;
 
 			set({ currentIteration: iterations + 1 });
 
@@ -264,8 +310,11 @@ export async function runChatAgentLoop(
 			let shouldBreak = false;
 			let hadFileWrites = false;
 			let rafHandle: number | null = null;
+			let batchedDeltas = 0;
+			let rafFlushes = 0;
 			const flushStreaming = () => {
 				rafHandle = null;
+				rafFlushes++;
 				set({ streamingContent: fullContent });
 			};
 
@@ -282,6 +331,7 @@ export async function runChatAgentLoop(
 
 					case "text_delta":
 						fullContent += event.content;
+						batchedDeltas++;
 						if (rafHandle === null) {
 							rafHandle = requestAnimationFrame(flushStreaming);
 						}
@@ -293,6 +343,7 @@ export async function runChatAgentLoop(
 							iterations,
 							"tools:",
 							event.toolCalls.map((t) => t.function.name),
+							`raf: ${rafFlushes} flushes / ${batchedDeltas} deltas`,
 						);
 						if (rafHandle !== null) {
 							cancelAnimationFrame(rafHandle);
@@ -390,8 +441,6 @@ export async function runChatAgentLoop(
 				}
 			}
 
-			iterations++;
-
 			if (shouldBreak) break;
 
 			if (hadFileWrites) {
@@ -403,6 +452,16 @@ export async function runChatAgentLoop(
 						!abortController.signal.aborted
 					) {
 						consecutiveErrorRounds++;
+						errorHistory.push({ round: iterations + 1, errors: [...allErrors] });
+
+						if (consecutiveErrorRounds >= MAX_CONSECUTIVE_ERROR_ROUNDS) {
+							const mm = getMessages();
+							addMessage(
+								"system",
+								`${t(mm.agent.maxIterations, { max: consecutiveErrorRounds, count: allErrors.length })}:\n${allErrors.map((e) => `- ${e}`).join("\n")}\n\n${mm.agent.retryHint}`,
+							);
+							break;
+						}
 
 						if (
 							state.expertRole === "director" &&
@@ -417,15 +476,19 @@ export async function runChatAgentLoop(
 								allErrors,
 								freshErrors,
 								consecutiveErrorRounds,
+								errorHistory,
 							),
 						);
+						isDebugRound = true;
 						set({ status: "thinking", streamingContent: "" });
 						continue;
 					} else {
 						consecutiveErrorRounds = 0;
+						iterations++;
 						if (!hadToolCalls) break;
 					}
 				} catch {
+					iterations++;
 					if (!hadToolCalls) break;
 				}
 			} else if (!hadToolCalls) {
@@ -439,6 +502,16 @@ export async function runChatAgentLoop(
 						!abortController.signal.aborted
 					) {
 						consecutiveErrorRounds++;
+						errorHistory.push({ round: iterations + 1, errors: [...existingErrors] });
+
+						if (consecutiveErrorRounds >= MAX_CONSECUTIVE_ERROR_ROUNDS) {
+							const mm = getMessages();
+							addMessage(
+								"system",
+								`${t(mm.agent.maxIterations, { max: consecutiveErrorRounds, count: existingErrors.length })}:\n${existingErrors.map((e) => `- ${e}`).join("\n")}\n\n${mm.agent.retryHint}`,
+							);
+							break;
+						}
 
 						if (
 							state.expertRole === "director" &&
@@ -453,15 +526,20 @@ export async function runChatAgentLoop(
 								existingErrors,
 								[],
 								consecutiveErrorRounds,
+								errorHistory,
 							),
 						);
+						isDebugRound = true;
 						set({ status: "thinking", streamingContent: "" });
 						continue;
 					}
 				} catch {
 					/* ignore */
 				}
+				iterations++;
 				break;
+			} else {
+				iterations++;
 			}
 
 			set({ status: "thinking", streamingContent: "" });
@@ -473,9 +551,12 @@ export async function runChatAgentLoop(
 				const remainingErrors = useGameStore.getState().errors;
 				if (remainingErrors.length > 0) {
 					const mm = getMessages();
+					const historyNote = errorHistory.length > 0
+						? `\n\n[${errorHistory.length} debug rounds attempted]`
+						: "";
 					addMessage(
 						"system",
-						`${t(mm.agent.maxIterations, { max: maxIterations, count: remainingErrors.length })}:\n${remainingErrors.map((e) => `- ${e}`).join("\n")}\n\n${mm.agent.retryHint}`,
+						`${t(mm.agent.maxIterations, { max: maxIterations, count: remainingErrors.length })}:\n${remainingErrors.map((e) => `- ${e}`).join("\n")}\n\n${mm.agent.retryHint}${historyNote}`,
 					);
 				}
 			} catch {

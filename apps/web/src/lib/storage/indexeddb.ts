@@ -9,10 +9,11 @@ import type { StorageProvider, ExportOptions, ImportResult } from "./types";
 import { generateTemplateFiles } from "../templates";
 
 const DB_NAME = "rimecraft";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const PROJECTS_STORE = "projects";
 const FILES_STORE = "files";
 const ASSETS_STORE = "assets";
+const CHAT_STORE = "chat_messages";
 
 interface ProjectRecord {
 	id: string;
@@ -33,6 +34,12 @@ interface AssetRecord {
 	projectId: string;
 	path: string;
 	blob: Blob;
+}
+
+interface ChatRecord {
+	projectId: string;
+	messages: unknown[];
+	updatedAt: string;
 }
 
 function fileKey(projectId: string, path: string): string {
@@ -64,6 +71,11 @@ async function getDb(): Promise<IDBPDatabase> {
 					const store = db.createObjectStore("user_assets", { keyPath: "id" });
 					store.createIndex("category", "category");
 					store.createIndex("source", "source");
+				}
+			}
+			if (oldVersion < 3) {
+				if (!db.objectStoreNames.contains(CHAT_STORE)) {
+					db.createObjectStore(CHAT_STORE, { keyPath: "projectId" });
 				}
 			}
 		},
@@ -153,6 +165,8 @@ export class IndexedDBStorageProvider implements StorageProvider {
 			await assetCursor.delete();
 			assetCursor = await assetCursor.continue();
 		}
+
+		await db.delete(CHAT_STORE, id).catch(() => {});
 	}
 
 	async listProjects(): Promise<ProjectMeta[]> {
@@ -346,5 +360,26 @@ export class IndexedDBStorageProvider implements StorageProvider {
 		meta: ProjectMeta,
 	): { path: string; content: string }[] {
 		return generateTemplateFiles(meta);
+	}
+
+	async saveChatMessages(projectId: string, messages: unknown[]): Promise<void> {
+		const db = await getDb();
+		const record: ChatRecord = {
+			projectId,
+			messages,
+			updatedAt: new Date().toISOString(),
+		};
+		await db.put(CHAT_STORE, record);
+	}
+
+	async loadChatMessages(projectId: string): Promise<unknown[]> {
+		const db = await getDb();
+		const record = (await db.get(CHAT_STORE, projectId)) as ChatRecord | undefined;
+		return record?.messages ?? [];
+	}
+
+	async deleteChatMessages(projectId: string): Promise<void> {
+		const db = await getDb();
+		await db.delete(CHAT_STORE, projectId);
 	}
 }
