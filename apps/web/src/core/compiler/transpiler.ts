@@ -95,8 +95,15 @@ export function transpileTypeScript(code: string): string {
 	);
 
 	// Parameter type annotations: `(param: Type, ...)`
+	// Only strip well-known TS types to avoid mangling object literals like `{ duration: TWEEN_MS }`
 	result = result.replace(
-		/([(,]\s*)(\w+)\??\s*:\s*(?:string|number|boolean|void|any|unknown|never|null|undefined|[A-Z][\w.]*(?:<[^>]*>)?(?:\[\])?)(?=\s*[,)=])/g,
+		/([(,]\s*)(\w+)\??\s*:\s*(?:string|number|boolean|void|any|unknown|never|null|undefined)(?:\[\])?(?=\s*[,)=])/g,
+		"$1$2",
+	);
+	// Class/interface type annotations in function params: `(param: Phaser.Input.Pointer)`
+	// Only match after `(` or `, ` when preceding context looks like a param list
+	result = result.replace(
+		/(\(\s*(?:\w+\s*,\s*)*)(\w+)\??\s*:\s*[A-Z][\w.]*(?:<[^>]*>)?(?:\[\])?(?=\s*[,)])/g,
 		"$1$2",
 	);
 
@@ -112,8 +119,8 @@ export function transpileTypeScript(code: string): string {
 		"",
 	);
 
-	// Non-null assertions: `obj!.prop` → `obj.prop`
-	result = result.replace(/(\w)!/g, "$1");
+	// Non-null assertions: `obj!.prop`, `arr[i]!.prop`, `fn()!.prop` → remove `!`
+	result = result.replace(/([\w\])])!/g, "$1");
 
 	return result;
 }

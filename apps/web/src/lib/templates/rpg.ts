@@ -45,6 +45,7 @@ export class MenuScene extends Phaser.Scene {
 		this.load.image("ghost", "/assets/sprites/ghost.png");
 		this.load.image("gem", "/assets/sprites/gem.png");
 		this.load.image("firstaid", "/assets/sprites/firstaid.png");
+		this.load.image("clown", "/assets/sprites/clown.png");
 	}
 
 	create() {
@@ -198,6 +199,8 @@ export class GameScene extends Phaser.Scene {
 	private dialogBox: Phaser.GameObjects.Container | null = null;
 	private dialogTexts: string[] = [];
 	private dialogIndex = 0;
+	private nearbyNpc: Phaser.GameObjects.GameObject | null = null;
+	private doorCooldown = false;
 	private currentRoom = 0;
 	private inventory = { gems: 0, potions: 2 };
 	private hp = 100;
@@ -219,7 +222,9 @@ export class GameScene extends Phaser.Scene {
 	create() {
 		this.dialogBox = null;
 		this.floorTiles = [];
+		this.doorCooldown = true;
 		this.loadRoom(this.currentRoom);
+		this.time.delayedCall(500, () => { this.doorCooldown = false; });
 
 		this.cursors = this.input.keyboard!.createCursorKeys();
 
@@ -277,7 +282,7 @@ export class GameScene extends Phaser.Scene {
 		}
 
 		for (const npc of room.npcs) {
-			const sprite = this.add.rectangle(npc.c * TILE + TILE / 2, npc.r * TILE + TILE / 2, 28, 36, 0xa78bfa);
+			const sprite = this.add.image(npc.c * TILE + TILE / 2, npc.r * TILE + TILE / 2, "clown").setScale(0.6);
 			this.physics.add.existing(sprite, true);
 			this.npcSprites.add(sprite);
 			sprite.setData("dialog", npc.dialog);
@@ -310,11 +315,22 @@ export class GameScene extends Phaser.Scene {
 		this.hero.setCollideWorldBounds(true);
 
 		this.physics.add.collider(this.hero, this.walls);
-		this.physics.add.overlap(this.hero, this.npcSprites, this.talkToNpc as any, undefined, this);
+		this.physics.add.collider(this.hero, this.npcSprites);
 		this.physics.add.overlap(this.hero, this.gemSprites, this.collectGem as any, undefined, this);
 		this.physics.add.overlap(this.hero, this.potionSprites, this.collectPotion as any, undefined, this);
 		this.physics.add.overlap(this.hero, this.enemySprites, this.encounterEnemy as any, undefined, this);
 		this.physics.add.overlap(this.hero, this.doorZones, this.enterDoor as any, undefined, this);
+
+		this.input.keyboard!.on("keydown-SPACE", () => {
+			if (this.dialogBox) {
+				this.dialogIndex++;
+				this.showDialog();
+			} else if (this.nearbyNpc) {
+				this.dialogTexts = this.nearbyNpc.getData("dialog");
+				this.dialogIndex = 0;
+				this.showDialog();
+			}
+		});
 	}
 
 	update() {
@@ -324,6 +340,13 @@ export class GameScene extends Phaser.Scene {
 			(this.hero.body as Phaser.Physics.Arcade.Body).setVelocity(0);
 			return;
 		}
+
+		this.nearbyNpc = null;
+		const TALK_DIST = 50;
+		this.npcSprites.getChildren().forEach((npc: any) => {
+			const d = Phaser.Math.Distance.Between(this.hero.x, this.hero.y, npc.x, npc.y);
+			if (d < TALK_DIST) this.nearbyNpc = npc;
+		});
 
 		if (this.cursors.left.isDown) {
 			(this.hero.body as Phaser.Physics.Arcade.Body).setVelocity(-speed, 0);
@@ -347,11 +370,8 @@ export class GameScene extends Phaser.Scene {
 		return "${g.rpg.hp}: " + this.hp + "  ${g.rpg.potions}: " + this.inventory.potions + "  ${g.rpg.gems}: " + this.inventory.gems;
 	}
 
-	private talkToNpc(_hero: any, npc: any) {
-		if (this.dialogBox) return;
-		this.dialogTexts = npc.getData("dialog");
-		this.dialogIndex = 0;
-		this.showDialog();
+	private closeDialog() {
+		if (this.dialogBox) { this.dialogBox.destroy(); this.dialogBox = null; }
 	}
 
 	private showDialog() {
@@ -378,10 +398,6 @@ export class GameScene extends Phaser.Scene {
 		this.dialogBox.on("pointerdown", () => { this.dialogIndex++; this.showDialog(); });
 	}
 
-	private closeDialog() {
-		if (this.dialogBox) { this.dialogBox.destroy(); this.dialogBox = null; }
-	}
-
 	private collectGem(_hero: any, gem: any) {
 		gem.disableBody(true, true);
 		this.inventory.gems++;
@@ -406,6 +422,7 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private enterDoor(_hero: any, door: any) {
+		if (this.doorCooldown) return;
 		const toRoom = door.getData("toRoom");
 		const toR = door.getData("toR");
 		const toC = door.getData("toC");

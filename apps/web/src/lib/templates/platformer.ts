@@ -242,7 +242,7 @@ export class GameScene extends Phaser.Scene {
 		this.enemies = this.physics.add.group({ allowGravity: false });
 		for (const e of lvl.enemies) {
 			const wasp = this.enemies.create(e.x, e.y, "wasp") as Phaser.Physics.Arcade.Sprite;
-			wasp.setScale(0.8);
+			wasp.setScale(0.35);
 			this.tweens.add({ targets: wasp, x: e.maxX, duration: 2000, yoyo: true, repeat: -1, ease: "Linear" });
 		}
 
