@@ -257,7 +257,12 @@ export function AssetLibraryDialog({
 								size="sm"
 								disabled={!aiPrompt.trim()}
 								onClick={() => {
-									const prompt = locale === "zh" ? `请帮我生成素材：${aiPrompt}` : `Please generate an asset: ${aiPrompt}`;
+									const prompt =
+										locale === "zh"
+											? `请帮我生成素材：${aiPrompt}`
+											: locale === "ja"
+												? `素材を生成してください：${aiPrompt}`
+												: `Please generate an asset: ${aiPrompt}`;
 									setAiPrompt("");
 									setShowAiInput(false);
 									onOpenChange(false);
@@ -370,8 +375,8 @@ export function AssetLibraryDialog({
 							<div className="w-56 shrink-0 space-y-3 rounded-lg border border-border p-3">
 								<div className="flex items-start justify-between">
 									<div>
-										<p className="text-sm font-medium">{locale === "en" ? selectedAsset.name : selectedAsset.nameZh}</p>
-										<p className="text-xs text-muted-foreground">{locale === "en" ? selectedAsset.nameZh : selectedAsset.name}</p>
+										<p className="text-sm font-medium">{locale === "zh" ? selectedAsset.nameZh : selectedAsset.name}</p>
+										<p className="text-xs text-muted-foreground">{locale === "zh" ? selectedAsset.name : selectedAsset.nameZh}</p>
 									</div>
 									<button
 										type="button"
@@ -518,7 +523,7 @@ function AssetCard({
 				)}
 			</div>
 			<span className="w-full truncate text-center text-[10px] text-muted-foreground">
-				{locale === "en" ? entry.name : entry.nameZh}
+				{locale === "zh" ? entry.nameZh : entry.name}
 			</span>
 		</button>
 	);
