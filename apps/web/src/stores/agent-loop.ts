@@ -173,7 +173,52 @@ export async function runChatAgentLoop(
 		let ragContext: string | null = null;
 		try {
 			const { buildRagContext } = await import("@/lib/ai/rag/retrieval");
-			ragContext = buildRagContext(content) || null;
+			const activeRole = state.activeRoleId ?? state.expertRole;
+			const contextType: "coding" | "debug" | "design" | "general" =
+				activeRole === "debug"
+					? "debug"
+					: activeRole === "coding"
+						? "coding"
+						: activeRole === "design"
+							? "design"
+							: "general";
+
+			let currentCode: string | undefined;
+			let recentErrors: string[] | undefined;
+
+			try {
+				const { useGameStore } = await import("@/stores/game-store");
+				const gameErrors = useGameStore.getState().errors;
+				if (gameErrors.length > 0) {
+					recentErrors = gameErrors.slice(-5);
+				}
+			} catch { /* ignore */ }
+
+			try {
+				const { getEditorCore } = await import("@/core/editor-core");
+				const core = getEditorCore();
+				const { useProjectStore } = await import("@/stores/project-store");
+				const projectId = useProjectStore.getState().currentProject?.id;
+				if (projectId) {
+					const storage = core.project.getStorage();
+					const files = await storage.listFiles(projectId);
+					const srcFiles = files.filter(
+						(f) => f.path.endsWith(".ts") && f.path.startsWith("src/"),
+					);
+					const codeSnippets: string[] = [];
+					for (const f of srcFiles.slice(0, 5)) {
+						const fc = await storage.readFile(projectId, f.path);
+						codeSnippets.push(fc.slice(0, 3000));
+					}
+					currentCode = codeSnippets.join("\n");
+				}
+			} catch { /* ignore */ }
+
+			ragContext = buildRagContext(content, {
+				contextType,
+				currentCode,
+				recentErrors,
+			}) || null;
 		} catch {
 			/* RAG optional */
 		}

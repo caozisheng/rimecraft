@@ -1,0 +1,969 @@
+{
+  "version": "1.0",
+  "errors": [
+    {
+      "id": "err-children-each",
+      "category": "api-misuse",
+      "errorPattern": "children.each is not a function",
+      "errorRegex": "children\\.(each|iterate).*not a function",
+      "severity": "high",
+      "frequency": "very-common",
+      "keywords": ["group", "children", "each", "iterate", "forEach", "遍历"],
+      "cause": "Phaser 4 中 Group.children 是 Set 类型，没有 each/iterate 方法（这是 Phaser 3 API）",
+      "fix": {
+        "wrong": "group.children.each((child) => { ... });",
+        "correct": "group.getChildren().forEach((child) => { ... });",
+        "explanation": "Phaser 4 使用 getChildren() 返回数组，然后用标准 forEach 遍历"
+      },
+      "relatedErrors": ["err-children-size"]
+    },
+    {
+      "id": "err-children-size",
+      "category": "api-misuse",
+      "errorPattern": "Cannot read properties of undefined (reading 'size')",
+      "errorRegex": "children\\.size|children\\.length.*undefined",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["group", "children", "size", "length", "count", "数量"],
+      "cause": "Phaser 4 Group 不直接暴露 children.size，应使用 getChildren().length",
+      "fix": {
+        "wrong": "group.children.size;",
+        "correct": "group.getChildren().length;",
+        "explanation": "使用 getChildren() 获取数组后取 length"
+      }
+    },
+    {
+      "id": "err-body-null",
+      "category": "physics",
+      "errorPattern": "Cannot read properties of null (reading 'setVelocityX')",
+      "errorRegex": "Cannot read.*null.*(?:setVelocity|setGravity|setBounce|setCollide|body|setImmovable|setSize|velocity|stop)",
+      "severity": "high",
+      "frequency": "very-common",
+      "keywords": ["body", "null", "physics", "velocity", "物理体"],
+      "cause": "对象用 this.add.sprite() 创建（无物理体），但代码尝试访问 body 属性",
+      "fix": {
+        "wrong": "const player = this.add.sprite(100, 300, 'player');\nplayer.body!.setVelocityX(200);",
+        "correct": "const player = this.physics.add.sprite(100, 300, 'player');\nplayer.body!.setVelocityX(200);",
+        "explanation": "必须使用 this.physics.add.sprite() 创建才有物理体"
+      }
+    },
+    {
+      "id": "err-texture-not-found",
+      "category": "resource-loading",
+      "errorPattern": "Texture \"xxx\" not found",
+      "errorRegex": "Texture.*not found|Missing texture",
+      "severity": "high",
+      "frequency": "very-common",
+      "keywords": ["texture", "image", "load", "preload", "纹理", "加载"],
+      "cause": "create() 中引用的纹理 key 在 preload() 中没有对应的 load 调用，或 key 拼写不匹配",
+      "fix": {
+        "checkList": [
+          "确认 preload() 中有 this.load.image('key', 'path')",
+          "确认 key 拼写与 create() 中完全一致（大小写敏感）",
+          "如果使用 generateTexture，确认在 create() 早期生成，且在使用之前",
+          "如果是 spritesheet，确认 load.spritesheet 而非 load.image"
+        ]
+      }
+    },
+    {
+      "id": "err-scene-not-registered",
+      "category": "scene-lifecycle",
+      "errorPattern": "Scene key \"xxx\" does not exist",
+      "errorRegex": "Scene.*(?:not exist|not found|undefined|invalid)",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["scene", "start", "launch", "register", "场景", "注册"],
+      "cause": "调用 scene.start('SceneName') 但该场景未在 main.ts 的 config.scene 数组中注册",
+      "fix": {
+        "checkList": [
+          "确认场景类已在 main.ts 中 import",
+          "确认 config.scene 数组包含该场景类（传类引用不是字符串）",
+          "确认 scene.start() 中的 key 与场景 constructor 中 super() 的参数匹配"
+        ]
+      }
+    },
+    {
+      "id": "err-refreshbody-missing",
+      "category": "physics",
+      "errorPattern": "Static body size doesn't match sprite scale",
+      "errorRegex": "refreshBody|static.*body.*size|hitbox.*mismatch",
+      "severity": "high",
+      "frequency": "very-common",
+      "keywords": ["refreshBody", "staticGroup", "scale", "static", "静态组", "刷新"],
+      "cause": "对 staticGroup 中的对象调用 setScale() 后没有调用 refreshBody()，导致物理体大小不匹配",
+      "fix": {
+        "wrong": "platforms.create(400, 580, 'ground').setScale(2);",
+        "correct": "platforms.create(400, 580, 'ground').setScale(2).refreshBody();",
+        "explanation": "setScale 后必须调 refreshBody() 同步物理体大小"
+      }
+    },
+    {
+      "id": "err-collider-no-callback-context",
+      "category": "api-misuse",
+      "errorPattern": "Cannot read properties of undefined in collision callback",
+      "errorRegex": "Cannot read.*undefined.*(?:in|at).*(?:collide|overlap|callback)",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["collider", "overlap", "callback", "this", "碰撞", "回调"],
+      "cause": "碰撞/重叠回调中 this 指向不正确，忘记传第 5 个参数 this",
+      "fix": {
+        "wrong": "this.physics.add.overlap(player, coins, (p, c) => { this.score += 10; });",
+        "correct": "this.physics.add.overlap(player, coins, (p, c) => { this.score += 10; }, undefined, this);",
+        "explanation": "传 undefined 作为第 4 个参数，this 作为第 5 个参数来绑定回调上下文"
+      }
+    },
+    {
+      "id": "err-collider-type-assertion",
+      "category": "type-error",
+      "errorPattern": "Property 'xxx' does not exist on type 'GameObject'",
+      "errorRegex": "Property.*does not exist.*GameObject|Type.*GameObject.*not assignable",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["type", "assertion", "GameObject", "cast", "类型", "断言"],
+      "cause": "碰撞回调参数类型是 GameObject，需要类型断言才能访问 Sprite 特有属性",
+      "fix": {
+        "wrong": "this.physics.add.overlap(player, coins, (p, coin) => {\n  coin.disableBody(true, true);\n});",
+        "correct": "this.physics.add.overlap(player, coins, (p, coin) => {\n  const c = coin as Phaser.Physics.Arcade.Sprite;\n  c.disableBody(true, true);\n}, undefined, this);",
+        "explanation": "在回调中用 as Phaser.Physics.Arcade.Sprite 类型断言"
+      }
+    },
+    {
+      "id": "err-particles-p3-api",
+      "category": "api-misuse",
+      "errorPattern": "createEmitter is not a function / addParticleEmitter is not a function",
+      "errorRegex": "(?:createEmitter|addParticleEmitter|ParticleEmitterManager).*not a function",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["particle", "emitter", "createEmitter", "粒子", "发射器"],
+      "cause": "使用了 Phaser 3 的粒子 API。Phaser 4 粒子系统完全重构",
+      "fix": {
+        "wrong": "const particles = this.add.particles('spark');\nconst emitter = particles.createEmitter({ ... });",
+        "correct": "const emitter = this.add.particles(x, y, 'spark', { speed: 100, lifespan: 500 });",
+        "explanation": "Phaser 4 使用 this.add.particles(x, y, key, config) 直接创建"
+      }
+    },
+    {
+      "id": "err-keyboard-null",
+      "category": "input",
+      "errorPattern": "Cannot read properties of null (reading 'createCursorKeys')",
+      "errorRegex": "Cannot read.*null.*(?:createCursorKeys|addKey|addKeys|keyboard)",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["keyboard", "input", "null", "cursor", "键盘", "输入"],
+      "cause": "this.input.keyboard 为 null，通常因为 input 系统未正确初始化或在错误的生命周期阶段调用",
+      "fix": {
+        "wrong": "const cursors = this.input.keyboard.createCursorKeys();",
+        "correct": "const cursors = this.input.keyboard!.createCursorKeys();",
+        "explanation": "使用 ! 非空断言操作符。确保在 create() 中调用，不是 constructor"
+      }
+    },
+    {
+      "id": "err-spritesheet-no-frame-config",
+      "category": "resource-loading",
+      "errorPattern": "Missing frameWidth/frameHeight for spritesheet",
+      "errorRegex": "frameWidth|frameHeight|frame.*config|spritesheet.*frame",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["spritesheet", "frame", "frameWidth", "frameHeight", "精灵图", "帧"],
+      "cause": "加载 spritesheet 时没有指定 frameWidth 和 frameHeight 配置",
+      "fix": {
+        "wrong": "this.load.spritesheet('player', 'player.png');",
+        "correct": "this.load.spritesheet('player', 'player.png', { frameWidth: 32, frameHeight: 48 });",
+        "explanation": "spritesheet 必须指定 frameWidth 和 frameHeight 告知引擎如何切割帧"
+      }
+    },
+    {
+      "id": "err-anim-key-not-found",
+      "category": "animation",
+      "errorPattern": "Animation key 'xxx' not found / Animation does not exist",
+      "errorRegex": "Animation.*(?:key|not found|not exist|undefined)",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["animation", "anim", "key", "play", "动画", "帧动画"],
+      "cause": "尝试播放的动画 key 未在 this.anims.create() 中创建，或 key 拼写不匹配",
+      "fix": {
+        "checkList": [
+          "确认 this.anims.create({ key: 'xxx', ... }) 已在 create() 中调用",
+          "确认 sprite.play('xxx') 的 key 与 anims.create 的 key 完全一致",
+          "确认 spritesheet 已正确加载（frameWidth/frameHeight 正确）",
+          "如果跨场景使用动画，确认在全局场景或 Boot 场景中创建"
+        ]
+      }
+    },
+    {
+      "id": "err-anim-frame-range",
+      "category": "animation",
+      "errorPattern": "Frame index out of range",
+      "errorRegex": "frame.*(?:out of range|index|does not exist|invalid)",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["frame", "range", "spritesheet", "generateFrameNumbers", "帧", "范围"],
+      "cause": "generateFrameNumbers 的 start/end 超出了 spritesheet 的实际帧数",
+      "fix": {
+        "explanation": "帧数 = (图片宽度/frameWidth) * (图片高度/frameHeight)。确认 start 和 end 在 0 到 帧数-1 之间"
+      }
+    },
+    {
+      "id": "err-update-create-objects",
+      "category": "performance",
+      "errorPattern": "Memory leak / FPS dropping over time",
+      "errorRegex": "memory.*leak|out of memory|fps.*drop|performance",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["update", "create", "memory", "leak", "performance", "内存", "泄漏", "性能"],
+      "cause": "在 update() 中每帧创建新游戏对象（add.sprite/add.text 等），导致内存持续增长",
+      "fix": {
+        "wrong": "update() {\n  this.add.text(100, 100, 'Score: ' + score);\n}",
+        "correct": "create() {\n  this.scoreText = this.add.text(100, 100, 'Score: 0');\n}\nupdate() {\n  this.scoreText.setText('Score: ' + score);\n}",
+        "explanation": "在 create() 中创建对象并存为属性，在 update() 中只更新属性值"
+      }
+    },
+    {
+      "id": "err-scene-data-undefined",
+      "category": "scene-lifecycle",
+      "errorPattern": "Cannot read properties of undefined in create(data)",
+      "errorRegex": "Cannot read.*undefined.*(?:score|level|data)",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["scene", "data", "start", "init", "create", "数据", "传递"],
+      "cause": "场景接收的 data 参数为 undefined，因为上一个场景没有传递数据或用了错误的方法",
+      "fix": {
+        "wrong": "create(data: { score: number }) {\n  this.add.text(100, 100, 'Score: ' + data.score);\n}",
+        "correct": "create(data: { score: number }) {\n  const score = data?.score ?? 0;\n  this.add.text(100, 100, 'Score: ' + score);\n}",
+        "explanation": "始终用可选链和默认值处理 data 参数，因为首次启动时 data 可能为 undefined"
+      }
+    },
+    {
+      "id": "err-duplicate-texture-key",
+      "category": "resource-loading",
+      "errorPattern": "Texture with key 'xxx' already exists",
+      "errorRegex": "Texture.*key.*already exists|duplicate.*key",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["texture", "key", "duplicate", "重复", "纹理"],
+      "cause": "preload() 或 generateTexture 中使用了重复的资源 key",
+      "fix": {
+        "explanation": "确保每个 this.load.xxx() 和 generateTexture() 调用使用唯一的 key。如果场景重启，generateTexture 会尝试再次创建相同 key 的纹理——可以先检查 this.textures.exists(key)"
+      }
+    },
+    {
+      "id": "err-collider-not-triggering",
+      "category": "physics",
+      "errorPattern": "Collider/overlap callback not being called",
+      "errorRegex": "collider.*not.*(?:trigger|fire|call)|collision.*not.*work",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["collider", "overlap", "not working", "碰撞", "不触发"],
+      "cause": "碰撞器设置不正确：对象未用 physics.add 创建、参数顺序错误、或使用了 collider 而非 overlap",
+      "fix": {
+        "checkList": [
+          "确认两个碰撞对象都是物理对象 (physics.add.sprite/group)",
+          "确认 collider/overlap 参数顺序正确 (object1, object2, callback, processCallback, scope)",
+          "对于收集物品等穿透场景用 overlap 而非 collider",
+          "确认对象的 active 和 body.enable 都为 true",
+          "确认 staticGroup 已调 refreshBody()"
+        ]
+      }
+    },
+    {
+      "id": "err-objects-pass-through",
+      "category": "physics",
+      "errorPattern": "Objects passing through each other / no collision response",
+      "errorRegex": "pass.*through|no.*collision|phasing|穿透",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["pass through", "collision", "physics", "穿透", "穿越"],
+      "cause": "对象移动速度过快（隧道效应）或碰撞未正确配置",
+      "fix": {
+        "checkList": [
+          "降低对象速度或增大碰撞体大小",
+          "确认 collider 已正确添加",
+          "对于静态平台使用 staticGroup 而非普通 group",
+          "确认 physics world bounds 设置正确"
+        ]
+      }
+    },
+    {
+      "id": "err-import-path",
+      "category": "type-error",
+      "errorPattern": "Cannot find module './xxx' or its type declarations",
+      "errorRegex": "Cannot find module|Module not found|import.*error",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["import", "module", "path", "导入", "路径"],
+      "cause": "场景文件的 import 路径错误或文件名不匹配",
+      "fix": {
+        "checkList": [
+          "使用相对路径 (./scenes/game-scene) 而非绝对路径",
+          "确认文件名与 import 路径大小写一致",
+          "Phaser 引入: import Phaser from 'phaser'",
+          "确认 .ts 扩展名不出现在 import 路径中"
+        ]
+      }
+    },
+    {
+      "id": "err-body-assertion",
+      "category": "type-error",
+      "errorPattern": "Object is possibly 'null' for body property",
+      "errorRegex": "Object is possibly.*null.*body|body.*possibly.*null",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["body", "null", "assertion", "typescript", "类型"],
+      "cause": "TypeScript 严格模式下 sprite.body 可能为 null，需要非空断言",
+      "fix": {
+        "wrong": "player.body.setVelocityX(200);",
+        "correct": "player.body!.setVelocityX(200);",
+        "explanation": "在 body 后加 ! 非空断言操作符"
+      }
+    },
+    {
+      "id": "err-async-preload",
+      "category": "api-misuse",
+      "errorPattern": "Preload assets not available in create()",
+      "errorRegex": "async.*preload|await.*load|preload.*promise",
+      "severity": "high",
+      "frequency": "uncommon",
+      "keywords": ["async", "await", "preload", "load", "异步"],
+      "cause": "在 preload() 中使用了 async/await，Phaser 有自己的加载管理机制",
+      "fix": {
+        "wrong": "async preload() {\n  await this.load.image('player', 'player.png');\n}",
+        "correct": "preload() {\n  this.load.image('player', 'player.png');\n}",
+        "explanation": "Phaser 的 preload 自动管理加载队列，不需要 async/await"
+      }
+    },
+    {
+      "id": "err-destroy-then-access",
+      "category": "api-misuse",
+      "errorPattern": "Cannot read properties of destroyed object",
+      "errorRegex": "Cannot read.*destroyed|destroyed.*object|null.*after.*destroy",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["destroy", "null", "access", "销毁", "访问"],
+      "cause": "在碰撞回调中先 destroy() 对象然后继续访问它的属性",
+      "fix": {
+        "wrong": "callback(player, enemy) {\n  enemy.destroy();\n  this.score += enemy.getData('points');\n}",
+        "correct": "callback(player, enemy) {\n  const points = (enemy as Phaser.Physics.Arcade.Sprite).getData('points');\n  (enemy as Phaser.Physics.Arcade.Sprite).destroy();\n  this.score += points;\n}",
+        "explanation": "先读取需要的数据，再销毁对象"
+      }
+    },
+    {
+      "id": "err-scene-key-mismatch",
+      "category": "scene-lifecycle",
+      "errorPattern": "Scene switch fails silently / wrong scene loads",
+      "errorRegex": "scene.*key.*mismatch|wrong.*scene",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["scene", "key", "super", "constructor", "名称"],
+      "cause": "scene.start() 中的 key 与场景 constructor 中 super('key') 的参数不匹配",
+      "fix": {
+        "wrong": "class GameScene extends Phaser.Scene {\n  constructor() { super('Game'); }\n}\n// ...\nthis.scene.start('GameScene');",
+        "correct": "class GameScene extends Phaser.Scene {\n  constructor() { super('GameScene'); }\n}\n// ...\nthis.scene.start('GameScene');",
+        "explanation": "super() 中的 key 必须与 scene.start() 使用的 key 完全一致"
+      }
+    },
+    {
+      "id": "err-physics-group-config",
+      "category": "physics",
+      "errorPattern": "Physics group objects don't have physics bodies",
+      "errorRegex": "group.*physics|group.*body.*null",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["group", "physics", "config", "classType", "物理组"],
+      "cause": "创建物理组时没有正确配置 classType",
+      "fix": {
+        "wrong": "this.enemies = this.physics.add.group();",
+        "correct": "this.enemies = this.physics.add.group({\n  classType: Phaser.Physics.Arcade.Sprite,\n  maxSize: 20,\n  runChildUpdate: true\n});",
+        "explanation": "指定 classType 确保池中创建的对象有物理体"
+      }
+    },
+    {
+      "id": "err-pool-reset",
+      "category": "physics",
+      "errorPattern": "Reused pool objects retain old position/velocity",
+      "errorRegex": "pool.*reset|reuse.*position|recycle.*velocity",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["pool", "reset", "reuse", "recycle", "对象池", "重置"],
+      "cause": "从对象池中获取的复用对象没有重置位置和速度",
+      "fix": {
+        "wrong": "const bullet = pool.getFirst(false, true, x, y, 'bullet');\nbullet.setActive(true).setVisible(true);",
+        "correct": "const bullet = pool.getFirst(false, true, x, y, 'bullet');\nif (bullet) {\n  bullet.setActive(true).setVisible(true);\n  bullet.body!.reset(x, y);\n  bullet.body!.setVelocityY(-400);\n}",
+        "explanation": "复用对象时用 body.reset() 重置位置，并重新设置速度"
+      }
+    },
+    {
+      "id": "err-rnd-not-function",
+      "category": "api-misuse",
+      "errorPattern": "Phaser.Math.RND is not a function",
+      "errorRegex": "RND.*not.*function|Math\\.RND",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["RND", "random", "Math", "Between", "随机"],
+      "cause": "使用了 Phaser 3 的 Phaser.Math.RND，Phaser 4 使用 Phaser.Math.Between",
+      "fix": {
+        "wrong": "Phaser.Math.RND.between(10, 100);",
+        "correct": "Phaser.Math.Between(10, 100);",
+        "explanation": "使用 Phaser.Math.Between() 替代 RND"
+      }
+    },
+    {
+      "id": "err-audio-key-missing",
+      "category": "resource-loading",
+      "errorPattern": "Audio key 'xxx' missing from cache",
+      "errorRegex": "Audio.*key.*(?:missing|not found|cache)",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["audio", "sound", "key", "missing", "音频", "缺失"],
+      "cause": "在 create() 中使用 this.sound.add/play 但 preload() 中没有 this.load.audio",
+      "fix": {
+        "checkList": [
+          "确认 preload() 中有 this.load.audio('key', 'path')",
+          "确认 audio key 拼写一致",
+          "确认音频文件路径正确且文件存在"
+        ]
+      }
+    },
+    {
+      "id": "err-setinteractive-missing",
+      "category": "input",
+      "errorPattern": "Click/pointer events not firing on sprite",
+      "errorRegex": "setInteractive|pointer.*not.*fire|click.*not.*work",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["interactive", "click", "pointer", "setInteractive", "点击", "交互"],
+      "cause": "对象没有调用 setInteractive() 就绑定了指针事件",
+      "fix": {
+        "wrong": "sprite.on('pointerdown', () => { ... });",
+        "correct": "sprite.setInteractive({ useHandCursor: true });\nsprite.on('pointerdown', () => { ... });",
+        "explanation": "必须先调 setInteractive() 才能接收指针事件"
+      }
+    },
+    {
+      "id": "err-drag-not-working",
+      "category": "input",
+      "errorPattern": "Drag events not firing / object not draggable",
+      "errorRegex": "drag.*not.*(?:work|fire)|setDraggable",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["drag", "draggable", "setDraggable", "拖拽"],
+      "cause": "拖拽功能需要先 setInteractive 再 setDraggable",
+      "fix": {
+        "wrong": "this.input.setDraggable(sprite);",
+        "correct": "sprite.setInteractive();\nthis.input.setDraggable(sprite);\nthis.input.on('drag', (pointer, obj, dragX, dragY) => {\n  obj.x = dragX;\n  obj.y = dragY;\n});",
+        "explanation": "拖拽需要: 1) setInteractive 2) setDraggable 3) 监听 drag 事件"
+      }
+    },
+    {
+      "id": "err-world-bounds-not-set",
+      "category": "physics",
+      "errorPattern": "Objects stuck at default world bounds",
+      "errorRegex": "world.*bounds|setCollideWorldBounds",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["world", "bounds", "camera", "map", "世界", "边界"],
+      "cause": "物理世界边界默认为画布大小，大地图需要手动设置",
+      "fix": {
+        "correct": "this.physics.world.setBounds(0, 0, mapWidth, mapHeight);\nthis.cameras.main.setBounds(0, 0, mapWidth, mapHeight);",
+        "explanation": "同时设置物理世界边界和相机边界到实际地图大小"
+      }
+    },
+    {
+      "id": "err-tilemap-tileset-null",
+      "category": "resource-loading",
+      "errorPattern": "addTilesetImage returns null / tileset not found",
+      "errorRegex": "addTilesetImage.*null|tileset.*not found|createLayer.*null",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["tilemap", "tileset", "addTilesetImage", "地图", "瓦片"],
+      "cause": "addTilesetImage 的第一个参数（Tiled 中的 tileset 名称）与实际名称不匹配",
+      "fix": {
+        "correct": "const tileset = map.addTilesetImage('TilesetNameInTiled', 'loadedImageKey')!;\nconst layer = map.createLayer('LayerNameInTiled', tileset)!;",
+        "explanation": "第一个参数是 Tiled 编辑器中的 tileset 名称（区分大小写），第二个是 preload 中的 image key"
+      }
+    },
+    {
+      "id": "err-event-listener-leak",
+      "category": "performance",
+      "errorPattern": "Event listeners accumulating / multiple handlers fired",
+      "errorRegex": "listener.*leak|event.*duplicate|multiple.*handler",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["event", "listener", "leak", "on", "off", "事件", "泄漏"],
+      "cause": "场景重启时没有清理事件监听器，导致累积",
+      "fix": {
+        "correct": "// 使用 once 代替 on 用于一次性事件\nthis.input.once('pointerdown', callback);\n\n// 或在 shutdown 中清理\nthis.events.on('shutdown', () => {\n  this.input.off('pointerdown', callback);\n});",
+        "explanation": "场景重启时用 shutdown 事件清理，或用 once 自动清理一次性监听器"
+      }
+    },
+    {
+      "id": "err-velocity-on-static",
+      "category": "physics",
+      "errorPattern": "Cannot set velocity on static body",
+      "errorRegex": "velocity.*static|static.*velocity|immovable.*move",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["velocity", "static", "immovable", "速度", "静态"],
+      "cause": "尝试对 staticGroup 中的对象或 setImmovable(true) 的对象设置速度",
+      "fix": {
+        "explanation": "静态物理体不能移动。如需移动平台，使用普通 physics.add.group 中的对象，设为 immovable 但不是 static"
+      }
+    },
+    {
+      "id": "err-tween-targets-undefined",
+      "category": "api-misuse",
+      "errorPattern": "Tween target is undefined / Cannot tween null object",
+      "errorRegex": "tween.*target.*(?:undefined|null)|Cannot.*tween.*null",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["tween", "target", "undefined", "null", "补间"],
+      "cause": "tweens.add 的 targets 属性指向了一个未初始化或已销毁的对象",
+      "fix": {
+        "explanation": "确保 tween 的 targets 对象在 tween 创建时已存在且未被销毁。如果对象可能被销毁，在 onComplete 或 onUpdate 中检查"
+      }
+    },
+    {
+      "id": "err-depth-z-order",
+      "category": "api-misuse",
+      "errorPattern": "Object hidden behind other objects / wrong render order",
+      "errorRegex": "depth|z.*order|behind|hidden|层级",
+      "severity": "low",
+      "frequency": "common",
+      "keywords": ["depth", "z-order", "render", "order", "层级", "遮挡"],
+      "cause": "游戏对象的渲染顺序不正确，后创建的对象默认在上层",
+      "fix": {
+        "correct": "// 使用 setDepth 控制渲染层级\nbackground.setDepth(0);\nplatforms.setDepth(1);\nplayer.setDepth(2);\nui.setDepth(100);",
+        "explanation": "setDepth(n) 数值越大越在前面。UI 元素通常设 100+，确保始终在最上层"
+      }
+    },
+    {
+      "id": "err-scrollfactor-ui",
+      "category": "api-misuse",
+      "errorPattern": "UI elements move with camera / score text scrolls off screen",
+      "errorRegex": "scrollFactor|UI.*scroll|text.*move.*camera",
+      "severity": "low",
+      "frequency": "common",
+      "keywords": ["scrollFactor", "UI", "camera", "fixed", "滚动", "固定"],
+      "cause": "UI 元素没有设置 setScrollFactor(0)，导致跟随相机移动",
+      "fix": {
+        "correct": "this.scoreText = this.add.text(16, 16, 'Score: 0', style)\n  .setScrollFactor(0)\n  .setDepth(100);",
+        "explanation": "setScrollFactor(0) 使对象固定在屏幕上不跟随相机移动"
+      }
+    },
+    {
+      "id": "err-multiple-scene-register",
+      "category": "scene-lifecycle",
+      "errorPattern": "Scene array missing imported scenes",
+      "errorRegex": "scene.*array|config.*scene|register.*scene",
+      "severity": "high",
+      "frequency": "common",
+      "keywords": ["scene", "config", "array", "register", "注册", "数组"],
+      "cause": "新增的场景类没有加入 main.ts 的 config.scene 数组",
+      "fix": {
+        "correct": "import { MenuScene } from './scenes/menu-scene';\nimport { GameScene } from './scenes/game-scene';\nimport { GameOverScene } from './scenes/game-over-scene';\n\nconst config = {\n  scene: [MenuScene, GameScene, GameOverScene]\n};",
+        "explanation": "所有场景类都必须在 config.scene 数组中列出，第一个是默认启动场景"
+      }
+    },
+    {
+      "id": "err-load-image-for-spritesheet",
+      "category": "resource-loading",
+      "errorPattern": "Using load.image for spritesheet asset",
+      "errorRegex": "load\\.image.*spritesheet|single frame|no animation frames",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["load", "image", "spritesheet", "frame", "加载"],
+      "cause": "用 load.image 加载了 spritesheet 图片，导致只显示整张图而非单帧",
+      "fix": {
+        "wrong": "this.load.image('player', 'player-spritesheet.png');",
+        "correct": "this.load.spritesheet('player', 'player-spritesheet.png', {\n  frameWidth: 32,\n  frameHeight: 48\n});",
+        "explanation": "spritesheet 必须用 load.spritesheet 加载并指定帧尺寸"
+      }
+    },
+    {
+      "id": "err-scene-string-register",
+      "category": "scene-lifecycle",
+      "errorPattern": "Scene registered as string instead of class",
+      "errorRegex": "scene.*string|scene.*class.*reference",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["scene", "string", "class", "reference", "字符串"],
+      "cause": "在 config.scene 中传入字符串而非场景类引用",
+      "fix": {
+        "wrong": "const config = { scene: ['GameScene'] };",
+        "correct": "import { GameScene } from './scenes/game-scene';\nconst config = { scene: [GameScene] };",
+        "explanation": "config.scene 数组应该包含类引用而非字符串"
+      }
+    },
+    {
+      "id": "err-physics-not-enabled",
+      "category": "physics",
+      "errorPattern": "this.physics is undefined / Physics world not created",
+      "errorRegex": "this\\.physics.*undefined|physics.*not.*(?:enabled|created|configured)",
+      "severity": "high",
+      "frequency": "uncommon",
+      "keywords": ["physics", "undefined", "config", "enabled", "物理", "未启用"],
+      "cause": "游戏配置中没有 physics 配置项",
+      "fix": {
+        "correct": "const config: Phaser.Types.Core.GameConfig = {\n  physics: {\n    default: 'arcade',\n    arcade: { gravity: { x: 0, y: 300 }, debug: false }\n  },\n  // ...\n};",
+        "explanation": "必须在 GameConfig 中配置 physics 才能使用物理系统"
+      }
+    },
+    {
+      "id": "err-gravity-config-format",
+      "category": "physics",
+      "errorPattern": "Gravity config expects object not number",
+      "errorRegex": "gravity.*object|gravity.*number|gravity.*{",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["gravity", "config", "object", "重力", "配置"],
+      "cause": "Phaser 4 gravity 配置需要 {x, y} 对象格式",
+      "fix": {
+        "wrong": "arcade: { gravity: 300 }",
+        "correct": "arcade: { gravity: { x: 0, y: 300 } }",
+        "explanation": "gravity 必须是 { x: number, y: number } 对象"
+      }
+    },
+    {
+      "id": "err-timer-callback-context",
+      "category": "api-misuse",
+      "errorPattern": "this is undefined in timer callback",
+      "errorRegex": "this.*undefined.*timer|timer.*callback.*this",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["timer", "callback", "this", "context", "计时器"],
+      "cause": "time.addEvent 回调中 this 上下文不正确",
+      "fix": {
+        "wrong": "this.time.addEvent({\n  delay: 1000,\n  callback: function() { this.spawnEnemy(); }\n});",
+        "correct": "this.time.addEvent({\n  delay: 1000,\n  callback: () => { this.spawnEnemy(); },\n  loop: true\n});",
+        "explanation": "使用箭头函数 () => {} 自动绑定 this，或传 callbackScope: this"
+      }
+    },
+    {
+      "id": "err-text-style-format",
+      "category": "api-misuse",
+      "errorPattern": "Text style property ignored / wrong text style format",
+      "errorRegex": "text.*style|fontSize.*number|font.*style",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["text", "style", "fontSize", "color", "文本", "样式"],
+      "cause": "Text 样式属性格式不正确",
+      "fix": {
+        "wrong": "this.add.text(10, 10, 'Hi', { fontSize: 24, color: 'white' });",
+        "correct": "this.add.text(10, 10, 'Hi', { fontSize: '24px', color: '#ffffff' });",
+        "explanation": "fontSize 需要字符串格式如 '24px'，color 使用十六进制字符串如 '#fff'"
+      }
+    },
+    {
+      "id": "err-justdown-not-working",
+      "category": "input",
+      "errorPattern": "JustDown fires multiple times / key press detected every frame",
+      "errorRegex": "JustDown|just.*down|key.*press.*repeat",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["JustDown", "key", "press", "once", "按键", "单次"],
+      "cause": "使用 key.isDown 而非 JustDown 来检测单次按键",
+      "fix": {
+        "wrong": "if (spaceKey.isDown) { this.jump(); }",
+        "correct": "if (Phaser.Input.Keyboard.JustDown(spaceKey)) { this.jump(); }",
+        "explanation": "isDown 每帧为 true（持续按住），JustDown 只在按下瞬间触发一次"
+      }
+    },
+    {
+      "id": "err-phaser-import",
+      "category": "type-error",
+      "errorPattern": "Cannot find module 'phaser' / Phaser is not defined",
+      "errorRegex": "Cannot find.*phaser|Phaser.*not defined|module.*phaser",
+      "severity": "high",
+      "frequency": "uncommon",
+      "keywords": ["import", "Phaser", "module", "导入"],
+      "cause": "Phaser 的 import 语句格式不正确",
+      "fix": {
+        "wrong": "import * as Phaser from 'phaser';\n// 或\nconst Phaser = require('phaser');",
+        "correct": "import Phaser from 'phaser';",
+        "explanation": "使用默认导入 import Phaser from 'phaser'"
+      }
+    },
+    {
+      "id": "err-generate-texture-order",
+      "category": "resource-loading",
+      "errorPattern": "Generated texture not available when creating sprite",
+      "errorRegex": "generateTexture.*not.*(?:available|found|ready)",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["generateTexture", "texture", "order", "纹理", "生成", "顺序"],
+      "cause": "generateTexture 在 sprite 创建之后调用，纹理还不存在",
+      "fix": {
+        "explanation": "makeTexture/generateTexture 必须在使用该纹理创建 sprite 之前调用。建议放在 create() 的最开始"
+      }
+    },
+    {
+      "id": "err-group-getfirst-null",
+      "category": "api-misuse",
+      "errorPattern": "getFirst returns undefined / null when pool is full",
+      "errorRegex": "getFirst.*(?:null|undefined)|pool.*full|maxSize.*reached",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["getFirst", "pool", "maxSize", "full", "对象池", "满"],
+      "cause": "对象池已满（所有对象都是 active 状态），getFirst 返回 null",
+      "fix": {
+        "correct": "const bullet = pool.getFirst(false, true, x, y, 'bullet');\nif (bullet) {\n  bullet.setActive(true).setVisible(true);\n  bullet.body!.setVelocityY(-400);\n}\n// 如果 bullet 为 null，说明池满，忽略此次发射",
+        "explanation": "始终检查 getFirst 的返回值是否为 null。增大 maxSize 或加快回收速度"
+      }
+    },
+    {
+      "id": "err-overlap-vs-collider",
+      "category": "physics",
+      "errorPattern": "Objects bounce apart instead of overlapping / overlap causes physics separation",
+      "errorRegex": "overlap.*collider|bounce.*collect|separation.*pickup",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["overlap", "collider", "bounce", "collect", "重叠", "碰撞"],
+      "cause": "收集物品用了 collider（导致物理弹开）而非 overlap（允许穿透）",
+      "fix": {
+        "wrong": "this.physics.add.collider(player, coins, collectCoin, null, this);",
+        "correct": "this.physics.add.overlap(player, coins, collectCoin, undefined, this);",
+        "explanation": "收集物品/触发区域用 overlap（穿透），墙壁/平台用 collider（弹开）"
+      }
+    },
+    {
+      "id": "err-disablebody-params",
+      "category": "api-misuse",
+      "errorPattern": "disableBody not hiding object / object still visible after disable",
+      "errorRegex": "disableBody|disable.*body.*visible",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["disableBody", "hide", "disable", "禁用"],
+      "cause": "disableBody 需要传 (true, true) 来同时禁用物理体和隐藏对象",
+      "fix": {
+        "wrong": "coin.disableBody();",
+        "correct": "coin.disableBody(true, true);",
+        "explanation": "第一个 true 禁用物理体，第二个 true 隐藏对象"
+      }
+    },
+    {
+      "id": "err-camera-follow-before-create",
+      "category": "api-misuse",
+      "errorPattern": "Camera follow target undefined",
+      "errorRegex": "camera.*follow.*undefined|startFollow.*null",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["camera", "follow", "startFollow", "相机", "跟随"],
+      "cause": "在创建 player 之前就调用了 cameras.main.startFollow",
+      "fix": {
+        "explanation": "确保 startFollow 在目标对象创建之后调用。通常放在 create() 的末尾"
+      }
+    },
+    {
+      "id": "err-scene-launch-vs-start",
+      "category": "scene-lifecycle",
+      "errorPattern": "Scene replaces current instead of overlaying / HUD scene stops game",
+      "errorRegex": "launch.*start|overlay.*scene|HUD.*stop",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["launch", "start", "overlay", "HUD", "叠加", "覆盖"],
+      "cause": "用 scene.start 启动了 HUD 场景（会停止当前场景），应该用 scene.launch",
+      "fix": {
+        "wrong": "this.scene.start('HUDScene');",
+        "correct": "this.scene.launch('HUDScene');",
+        "explanation": "start 会停止当前场景，launch 在当前场景上叠加新场景"
+      }
+    },
+    {
+      "id": "err-scale-width-height",
+      "category": "api-misuse",
+      "errorPattern": "Using game.config.width instead of scale.width",
+      "errorRegex": "config\\.width|game\\.width|scale\\.width",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["width", "height", "scale", "size", "宽度", "高度"],
+      "cause": "使用硬编码的画布宽高而非 this.scale.width/height",
+      "fix": {
+        "wrong": "this.add.text(800 / 2, 600 / 2, 'Title');",
+        "correct": "const { width, height } = this.scale;\nthis.add.text(width / 2, height / 2, 'Title').setOrigin(0.5);",
+        "explanation": "使用 this.scale.width/height 获取实际画布尺寸，支持响应式"
+      }
+    },
+    {
+      "id": "err-missing-export",
+      "category": "type-error",
+      "errorPattern": "Scene class not exported / import fails",
+      "errorRegex": "export.*class|import.*scene.*fail|not.*exported",
+      "severity": "high",
+      "frequency": "uncommon",
+      "keywords": ["export", "class", "import", "导出", "导入"],
+      "cause": "场景类没有 export，导致 main.ts 无法导入",
+      "fix": {
+        "wrong": "class GameScene extends Phaser.Scene { ... }",
+        "correct": "export class GameScene extends Phaser.Scene { ... }",
+        "explanation": "场景类必须使用 export class 导出"
+      }
+    },
+    {
+      "id": "err-sound-play-before-interaction",
+      "category": "api-misuse",
+      "errorPattern": "Audio not playing / AudioContext suspended",
+      "errorRegex": "AudioContext.*(?:suspended|not allowed)|audio.*not.*play|sound.*silent",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["audio", "sound", "play", "suspended", "AudioContext", "音频", "静音"],
+      "cause": "浏览器要求用户交互后才能播放音频（Chrome autoplay policy）",
+      "fix": {
+        "explanation": "确保音频在用户点击/触摸事件后播放。Phaser 通常自动处理解锁，但如果仍有问题，可以在 pointerdown 事件中手动调用 this.sound.unlock()"
+      }
+    },
+    {
+      "id": "err-init-vs-create-data",
+      "category": "scene-lifecycle",
+      "errorPattern": "Scene data available in init but not create",
+      "errorRegex": "init.*data.*create|data.*init.*vs.*create",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["init", "create", "data", "scene", "数据", "生命周期"],
+      "cause": "scene.start 传递的数据在 init() 和 create() 中都能接收，但 init 先执行",
+      "fix": {
+        "correct": "init(data: { score: number }) {\n  this.finalScore = data?.score ?? 0;\n}\n\ncreate() {\n  this.add.text(100, 100, 'Score: ' + this.finalScore);\n}",
+        "explanation": "在 init 中保存数据到类属性，在 create 中使用。或直接在 create(data) 中接收"
+      }
+    },
+    {
+      "id": "err-key-repeat-addkey",
+      "category": "input",
+      "errorPattern": "Key already added / duplicate key binding",
+      "errorRegex": "key.*(?:already|duplicate)|addKey.*twice",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["key", "addKey", "duplicate", "按键", "重复"],
+      "cause": "场景重启时重复添加按键绑定",
+      "fix": {
+        "explanation": "Phaser 会在场景重启时自动清理输入，但如果手动管理按键引用，确保不要在 create() 中重复创建。或用 this.input.keyboard!.removeAllKeys() 先清理"
+      }
+    },
+    {
+      "id": "err-tween-ease-name",
+      "category": "api-misuse",
+      "errorPattern": "Invalid tween ease function name",
+      "errorRegex": "ease.*(?:invalid|not found|unknown)",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["tween", "ease", "animation", "缓动", "动画"],
+      "cause": "tweens.add 中使用了不存在的 ease 函数名",
+      "fix": {
+        "explanation": "有效的 ease 名称: 'Linear', 'Power2', 'Power3', 'Bounce.Out', 'Bounce.InOut', 'Sine.InOut', 'Sine.Out', 'Back.Out', 'Elastic.Out', 'Cubic.Out', 'Expo.Out'。完整列表见 Phaser.Math.Easing"
+      }
+    },
+    {
+      "id": "err-group-cleanup-missing",
+      "category": "performance",
+      "errorPattern": "Objects accumulating / group never cleaned up",
+      "errorRegex": "cleanup|accumulate|group.*grow|never.*destroy",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["cleanup", "destroy", "group", "pool", "清理", "回收"],
+      "cause": "对象离开屏幕后没有回收或销毁，导致持续累积",
+      "fix": {
+        "correct": "// 在 update() 中回收出屏对象\nthis.bullets.getChildren().forEach((b) => {\n  const bullet = b as Phaser.Physics.Arcade.Sprite;\n  if (bullet.active && (bullet.y < -50 || bullet.y > this.scale.height + 50)) {\n    this.bullets.killAndHide(bullet);\n    bullet.body!.stop();\n  }\n});",
+        "explanation": "对象池模式：使用 killAndHide + body.stop 回收出屏对象"
+      }
+    },
+    {
+      "id": "err-physics-movetoobject",
+      "category": "physics",
+      "errorPattern": "physics.moveToObject not working / target not a physics object",
+      "errorRegex": "moveToObject|moveTo.*object|追踪.*移动",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["moveToObject", "moveTo", "physics", "chase", "追踪"],
+      "cause": "moveToObject 需要两个物理对象作为参数",
+      "fix": {
+        "correct": "this.physics.moveToObject(enemy, player, speed);",
+        "explanation": "确保 enemy 和 player 都是 physics.add.sprite 创建的物理对象"
+      }
+    },
+    {
+      "id": "err-particle-maxparticles",
+      "category": "performance",
+      "errorPattern": "Particle emitter causing lag / too many particles",
+      "errorRegex": "particle.*lag|too many.*particle|emitter.*performance",
+      "severity": "medium",
+      "frequency": "uncommon",
+      "keywords": ["particle", "maxParticles", "performance", "粒子", "性能"],
+      "cause": "粒子发射器没有限制最大粒子数或没有在使用后销毁",
+      "fix": {
+        "correct": "// 爆炸效果 — 使用后销毁\nconst particles = this.add.particles(x, y, 'spark', {\n  speed: { min: 50, max: 200 },\n  lifespan: 500,\n  quantity: 15,\n  emitting: false\n});\nparticles.explode(15);\nthis.time.delayedCall(600, () => particles.destroy());",
+        "explanation": "一次性粒子效果使用 explode() 后用 delayedCall 延迟销毁。持续发射器设 maxParticles"
+      }
+    },
+    {
+      "id": "err-touching-vs-blocked",
+      "category": "physics",
+      "errorPattern": "body.touching.down not detecting ground contact",
+      "errorRegex": "touching\\.down|onFloor|grounded|着地",
+      "severity": "medium",
+      "frequency": "common",
+      "keywords": ["touching", "down", "ground", "jump", "着地", "跳跃"],
+      "cause": "body.touching.down 只在有 collider 且对象正好接触时为 true",
+      "fix": {
+        "checkList": [
+          "确认有 this.physics.add.collider(player, ground)",
+          "确认 ground 是 staticGroup 或有 setImmovable(true)",
+          "检查 body.touching.down 而非 body.blocked.down（两者不同）",
+          "如果使用 body.onFloor()，需要设置 setCollideWorldBounds(true)"
+        ]
+      }
+    },
+    {
+      "id": "err-anims-create-global",
+      "category": "animation",
+      "errorPattern": "Animation already exists / key already in use",
+      "errorRegex": "Animation.*already.*exist|anim.*key.*use|duplicate.*anim",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["animation", "create", "duplicate", "global", "动画", "重复"],
+      "cause": "this.anims.create 创建的动画是全局的，场景重启会尝试再次创建同名动画",
+      "fix": {
+        "correct": "if (!this.anims.exists('player-idle')) {\n  this.anims.create({ key: 'player-idle', ... });\n}",
+        "explanation": "用 this.anims.exists() 检查动画是否已存在，或只在 Boot 场景创建一次"
+      }
+    },
+    {
+      "id": "err-setorigin-physics",
+      "category": "physics",
+      "errorPattern": "Physics body misaligned after setOrigin",
+      "errorRegex": "setOrigin.*body|origin.*physics|hitbox.*offset",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["setOrigin", "origin", "physics", "offset", "原点", "偏移"],
+      "cause": "setOrigin 改变了精灵的锚点但物理体位置不自动跟随",
+      "fix": {
+        "correct": "sprite.setOrigin(0.5, 1); // 底部中心\nsprite.body!.setOffset(0, 0); // 根据需要调整偏移",
+        "explanation": "修改 origin 后可能需要用 body.setOffset 和 body.setSize 重新对齐物理体"
+      }
+    },
+    {
+      "id": "err-cors-asset",
+      "category": "resource-loading",
+      "errorPattern": "CORS error loading external asset",
+      "errorRegex": "CORS|cross.*origin|Access-Control|blocked by CORS",
+      "severity": "high",
+      "frequency": "uncommon",
+      "keywords": ["CORS", "cross-origin", "external", "跨域"],
+      "cause": "加载外部 URL 的资源时遇到跨域限制",
+      "fix": {
+        "explanation": "使用本地资源或已配置 CORS 头的 CDN。在 load 配置中可以设置 crossOrigin: 'anonymous'"
+      }
+    },
+    {
+      "id": "err-flipx-direction",
+      "category": "api-misuse",
+      "errorPattern": "Sprite not flipping when changing direction",
+      "errorRegex": "flipX|flip.*direction|setFlipX",
+      "severity": "low",
+      "frequency": "uncommon",
+      "keywords": ["flipX", "flip", "direction", "mirror", "翻转", "朝向"],
+      "cause": "忘记在改变方向时翻转精灵",
+      "fix": {
+        "correct": "if (velocity.x < 0) player.setFlipX(true);\nelse if (velocity.x > 0) player.setFlipX(false);",
+        "explanation": "根据移动方向设置 flipX 来翻转精灵朝向"
+      }
+    }
+  ]
+}

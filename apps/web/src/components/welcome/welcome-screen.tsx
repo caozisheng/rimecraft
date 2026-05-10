@@ -235,12 +235,14 @@ export function WelcomeScreen() {
 				) : (
 					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 						{sortedProjects.map((project) => (
-							<button
+							<div
 								key={project.id}
-								type="button"
-								disabled={isCreating}
-								onClick={() => handleOpenProject(project.id)}
-								className="group relative flex items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary/50 hover:bg-accent disabled:opacity-50"
+								role="button"
+								tabIndex={isCreating ? -1 : 0}
+								aria-disabled={isCreating}
+								onClick={() => !isCreating && handleOpenProject(project.id)}
+								onKeyDown={(e) => { if (!isCreating && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); handleOpenProject(project.id); } }}
+								className="group relative flex cursor-pointer items-start gap-4 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary/50 hover:bg-accent aria-disabled:pointer-events-none aria-disabled:opacity-50"
 							>
 								<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-xl">
 									{getTemplateIcon(project.template)}
@@ -263,7 +265,7 @@ export function WelcomeScreen() {
 								>
 									<Trash2 className="h-3.5 w-3.5" />
 								</button>
-							</button>
+							</div>
 						))}
 					</div>
 				)}
