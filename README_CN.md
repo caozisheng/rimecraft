@@ -9,8 +9,16 @@
   用自然语言描述你的游戏创意，AI 智能体将协作编写、调试并实时预览 Phaser 游戏。
 </p>
 
-<img width="957" height="632" alt="image" src="https://github.com/user-attachments/assets/59615cd3-bedf-4dab-8b25-19c55ecb12a8" />
-<img width="1062" height="628" alt="image" src="https://github.com/user-attachments/assets/9396a45a-a977-4679-90f0-0472695b5b51" />
+<img width="955" height="746" alt="image" src="https://github.com/user-attachments/assets/03e49e64-d4fc-4c90-a2b1-c431c13faf8d" />
+
+<img width="955" height="748" alt="image" src="https://github.com/user-attachments/assets/9c642f34-af2c-447b-821f-2c889381bbaa" />
+
+<img width="960" height="750" alt="image" src="https://github.com/user-attachments/assets/c0a6ffb1-1bd8-49ea-b767-00b7dba646a7" />
+
+<img width="957" height="745" alt="image" src="https://github.com/user-attachments/assets/1b5fd326-75fc-4fee-8778-f0d9ce342631" />
+
+<img width="955" height="746" alt="image" src="https://github.com/user-attachments/assets/5ca00f53-c433-48dc-854b-201c0be2440c" />
+
 
 ## 功能特性
 
@@ -114,7 +122,7 @@ bun run build:tauri
 
 支持任何 OpenAI 兼容 API（OpenAI、Claude、DeepSeek、Ollama 等）
 
-<img width="966" height="748" alt="image" src="https://github.com/user-attachments/assets/3d1e200d-c9ba-4721-9c0f-b2859687c697" />
+<img width="951" height="750" alt="image" src="https://github.com/user-attachments/assets/1bcfe49c-f786-49d0-8883-671b56634261" />
 
 ## 文件存储
 
