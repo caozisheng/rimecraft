@@ -4,8 +4,9 @@ import { getStoredLocale, setStoredLocale } from "./locale";
 import type { Messages } from "./zh";
 import zh from "./zh";
 import en from "./en";
+import ja from "./ja";
 
-const messages: Record<Locale, Messages> = { zh, en };
+const messages: Record<Locale, Messages> = { zh, en, ja };
 
 interface I18nState {
 	locale: Locale;

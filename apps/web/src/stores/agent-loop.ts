@@ -256,7 +256,7 @@ export async function runChatAgentLoop(
 				gameContext,
 				ragContext,
 				signal: abortController.signal,
-				locale: getStoredLocale(),
+				locale: getStoredLocale() === "zh" ? "zh" : "en",
 			});
 
 			let fullContent = "";

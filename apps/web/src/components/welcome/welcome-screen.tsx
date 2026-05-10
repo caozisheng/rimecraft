@@ -39,6 +39,13 @@ function formatRelativeTime(isoString: string, locale: string): string {
 		if (diffDay < 30) return `${diffDay} 天前`;
 		return date.toLocaleDateString("zh-CN");
 	}
+	if (locale === "ja") {
+		if (diffMin < 1) return "たった今";
+		if (diffMin < 60) return `${diffMin} 分前`;
+		if (diffHour < 24) return `${diffHour} 時間前`;
+		if (diffDay < 30) return `${diffDay} 日前`;
+		return date.toLocaleDateString("ja-JP");
+	}
 	if (diffMin < 1) return "just now";
 	if (diffMin < 60) return `${diffMin}m ago`;
 	if (diffHour < 24) return `${diffHour}h ago`;

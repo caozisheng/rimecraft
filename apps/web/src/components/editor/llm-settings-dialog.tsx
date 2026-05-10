@@ -69,7 +69,7 @@ export function LLMSettingsDialog({
 							{m.settings.language}
 						</label>
 						<div className="flex gap-2">
-							{(["zh", "en"] as Locale[]).map((l) => (
+							{(["zh", "en", "ja"] as Locale[]).map((l) => (
 								<button
 									key={l}
 									type="button"
@@ -80,7 +80,7 @@ export function LLMSettingsDialog({
 											: "border border-border bg-card text-foreground hover:bg-accent"
 									}`}
 								>
-									{l === "zh" ? "中文" : "English"}
+									{l === "zh" ? "中文" : l === "ja" ? "日本語" : "English"}
 								</button>
 							))}
 						</div>
