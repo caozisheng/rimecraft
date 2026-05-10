@@ -282,7 +282,7 @@ export class GameScene extends Phaser.Scene {
 		}
 
 		for (const npc of room.npcs) {
-			const sprite = this.add.image(npc.c * TILE + TILE / 2, npc.r * TILE + TILE / 2, "clown").setScale(0.6);
+			const sprite = this.add.image(npc.c * TILE + TILE / 2, npc.r * TILE + TILE / 2, "clown").setScale(0.9);
 			this.physics.add.existing(sprite, true);
 			this.npcSprites.add(sprite);
 			sprite.setData("dialog", npc.dialog);

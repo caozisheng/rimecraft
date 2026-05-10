@@ -20,6 +20,8 @@ const ja: Messages = {
 	welcome: {
 		tagline: "対話で創る、あなたの 2D ゲームの世界",
 		inputPlaceholder: "ゲームに名前を付けてください...",
+		templateSection: "テンプレートプロジェクト",
+		blankSection: "空のプロジェクト",
 		defaultName: "マイゲーム",
 		openProject: "プロジェクトを開く",
 		importFile: ".rimecraft ファイルをインポート",

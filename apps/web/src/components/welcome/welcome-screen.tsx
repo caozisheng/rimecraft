@@ -14,15 +14,18 @@ import { useI18n } from "@/i18n";
 import { LLMSettingsDialog } from "@/components/editor/llm-settings-dialog";
 import type { ProjectMeta } from "@rimecraft/core";
 
-const TEMPLATES = [
+const GAME_TEMPLATES = [
 	{ id: "endless-runner" as const, icon: "🦕" },
 	{ id: "platformer" as const, icon: "🍄" },
 	{ id: "space-shooter" as const, icon: "🚀" },
 	{ id: "rpg" as const, icon: "⚔️" },
 	{ id: "puzzle" as const, icon: "🧩" },
 	{ id: "breakout" as const, icon: "🧱" },
-	{ id: "blank" as const, icon: "✨" },
 ];
+
+const BLANK_TEMPLATE = { id: "blank" as const, icon: "✨" };
+
+const TEMPLATES = [...GAME_TEMPLATES, BLANK_TEMPLATE];
 
 function formatRelativeTime(isoString: string, locale: string): string {
 	const date = new Date(isoString);
@@ -182,9 +185,16 @@ export function WelcomeScreen() {
 					/>
 				</div>
 
+				{/* Divider with label */}
+				<div className="mb-4 flex w-full max-w-4xl items-center gap-3">
+					<div className="h-px flex-1 bg-border" />
+					<span className="text-xs font-medium text-muted-foreground">{m.welcome.templateSection}</span>
+					<div className="h-px flex-1 bg-border" />
+				</div>
+
 				{/* Template Grid */}
-				<div className="mb-4 grid w-full max-w-4xl grid-cols-4 gap-3 sm:grid-cols-7">
-					{TEMPLATES.map((template) => (
+				<div className="mb-4 grid w-full max-w-4xl grid-cols-3 gap-3 sm:grid-cols-6">
+					{GAME_TEMPLATES.map((template) => (
 						<button
 							key={template.id}
 							type="button"
@@ -198,6 +208,19 @@ export function WelcomeScreen() {
 							</span>
 						</button>
 					))}
+				</div>
+
+				{/* Blank Project */}
+				<div className="mb-4 w-full max-w-4xl">
+					<button
+						type="button"
+						disabled={isCreating}
+						onClick={() => handleCreateProject("blank")}
+						className="group flex w-full items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card p-3 transition-all hover:border-primary/50 hover:bg-accent disabled:opacity-50"
+					>
+						<span className="text-2xl">{BLANK_TEMPLATE.icon}</span>
+						<span className="text-sm font-medium">{m.welcome.blankSection}</span>
+					</button>
 				</div>
 
 				{/* Quick Actions */}

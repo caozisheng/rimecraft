@@ -20,6 +20,8 @@ const en: Messages = {
 	welcome: {
 		tagline: "Create your 2D game world through conversation",
 		inputPlaceholder: "Name your game...",
+		templateSection: "Template Projects",
+		blankSection: "Blank Project",
 		defaultName: "My Game",
 		openProject: "Open Project",
 		importFile: "Import .rimecraft file",

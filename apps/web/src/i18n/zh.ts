@@ -18,6 +18,8 @@ const zh = {
 	welcome: {
 		tagline: "用对话创造你的 2D 游戏世界",
 		inputPlaceholder: "给你的游戏起个名字...",
+		templateSection: "模板项目",
+		blankSection: "空白项目",
 		defaultName: "我的游戏",
 		openProject: "打开项目",
 		importFile: "导入 .rimecraft 文件",
