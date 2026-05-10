@@ -21,6 +21,10 @@ const GAME_TEMPLATES = [
 	{ id: "rpg" as const, icon: "⚔️" },
 	{ id: "puzzle" as const, icon: "🧩" },
 	{ id: "breakout" as const, icon: "🧱" },
+	{ id: "rhythm" as const, icon: "🎵" },
+	{ id: "board-game" as const, icon: "🎲" },
+	{ id: "tank" as const, icon: "🪖" },
+	{ id: "dodge" as const, icon: "⏱️" },
 ];
 
 const BLANK_TEMPLATE = { id: "blank" as const, icon: "✨" };

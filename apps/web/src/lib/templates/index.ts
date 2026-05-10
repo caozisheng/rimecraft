@@ -6,6 +6,10 @@ import { spaceShooterTemplate } from "./space-shooter";
 import { rpgTemplate } from "./rpg";
 import { puzzleTemplate } from "./puzzle";
 import { breakoutTemplate } from "./breakout";
+import { rhythmTemplate } from "./rhythm";
+import { boardGameTemplate } from "./board-game";
+import { tankTemplate } from "./tank";
+import { dodgeTemplate } from "./dodge";
 
 export interface TemplateFile {
 	path: string;
@@ -21,6 +25,10 @@ const TEMPLATE_MAP: Record<string, TemplateGenerator> = {
 	rpg: rpgTemplate,
 	puzzle: puzzleTemplate,
 	breakout: breakoutTemplate,
+	rhythm: rhythmTemplate,
+	"board-game": boardGameTemplate,
+	tank: tankTemplate,
+	dodge: dodgeTemplate,
 };
 
 export function generateTemplateFiles(meta: ProjectMeta): TemplateFile[] {
