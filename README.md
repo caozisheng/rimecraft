@@ -110,6 +110,9 @@ Set BaseURL / API Key / Model Name via the in-app Settings dialog.
 
 Supports any OpenAI-compatible API (OpenAI, Claude, DeepSeek, Ollama, etc.)
 
+<img width="966" height="748" alt="image" src="https://github.com/user-attachments/assets/3d1e200d-c9ba-4721-9c0f-b2859687c697" />
+
+
 ## File Storage
 
 RimeCraft uses different storage backends depending on the runtime environment.
