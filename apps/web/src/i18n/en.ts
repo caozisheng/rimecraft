@@ -26,7 +26,7 @@ const en: Messages = {
 		openProject: "Open Project",
 		importFile: "Import .rimecraft file",
 		creating: "Creating project...",
-		footer: "RimeCraft v0.1.5 — AI-powered 2D game creation tool for young creators",
+		footer: "RimeCraft v0.1.6 — AI-powered 2D game creation tool for young creators",
 		templates: {
 			"endless-runner": { name: "Endless Runner", description: "Dino-style endless runner game" },
 			platformer: { name: "Platformer", description: "Mario-style side-scrolling platformer" },
@@ -354,6 +354,14 @@ const en: Messages = {
 		modelHint: "e.g. gpt-4.1, deepseek-chat, claude-sonnet-4-20250514",
 		saved: "Saved!",
 		language: "Language",
+		update: "Updates",
+		currentVersion: "Current Version",
+		checkUpdate: "Check for Updates",
+		checking: "Checking...",
+		latestVersion: "You're up to date",
+		newVersion: "New version {version} available",
+		download: "Download Update",
+		checkFailed: "Failed to check for updates",
 	},
 
 	api: {

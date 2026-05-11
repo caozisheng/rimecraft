@@ -355,6 +355,14 @@ const ja: Messages = {
 		modelHint: "例: gpt-4.1, deepseek-chat, claude-sonnet-4-20250514",
 		saved: "保存しました！",
 		language: "言語",
+		update: "バージョン更新",
+		currentVersion: "現在のバージョン",
+		checkUpdate: "更新を確認",
+		checking: "確認中...",
+		latestVersion: "最新バージョンです",
+		newVersion: "新バージョン {version} が利用可能です",
+		download: "更新をダウンロード",
+		checkFailed: "更新の確認に失敗しました",
 	},
 
 	api: {

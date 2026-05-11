@@ -16,6 +16,12 @@ import { useLLMConfigStore, detectProvider } from "@/stores/llm-config-store";
 import { useProjectStore } from "@/stores/project-store";
 import { generateTemplateFiles } from "@/lib/templates";
 import { getEditorCore } from "@/core/editor-core";
+import {
+	checkForUpdates,
+	getCurrentVersion,
+	openDownloadPage,
+	type UpdateCheckResult,
+} from "@/lib/update-checker";
 
 export function LLMSettingsDialog({
 	open,
@@ -31,6 +37,11 @@ export function LLMSettingsDialog({
 	const [model, setModel] = useState("");
 	const [saved, setSaved] = useState(false);
 
+	const [updateStatus, setUpdateStatus] = useState<
+		"idle" | "checking" | "latest" | "available" | "error"
+	>("idle");
+	const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
+
 	useEffect(() => {
 		if (open) {
 			const s = useLLMConfigStore.getState();
@@ -38,6 +49,8 @@ export function LLMSettingsDialog({
 			setApiKey(s.apiKey);
 			setModel(s.model);
 			setSaved(false);
+			setUpdateStatus("idle");
+			setUpdateResult(null);
 		}
 	}, [open]);
 
@@ -49,6 +62,17 @@ export function LLMSettingsDialog({
 		});
 		setSaved(true);
 		setTimeout(() => onOpenChange(false), 600);
+	};
+
+	const handleCheckUpdate = async () => {
+		setUpdateStatus("checking");
+		try {
+			const result = await checkForUpdates();
+			setUpdateResult(result);
+			setUpdateStatus(result.hasUpdate ? "available" : "latest");
+		} catch {
+			setUpdateStatus("error");
+		}
 	};
 
 	return (
@@ -153,6 +177,57 @@ export function LLMSettingsDialog({
 						<p className="text-xs text-muted-foreground">
 							{m.settings.modelHint}
 						</p>
+					</div>
+
+					{/* Update check */}
+					<div className="grid gap-1.5 border-t border-border pt-4">
+						<label className="text-sm font-medium">
+							{m.settings.update}
+						</label>
+						<div className="flex items-center gap-3">
+							<span className="text-xs text-muted-foreground">
+								{m.settings.currentVersion}: v{getCurrentVersion()}
+							</span>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleCheckUpdate}
+								disabled={updateStatus === "checking"}
+								className="h-7 text-xs"
+							>
+								{updateStatus === "checking"
+									? m.settings.checking
+									: m.settings.checkUpdate}
+							</Button>
+						</div>
+						{updateStatus === "latest" && (
+							<p className="text-xs text-green-500">
+								{m.settings.latestVersion}
+							</p>
+						)}
+						{updateStatus === "available" && updateResult && (
+							<div className="flex items-center gap-2">
+								<p className="text-xs text-yellow-500">
+									{m.settings.newVersion.replace(
+										"{version}",
+										`v${updateResult.latestVersion}`,
+									)}
+								</p>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => openDownloadPage(updateResult.downloadUrl)}
+									className="h-7 text-xs"
+								>
+									{m.settings.download}
+								</Button>
+							</div>
+						)}
+						{updateStatus === "error" && (
+							<p className="text-xs text-red-500">
+								{m.settings.checkFailed}
+							</p>
+						)}
 					</div>
 				</div>
 

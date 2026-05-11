@@ -24,7 +24,7 @@ const zh = {
 		openProject: "打开项目",
 		importFile: "导入 .rimecraft 文件",
 		creating: "正在创建项目...",
-		footer: "RimeCraft v0.1.5 — 面向青少年的 AI 对话式 2D 游戏开发工具",
+		footer: "RimeCraft v0.1.6 — 面向青少年的 AI 对话式 2D 游戏开发工具",
 		templates: {
 			"endless-runner": { name: "无尽跑酷", description: "小恐龙风格的无尽跑酷游戏" },
 			platformer: { name: "平台跳跃", description: "超级马里奥风格的横版跳跃" },
@@ -353,6 +353,14 @@ const zh = {
 		modelHint: "e.g. gpt-4.1, deepseek-chat, claude-sonnet-4-20250514",
 		saved: "Saved!",
 		language: "Language",
+		update: "版本更新",
+		currentVersion: "当前版本",
+		checkUpdate: "检查更新",
+		checking: "检查中...",
+		latestVersion: "已是最新版本",
+		newVersion: "发现新版本 {version}",
+		download: "下载更新",
+		checkFailed: "检查更新失败",
 	},
 
 	api: {
