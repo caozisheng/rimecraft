@@ -38,6 +38,7 @@ const ja: Messages = {
 			"board-game": { name: "ボードゲーム", description: "サイコロで競うボードレースゲーム" },
 			tank: { name: "タンクバトル", description: "クラシックな戦車シューティング" },
 			dodge: { name: "ドッジ", description: "ドラッグで避けて、どこまで生き残れる？" },
+			"flappy-bird": { name: "フラッピーバード", description: "タップして鳥をパイプの間に飛ばそう" },
 			blank: { name: "空のプロジェクト", description: "ゼロから作成" },
 		},
 		suggestions: [
@@ -512,6 +513,14 @@ const ja: Messages = {
 			startGame: "▶  チャレンジ開始",
 			moveHint: "円をドラッグして避ける",
 			survived: "生存時間",
+			retry: "🔄  もう一度",
+		},
+		flappyBird: {
+			subtitle: "🐤 フラッピーバード",
+			startGame: "▶  ゲーム開始",
+			tapHint: "タップまたはスペースで羽ばたく",
+			bestScore: "ベスト",
+			newBest: "🎉 新記録！",
 			retry: "🔄  もう一度",
 		},
 	},

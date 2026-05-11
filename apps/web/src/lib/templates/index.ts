@@ -10,6 +10,7 @@ import { rhythmTemplate } from "./rhythm";
 import { boardGameTemplate } from "./board-game";
 import { tankTemplate } from "./tank";
 import { dodgeTemplate } from "./dodge";
+import { flappyBirdTemplate } from "./flappy-bird";
 
 export interface TemplateFile {
 	path: string;
@@ -29,6 +30,7 @@ const TEMPLATE_MAP: Record<string, TemplateGenerator> = {
 	"board-game": boardGameTemplate,
 	tank: tankTemplate,
 	dodge: dodgeTemplate,
+	"flappy-bird": flappyBirdTemplate,
 };
 
 export function generateTemplateFiles(meta: ProjectMeta): TemplateFile[] {

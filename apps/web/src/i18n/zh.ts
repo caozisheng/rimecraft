@@ -24,7 +24,7 @@ const zh = {
 		openProject: "打开项目",
 		importFile: "导入 .rimecraft 文件",
 		creating: "正在创建项目...",
-		footer: "RimeCraft v0.1.4 — 面向青少年的 AI 对话式 2D 游戏开发工具",
+		footer: "RimeCraft v0.1.5 — 面向青少年的 AI 对话式 2D 游戏开发工具",
 		templates: {
 			"endless-runner": { name: "无尽跑酷", description: "小恐龙风格的无尽跑酷游戏" },
 			platformer: { name: "平台跳跃", description: "超级马里奥风格的横版跳跃" },
@@ -36,6 +36,7 @@ const zh = {
 			"board-game": { name: "棋盘大战", description: "掷骰子对战的棋盘竞速游戏" },
 			tank: { name: "坦克大战", description: "经典坦克射击对战" },
 			dodge: { name: "生存闪避", description: "拖拽闪避，看你能撑多久" },
+			"flappy-bird": { name: "像素鸟", description: "点击屏幕让小鸟飞越管道" },
 			blank: { name: "空白项目", description: "从零开始创建" },
 		},
 		suggestions: [
@@ -510,6 +511,14 @@ const zh = {
 			startGame: "▶  开始挑战",
 			moveHint: "拖拽圆球来闪避",
 			survived: "你坚持了",
+			retry: "🔄  再来一次",
+		},
+		flappyBird: {
+			subtitle: "🐤 像素鸟",
+			startGame: "▶  开始游戏",
+			tapHint: "点击屏幕或按空格让小鸟飞起来",
+			bestScore: "最佳",
+			newBest: "🎉 新纪录！",
 			retry: "🔄  再来一次",
 		},
 	},
