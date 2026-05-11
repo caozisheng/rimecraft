@@ -9,7 +9,7 @@
   Describe your game idea in natural language, and AI agents will collaboratively write, debug, and preview Phaser games in real time.
 </p>
 
-<img width="955" height="746" alt="image" src="https://github.com/user-attachments/assets/03e49e64-d4fc-4c90-a2b1-c431c13faf8d" />
+<img width="2008" height="1256" alt="image" src="https://github.com/user-attachments/assets/c668846f-2af2-45c3-b2a6-a1a3d2ce0c81" />
 
 <img width="955" height="748" alt="image" src="https://github.com/user-attachments/assets/9c642f34-af2c-447b-821f-2c889381bbaa" />
 
