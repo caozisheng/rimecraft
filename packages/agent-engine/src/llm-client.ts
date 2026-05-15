@@ -1,37 +1,37 @@
-import type { AgentLLMConfig, ToolDefinition } from "./types";
-import { CloudLLMBackend, type LLMBackend, type StreamChunk } from "./llm-backend";
+import type { AgentLLMConfig, OpenAIMessage, StreamChunk, ToolDefinition } from "./types";
+import { CloudLLMBackend, type LLMBackend } from "./llm-backend";
+import { AnthropicLLMBackend } from "./anthropic-backend";
 
 const openaiBackend = new CloudLLMBackend();
+const anthropicBackend = new AnthropicLLMBackend();
+let customBackend: LLMBackend | null = null;
+
+export function registerLLMBackend(backend: LLMBackend): void {
+	customBackend = backend;
+}
+
+export function resolveProvider(config: AgentLLMConfig): string {
+	if (config.provider && config.provider !== "custom") return config.provider;
+	try {
+		const host = new URL(config.baseUrl).hostname;
+		if (host === "api.anthropic.com") return "anthropic";
+	} catch { /* fallback */ }
+	return "openai";
+}
 
 export function getLLMBackend(config: AgentLLMConfig): LLMBackend {
+	if (customBackend) return customBackend;
+	const provider = resolveProvider(config);
+	if (provider === "anthropic") return anthropicBackend;
 	return openaiBackend;
 }
 
 export function streamChatCompletion(
 	config: AgentLLMConfig,
-	messages: Record<string, unknown>[],
+	messages: OpenAIMessage[],
 	signal?: AbortSignal,
 	tools?: ToolDefinition[],
 ): AsyncGenerator<StreamChunk> {
 	const backend = getLLMBackend(config);
 	return backend.streamChat(config, messages, signal, tools);
-}
-
-export async function testLLMConnection(
-	config: AgentLLMConfig,
-): Promise<{ ok: boolean; error?: string; provider?: string }> {
-	const provider = config.provider ?? "openai-compatible";
-	try {
-		const response = await fetch(`${config.baseUrl}/models`, {
-			headers: { Authorization: `Bearer ${config.apiKey}` },
-		});
-		if (response.ok) return { ok: true, provider };
-		return { ok: false, error: `API returned ${response.status}`, provider };
-	} catch (error) {
-		return {
-			ok: false,
-			error: error instanceof Error ? error.message : "Connection failed",
-			provider,
-		};
-	}
 }

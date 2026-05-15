@@ -2,31 +2,39 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
 	const body = await request.json();
-	const { baseUrl, apiKey, ...payload } = body;
+	const { provider, baseUrl, apiKey, ...payload } = body;
 
 	if (!baseUrl || !apiKey) {
 		return NextResponse.json(
-			{ error: "请先在 LLM Settings 中配置 API Base URL 和 API Key" },
+			{ error: "Missing baseUrl or apiKey" },
 			{ status: 400 },
 		);
 	}
 
-	const target = `${baseUrl}/chat/completions`;
+	const isAnthropic = provider === "anthropic";
+	const target = isAnthropic
+		? `${baseUrl.replace(/\/+$/, "")}/v1/messages`
+		: `${baseUrl.replace(/\/+$/, "")}/chat/completions`;
+
+	const headers: Record<string, string> = { "Content-Type": "application/json" };
+	if (isAnthropic) {
+		headers["x-api-key"] = apiKey;
+		headers["anthropic-version"] = "2023-06-01";
+	} else {
+		headers.Authorization = `Bearer ${apiKey}`;
+	}
 
 	try {
 		const response = await fetch(target, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${apiKey}`,
-			},
+			headers,
 			body: JSON.stringify(payload),
 		});
 
 		if (!response.ok) {
 			const errorText = await response.text();
 			return NextResponse.json(
-				{ error: `API 返回 ${response.status}: ${errorText}` },
+				{ error: `API returned ${response.status}: ${errorText}` },
 				{ status: response.status },
 			);
 		}
@@ -47,7 +55,7 @@ export async function POST(request: NextRequest) {
 		const message =
 			error instanceof Error ? error.message : "Unknown error";
 		return NextResponse.json(
-			{ error: `无法连接到 ${target}: ${message}` },
+			{ error: `Cannot connect to ${target}: ${message}` },
 			{ status: 502 },
 		);
 	}

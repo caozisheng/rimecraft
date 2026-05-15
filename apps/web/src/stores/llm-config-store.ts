@@ -16,7 +16,8 @@ export function detectProvider(baseUrl: string): LLMProvider {
 	const lower = baseUrl.toLowerCase();
 	if (lower.includes("api.openai.com")) return "openai";
 	if (lower.includes("anthropic") || lower.includes("claude")) return "anthropic";
-	return "openai-compatible";
+	if (lower.includes("deepseek")) return "deepseek";
+	return "custom";
 }
 
 interface LLMConfigState extends AgentLLMConfig {

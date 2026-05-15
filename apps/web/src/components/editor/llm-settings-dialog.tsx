@@ -1,18 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
-	DialogDescription,
-	DialogFooter,
 } from "@rimecraft/ui";
-import { Input, Button } from "@rimecraft/ui";
+import { Button } from "@rimecraft/ui";
 import { useI18n } from "@/i18n";
 import type { Locale } from "@/i18n/locale";
-import { useLLMConfigStore, detectProvider } from "@/stores/llm-config-store";
 import { useProjectStore } from "@/stores/project-store";
 import { generateTemplateFiles } from "@/lib/templates";
 import { getEditorCore } from "@/core/editor-core";
@@ -31,38 +28,11 @@ export function LLMSettingsDialog({
 	onOpenChange: (open: boolean) => void;
 }) {
 	const { messages: m, locale, setLocale } = useI18n();
-	const store = useLLMConfigStore();
-	const [baseUrl, setBaseUrl] = useState("");
-	const [apiKey, setApiKey] = useState("");
-	const [model, setModel] = useState("");
-	const [saved, setSaved] = useState(false);
 
 	const [updateStatus, setUpdateStatus] = useState<
 		"idle" | "checking" | "latest" | "available" | "error"
 	>("idle");
 	const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
-
-	useEffect(() => {
-		if (open) {
-			const s = useLLMConfigStore.getState();
-			setBaseUrl(s.baseUrl);
-			setApiKey(s.apiKey);
-			setModel(s.model);
-			setSaved(false);
-			setUpdateStatus("idle");
-			setUpdateResult(null);
-		}
-	}, [open]);
-
-	const handleSave = () => {
-		store.saveAll({
-			baseUrl: baseUrl.trim(),
-			apiKey: apiKey.trim(),
-			model: model.trim(),
-		});
-		setSaved(true);
-		setTimeout(() => onOpenChange(false), 600);
-	};
 
 	const handleCheckUpdate = async () => {
 		setUpdateStatus("checking");
@@ -80,9 +50,6 @@ export function LLMSettingsDialog({
 			<DialogContent className="border-border bg-card">
 				<DialogHeader>
 					<DialogTitle>{m.settings.title}</DialogTitle>
-					<DialogDescription>
-						{m.settings.description}
-					</DialogDescription>
 				</DialogHeader>
 
 				<div className="grid gap-4 py-2">
@@ -120,63 +87,6 @@ export function LLMSettingsDialog({
 								</button>
 							))}
 						</div>
-					</div>
-
-					<div className="grid gap-1.5">
-						<label
-							htmlFor="llm-base-url"
-							className="text-sm font-medium"
-						>
-							{m.settings.baseUrl}
-						</label>
-						<Input
-							id="llm-base-url"
-							value={baseUrl}
-							onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBaseUrl(e.target.value)}
-							placeholder="https://api.openai.com/v1"
-						/>
-						<p className="text-xs text-muted-foreground">
-							{m.settings.baseUrlHint}
-							{baseUrl && (
-								<span className="ml-2 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-									{detectProvider(baseUrl)}
-								</span>
-							)}
-						</p>
-					</div>
-
-					<div className="grid gap-1.5">
-						<label
-							htmlFor="llm-api-key"
-							className="text-sm font-medium"
-						>
-							{m.settings.apiKey}
-						</label>
-						<Input
-							id="llm-api-key"
-							type="password"
-							value={apiKey}
-							onChange={(e: React.ChangeEvent<HTMLInputElement>) => setApiKey(e.target.value)}
-							placeholder="sk-..."
-						/>
-					</div>
-
-					<div className="grid gap-1.5">
-						<label
-							htmlFor="llm-model"
-							className="text-sm font-medium"
-						>
-							{m.settings.model}
-						</label>
-						<Input
-							id="llm-model"
-							value={model}
-							onChange={(e: React.ChangeEvent<HTMLInputElement>) => setModel(e.target.value)}
-							placeholder="gpt-4.1"
-						/>
-						<p className="text-xs text-muted-foreground">
-							{m.settings.modelHint}
-						</p>
 					</div>
 
 					{/* Update check */}
@@ -230,18 +140,6 @@ export function LLMSettingsDialog({
 						)}
 					</div>
 				</div>
-
-				<DialogFooter>
-					<Button
-						variant="outline"
-						onClick={() => onOpenChange(false)}
-					>
-						{m.common.cancel}
-					</Button>
-					<Button onClick={handleSave}>
-						{saved ? m.settings.saved : m.common.save}
-					</Button>
-				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

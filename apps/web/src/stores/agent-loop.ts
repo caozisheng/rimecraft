@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { getMessages, t } from "@/i18n";
 import { getStoredLocale } from "@/i18n/locale";
-import type { AgentMessage, ExpertRole } from "@rimecraft/agent-engine";
+import type { AgentMessage } from "@rimecraft/agent-engine";
 
 interface ChatActions {
 	addMessage: (
@@ -11,8 +11,8 @@ interface ChatActions {
 	) => AgentMessage;
 	get: () => {
 		messages: AgentMessage[];
-		expertRole: ExpertRole;
-		activeRoleId: ExpertRole | null;
+		expertRole: string;
+		activeRoleId: string | null;
 	};
 	set: (
 		partial:
@@ -200,12 +200,18 @@ export async function runChatAgentLoop(
 	set({ abortController });
 
 	try {
-		const { runAgentLoop, ToolRegistry } = await import(
+		const { runAgentLoop, ToolRegistry, SWITCH_ROLE_TOOL_NAME } = await import(
 			"@rimecraft/agent-engine"
 		);
+		const { registerGameExpertRoles } = await import("@/core/agent-roles");
+		const { getIdentityPrompt, getWorkRules, getGamePromptLayers } = await import("@/core/agent-prompts");
 
-		const { getLLMConfig } = await import("@/stores/llm-config-store");
-		const llmConfig = getLLMConfig();
+		registerGameExpertRoles();
+
+		const { getConfigForRole } = await import("@/stores/ai-settings-store");
+		let llmConfig = getConfigForRole(state.activeRoleId ?? state.expertRole);
+
+		const locale: "zh" | "en" = getStoredLocale() === "zh" ? "zh" : "en";
 
 		const maxIterations = state.expertRole === "director" ? 20 : 10;
 		let iterations = 0;
@@ -297,12 +303,16 @@ export async function runChatAgentLoop(
 			const events = runAgentLoop({
 				messages: currentMessages,
 				llmConfig,
-				expertRole: state.expertRole,
+				expertRoleId: state.expertRole,
 				activeRoleId: get().activeRoleId ?? undefined,
-				gameContext,
+				dynamicContext: gameContext,
 				ragContext,
+				identityPrompt: getIdentityPrompt(locale),
+				workRules: getWorkRules(locale),
+				customLayers: getGamePromptLayers(locale),
+				tools: ToolRegistry.getDefinitions(),
 				signal: abortController.signal,
-				locale: getStoredLocale() === "zh" ? "zh" : "en",
+				locale,
 			});
 
 			let fullContent = "";
@@ -368,12 +378,13 @@ export async function runChatAgentLoop(
 						for (const toolCall of event.toolCalls) {
 							if (
 								toolCall.function.name ===
-								"switch_expert_role"
+								SWITCH_ROLE_TOOL_NAME
 							) {
 								const args = JSON.parse(
 									toolCall.function.arguments,
 								);
 								set({ activeRoleId: args.role });
+								llmConfig = getConfigForRole(args.role);
 								addMessage(
 									"tool",
 									t(getMessages().agent.switchedRole, {
@@ -398,11 +409,11 @@ export async function runChatAgentLoop(
 									toolCallId: toolCall.id,
 									toolResults: [
 										{
-											toolName:
+											name:
 												toolCall.function.name,
 											success: result.success,
 											message: result.message,
-											undoable: result.undoable,
+											undoable: result.undoable ?? false,
 										},
 									],
 								});

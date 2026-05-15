@@ -14,10 +14,14 @@ import {
 	Copy,
 	Users,
 	RotateCcw,
+	Settings,
+	ArrowLeft,
 } from "lucide-react";
-import { EXPERT_ROLES, type AgentMessage, type ExpertRole } from "@rimecraft/agent-engine";
+import { ExpertRoleRegistry, type AgentMessage } from "@rimecraft/agent-engine";
+import type { GameExpertRole } from "@/core/agent-roles";
 import Markdown from "react-markdown";
 import { useI18n } from "@/i18n";
+import { AgentSettings } from "./agent-settings";
 
 function ToolCallCard({ msg }: { msg: AgentMessage }) {
 	const [expanded, setExpanded] = useState(false);
@@ -92,7 +96,7 @@ function ToolResultMessage({ msg }: { msg: AgentMessage }) {
 					<X className="h-3 w-3 text-red-400" />
 				)}
 				<span className="font-mono text-muted-foreground">
-					{result.toolName}
+					{result.name}
 				</span>
 				{result.undoable && (
 					<span className="rounded bg-game-primary/20 px-1 py-0.5 text-[10px] text-game-primary">
@@ -200,6 +204,7 @@ export function ChatPanel() {
 	const undoTurn = useChatStore((s) => s.undoTurn);
 	const [input, setInput] = useState("");
 	const [showRoleMenu, setShowRoleMenu] = useState(false);
+	const [view, setView] = useState<"chat" | "settings">("chat");
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
 	const interactiveComponents = useCallback((): import("react-markdown").Components => ({
@@ -249,47 +254,75 @@ export function ChatPanel() {
 		<div className="flex h-full flex-col bg-background">
 			{/* Header */}
 			<div className="flex items-center gap-2 border-b border-border px-4 py-3">
-				<Sparkles className="h-4 w-4 text-game-primary" />
-				<span className="text-sm font-medium">
-					{m.roles[currentRole]?.name ?? m.chat.aiAssistant}
-				</span>
-				<span className="hidden text-xs text-muted-foreground sm:inline">
-					{m.roles[currentRole]?.description}
-				</span>
-				<div className="relative ml-auto">
-					<button
-						type="button"
-						onClick={() => setShowRoleMenu(!showRoleMenu)}
-						disabled={status !== "idle"}
-						className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
-					>
-						<Users className="h-3 w-3" />
-						<span>{m.chat.switchRole}</span>
-						<ChevronDown className="h-3 w-3" />
-					</button>
-					{showRoleMenu && (
-						<div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border bg-card py-1 shadow-lg">
-							{(Object.keys(EXPERT_ROLES) as ExpertRole[]).map((id) => (
-								<button
-									key={id}
-									type="button"
-									onClick={() => {
-										setExpertRole(id);
-										setActiveRoleId(id === "director" ? null : id);
-										setShowRoleMenu(false);
-									}}
-									className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-accent ${currentRole === id ? "text-game-primary" : "text-foreground"}`}
-								>
-									<span className="font-medium">{m.roles[id]?.name}</span>
-									{currentRole === id && <Check className="ml-auto h-3 w-3 text-game-primary" />}
-								</button>
-							))}
+				{view === "settings" ? (
+					<>
+						<button
+							type="button"
+							onClick={() => setView("chat")}
+							className="flex items-center justify-center rounded-lg p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						>
+							<ArrowLeft className="h-4 w-4" />
+						</button>
+						<span className="text-sm font-medium">
+							{m.settings.title}
+						</span>
+					</>
+				) : (
+					<>
+						<Sparkles className="h-4 w-4 text-game-primary" />
+						<span className="text-sm font-medium">
+							{m.roles[currentRole]?.name ?? m.chat.aiAssistant}
+						</span>
+						<span className="hidden text-xs text-muted-foreground sm:inline">
+							{m.roles[currentRole]?.description}
+						</span>
+						<div className="relative ml-auto flex items-center gap-1">
+							<button
+								type="button"
+								onClick={() => setView("settings")}
+								className="flex items-center justify-center rounded-lg p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+							>
+								<Settings className="h-4 w-4" />
+							</button>
+							<button
+								type="button"
+								onClick={() => setShowRoleMenu(!showRoleMenu)}
+								disabled={status !== "idle"}
+								className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
+							>
+								<Users className="h-3 w-3" />
+								<span>{m.chat.switchRole}</span>
+								<ChevronDown className="h-3 w-3" />
+							</button>
+							{showRoleMenu && (
+								<div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border bg-card py-1 shadow-lg">
+									{(ExpertRoleRegistry.getAll().map(r => r.id) as GameExpertRole[]).map((id) => (
+										<button
+											key={id}
+											type="button"
+											onClick={() => {
+												setExpertRole(id);
+												setActiveRoleId(id === "director" ? null : id);
+												setShowRoleMenu(false);
+											}}
+											className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-accent ${currentRole === id ? "text-game-primary" : "text-foreground"}`}
+										>
+											<span className="font-medium">{m.roles[id]?.name}</span>
+											{currentRole === id && <Check className="ml-auto h-3 w-3 text-game-primary" />}
+										</button>
+									))}
+								</div>
+							)}
 						</div>
-					)}
-				</div>
+					</>
+				)}
 			</div>
 
-			{/* Messages */}
+			{view === "settings" ? (
+				<AgentSettings />
+			) : (
+				<>
+				{/* Messages */}
 			<div className="flex-1 overflow-y-auto px-4 py-4">
 				{messages.length === 0 && (
 					<div className="flex h-full flex-col items-center justify-center text-center">
@@ -436,6 +469,8 @@ export function ChatPanel() {
 					)}
 				</div>
 			</div>
+			</>
+			)}
 		</div>
 	);
 }

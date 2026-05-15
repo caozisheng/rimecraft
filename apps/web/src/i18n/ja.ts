@@ -363,6 +363,15 @@ const ja: Messages = {
 		newVersion: "新バージョン {version} が利用可能です",
 		download: "更新をダウンロード",
 		checkFailed: "更新の確認に失敗しました",
+		providerType: "API タイプ",
+		defaultConfig: "デフォルト設定",
+		defaultConfigHint: "Director（自動）",
+		perRoleConfig: "ロール別設定",
+		perRoleConfigHint: "特定のロールに異なる LLM を使用",
+		usingDefault: "デフォルト設定を使用中",
+		resetAll: "すべてデフォルトに戻す",
+		showKey: "キーを表示",
+		hideKey: "キーを非表示",
 	},
 
 	api: {

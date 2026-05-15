@@ -1,6 +1,6 @@
 [package]
 name = "rimecraft"
-version = "0.1.6"
+version = "0.1.7"
 description = "RimeCraft - AI-powered 2D game development tool for teens"
 edition = "2021"
 

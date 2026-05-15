@@ -1,7 +1,7 @@
 import type { ToolDefinition } from "./types";
 
 export interface ToolSuggestion {
-	type: "similar_id" | "similar_file" | "syntax_hint" | "alternative";
+	type: "similar_id" | "similar_name" | "similar_file" | "syntax_hint" | "alternative";
 	text: string;
 }
 
@@ -27,7 +27,7 @@ export function agentToolToDefinition(tool: AgentTool): ToolDefinition {
 		function: {
 			name: tool.name,
 			description: tool.description,
-			parameters: tool.parameters,
+			parameters: tool.parameters as ToolDefinition["function"]["parameters"],
 		},
 	};
 }

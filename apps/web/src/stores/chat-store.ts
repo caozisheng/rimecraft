@@ -4,7 +4,6 @@ import { getMessages } from "@/i18n";
 import type {
 	AgentMessage,
 	AgentStatus,
-	ExpertRole,
 } from "@rimecraft/agent-engine";
 import { runChatAgentLoop } from "./agent-loop";
 
@@ -24,8 +23,8 @@ interface ChatState {
 	messages: AgentMessage[];
 	status: AgentStatus;
 	streamingContent: string;
-	expertRole: ExpertRole;
-	activeRoleId: ExpertRole | null;
+	expertRole: string;
+	activeRoleId: string | null;
 	isOpen: boolean;
 	abortController: AbortController | null;
 	currentIteration: number;
@@ -40,8 +39,8 @@ interface ChatState {
 	appendStreamingContent: (delta: string) => void;
 	clearStreamingContent: () => void;
 	setStatus: (status: AgentStatus) => void;
-	setExpertRole: (role: ExpertRole) => void;
-	setActiveRoleId: (role: ExpertRole | null) => void;
+	setExpertRole: (role: string) => void;
+	setActiveRoleId: (role: string | null) => void;
 	setOpen: (open: boolean) => void;
 	setAbortController: (controller: AbortController | null) => void;
 	clearMessages: () => void;

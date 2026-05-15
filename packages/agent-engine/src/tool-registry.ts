@@ -1,51 +1,52 @@
 import type { AgentTool, AgentToolResult } from "./tool-types";
-import type { ToolCallInfo, ToolDefinition } from "./types";
 import { agentToolToDefinition } from "./tool-types";
+import type { ToolDefinition, ToolCall } from "./types";
 
-const toolMap = new Map<string, AgentTool>();
+const tools = new Map<string, AgentTool>();
 
 export const ToolRegistry = {
 	register(tool: AgentTool): void {
-		toolMap.set(tool.name, tool);
+		tools.set(tool.name, tool);
 	},
 
 	get(name: string): AgentTool | undefined {
-		return toolMap.get(name);
+		return tools.get(name);
 	},
 
 	getAll(): AgentTool[] {
-		return Array.from(toolMap.values());
+		return Array.from(tools.values());
 	},
 
 	getDefinitions(): ToolDefinition[] {
-		return Array.from(toolMap.values()).map(agentToolToDefinition);
+		return Array.from(tools.values()).map(agentToolToDefinition);
 	},
 
-	async executeToolCall(
-		toolCall: ToolCallInfo,
-	): Promise<AgentToolResult> {
-		const tool = toolMap.get(toolCall.function.name);
+	async executeToolCall(toolCall: ToolCall): Promise<AgentToolResult> {
+		const { name, arguments: argsStr } = toolCall.function;
+
+		let args: Record<string, unknown>;
+		try {
+			args = JSON.parse(argsStr);
+		} catch {
+			return { success: false, message: "Invalid JSON arguments" };
+		}
+
+		const tool = tools.get(name);
 		if (!tool) {
-			return {
-				success: false,
-				message: `Unknown tool: ${toolCall.function.name}`,
-			};
+			return { success: false, message: `Unknown tool: ${name}` };
 		}
 
 		try {
-			const args = JSON.parse(toolCall.function.arguments);
 			return await tool.execute(args);
-		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : String(error);
+		} catch (err) {
 			return {
 				success: false,
-				message: `Tool execution error: ${message}`,
+				message: err instanceof Error ? err.message : "Tool execution failed",
 			};
 		}
 	},
 
 	clear(): void {
-		toolMap.clear();
+		tools.clear();
 	},
 };

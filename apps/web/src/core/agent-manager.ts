@@ -1,4 +1,5 @@
 import { ToolRegistry } from "@rimecraft/agent-engine";
+import { registerGameExpertRoles } from "./agent-roles";
 import type { ProjectManager } from "./project-manager";
 import type { PreviewManager } from "./preview-manager";
 import type { CommandManager } from "./command-manager";
@@ -29,6 +30,7 @@ export class AgentManager {
 
 	async initialize(): Promise<void> {
 		if (this.initialized) return;
+		registerGameExpertRoles();
 		await this.registerTools();
 		this.initialized = true;
 	}
