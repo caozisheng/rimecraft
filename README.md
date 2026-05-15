@@ -122,7 +122,8 @@ Set BaseURL / API Key / Model Name via the in-app Settings dialog.
 
 Supports any OpenAI-compatible API (OpenAI, Claude, DeepSeek, Ollama, etc.)
 
-<img width="951" height="750" alt="image" src="https://github.com/user-attachments/assets/1bcfe49c-f786-49d0-8883-671b56634261" />
+<img width="2635" height="1767" alt="image" src="https://github.com/user-attachments/assets/1c9262de-3d1f-42c6-ac4c-ab5af0eb7ee0" />
+
 
 
 ## File Storage
