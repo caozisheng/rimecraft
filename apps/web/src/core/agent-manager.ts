@@ -1,4 +1,4 @@
-import { ToolRegistry } from "@rimecraft/agent-engine";
+import { ToolRegistry } from "@rime/agent-engine";
 import { registerGameExpertRoles } from "./agent-roles";
 import type { ProjectManager } from "./project-manager";
 import type { PreviewManager } from "./preview-manager";

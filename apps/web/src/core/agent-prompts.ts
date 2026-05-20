@@ -1,4 +1,4 @@
-import type { PromptLayer } from "@rimecraft/agent-engine";
+import type { PromptLayer } from "@rime/agent-engine";
 
 const IDENTITY_ZH = `你是 RimeCraft 的 AI 助手，一个面向青少年的 2D 游戏对话式开发工具。
 用户通过自然语言描述想法，你帮助他们使用 Phaser 4 创建 2D 游戏。

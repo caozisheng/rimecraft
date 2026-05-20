@@ -1,4 +1,4 @@
-import type { AgentTool } from "@rimecraft/agent-engine";
+import type { AgentTool } from "@rime/agent-engine";
 import type { ToolContext, Command } from "./tool-context";
 import { useProjectStore, getMessages, t, normalizeError } from "./tool-context";
 import { ASSET_CATALOG, searchCatalog } from "@/lib/assets/asset-catalog";

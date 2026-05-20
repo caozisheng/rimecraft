@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { AgentLLMConfig, LLMProvider } from "@rimecraft/agent-engine";
+import type { AgentLLMConfig, LLMProvider } from "@rime/agent-engine";
 
 const STORAGE_PREFIX = "rimecraft_llm_";
 

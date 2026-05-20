@@ -1,6 +1,6 @@
 {
 	"name": "@rimecraft/web",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"private": true,
 	"scripts": {
 		"dev": "next dev --turbopack",
@@ -17,7 +17,7 @@
 		"@radix-ui/react-separator": "^1.1.8",
 		"@radix-ui/react-slot": "^1.2.4",
 		"@radix-ui/react-tooltip": "^1.2.8",
-		"@rimecraft/agent-engine": "workspace:*",
+		"@rime/agent-engine": "workspace:*",
 		"@rimecraft/code-editor": "workspace:*",
 		"@rimecraft/core": "workspace:*",
 		"@rimecraft/phaser-runtime": "workspace:*",

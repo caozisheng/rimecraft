@@ -6,7 +6,7 @@ import {
 	type RoleLLMOverride,
 } from "@/stores/ai-settings-store";
 import { GAME_EXPERT_ROLES, type GameExpertRole } from "@/core/agent-roles";
-import type { LLMProvider } from "@rimecraft/agent-engine";
+import type { LLMProvider } from "@rime/agent-engine";
 import { Eye, EyeOff } from "lucide-react";
 import { useI18n } from "@/i18n";
 

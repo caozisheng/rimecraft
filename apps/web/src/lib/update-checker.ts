@@ -1,5 +1,7 @@
+import pkg from "../../package.json";
+
 const GITHUB_REPO = "caozisheng/rimecraft";
-const CURRENT_VERSION = "0.1.5";
+const CURRENT_VERSION = pkg.version;
 
 export interface UpdateCheckResult {
 	hasUpdate: boolean;

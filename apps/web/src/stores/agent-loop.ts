@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { getMessages, t } from "@/i18n";
 import { getStoredLocale } from "@/i18n/locale";
-import type { AgentMessage } from "@rimecraft/agent-engine";
+import type { AgentMessage } from "@rime/agent-engine";
 
 interface ChatActions {
 	addMessage: (
@@ -201,7 +201,7 @@ export async function runChatAgentLoop(
 
 	try {
 		const { runAgentLoop, ToolRegistry, SWITCH_ROLE_TOOL_NAME } = await import(
-			"@rimecraft/agent-engine"
+			"@rime/agent-engine"
 		);
 		const { registerGameExpertRoles } = await import("@/core/agent-roles");
 		const { getIdentityPrompt, getWorkRules, getGamePromptLayers } = await import("@/core/agent-prompts");

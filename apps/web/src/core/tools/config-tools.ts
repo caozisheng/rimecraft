@@ -1,4 +1,4 @@
-import type { AgentTool } from "@rimecraft/agent-engine";
+import type { AgentTool } from "@rime/agent-engine";
 import type { ToolContext } from "./tool-context";
 import { getMessages, t, normalizeError } from "./tool-context";
 import { useGameStore } from "@/stores/game-store";

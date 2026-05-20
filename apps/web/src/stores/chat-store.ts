@@ -4,7 +4,7 @@ import { getMessages } from "@/i18n";
 import type {
 	AgentMessage,
 	AgentStatus,
-} from "@rimecraft/agent-engine";
+} from "@rime/agent-engine";
 import { runChatAgentLoop } from "./agent-loop";
 
 let _saveChatTimer: ReturnType<typeof setTimeout> | null = null;

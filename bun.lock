@@ -12,7 +12,7 @@
     },
     "apps/tauri": {
       "name": "@rimecraft/tauri",
-      "version": "0.1.0",
+      "version": "0.1.7",
       "dependencies": {
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -20,7 +20,7 @@
         "@radix-ui/react-separator": "^1.1.8",
         "@radix-ui/react-slot": "^1.2.4",
         "@radix-ui/react-tooltip": "^1.2.8",
-        "@rimecraft/agent-engine": "workspace:*",
+        "@rime/agent-engine": "workspace:*",
         "@rimecraft/core": "workspace:*",
         "@rimecraft/phaser-runtime": "workspace:*",
         "@rimecraft/ui": "workspace:*",
@@ -62,7 +62,7 @@
     },
     "apps/web": {
       "name": "@rimecraft/web",
-      "version": "0.1.0",
+      "version": "0.1.7",
       "dependencies": {
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -70,7 +70,7 @@
         "@radix-ui/react-separator": "^1.1.8",
         "@radix-ui/react-slot": "^1.2.4",
         "@radix-ui/react-tooltip": "^1.2.8",
-        "@rimecraft/agent-engine": "workspace:*",
+        "@rime/agent-engine": "workspace:*",
         "@rimecraft/code-editor": "workspace:*",
         "@rimecraft/core": "workspace:*",
         "@rimecraft/phaser-runtime": "workspace:*",
@@ -112,17 +112,18 @@
       },
     },
     "packages/agent-engine": {
-      "name": "@rimecraft/agent-engine",
+      "name": "@rime/agent-engine",
       "version": "0.1.0",
       "dependencies": {
-        "eventemitter3": "^5.0.1",
         "nanoid": "^5.1.5",
-        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "typescript": "^5.8.3",
       },
     },
     "packages/code-editor": {
       "name": "@rimecraft/code-editor",
-      "version": "0.1.0",
+      "version": "0.1.7",
       "dependencies": {
         "@monaco-editor/react": "^4.7.0",
         "monaco-editor": "^0.52.0",
@@ -138,7 +139,7 @@
     },
     "packages/core": {
       "name": "@rimecraft/core",
-      "version": "0.1.0",
+      "version": "0.1.7",
       "dependencies": {
         "uuid": "^11.1.0",
       },
@@ -148,7 +149,7 @@
     },
     "packages/phaser-runtime": {
       "name": "@rimecraft/phaser-runtime",
-      "version": "0.1.0",
+      "version": "0.1.7",
       "dependencies": {
         "eventemitter3": "^5.0.1",
         "phaser": "4.0.0",
@@ -156,7 +157,7 @@
     },
     "packages/ui": {
       "name": "@rimecraft/ui",
-      "version": "0.1.0",
+      "version": "0.1.7",
       "dependencies": {
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -411,7 +412,7 @@
 
     "@radix-ui/rect": ["@radix-ui/rect@1.1.1", "https://registry.npmmirror.com/@radix-ui/rect/-/rect-1.1.1.tgz", {}, "sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw=="],
 
-    "@rimecraft/agent-engine": ["@rimecraft/agent-engine@workspace:packages/agent-engine"],
+    "@rime/agent-engine": ["@rime/agent-engine@workspace:packages/agent-engine"],
 
     "@rimecraft/code-editor": ["@rimecraft/code-editor@workspace:packages/code-editor"],
 
