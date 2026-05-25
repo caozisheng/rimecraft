@@ -89,6 +89,36 @@ bun run dev:tauri
 
 # リリースビルド
 bun run build:tauri
+
+# Linux x64
+bun run build:tauri:linux-x64
+
+# Linux ARM64
+bun run build:tauri:linux-arm64
+
+# macOS Apple Silicon
+bun run build:tauri:macos-arm64
+
+# macOS Intel
+bun run build:tauri:macos-x64
+
+# macOS Universal (Apple Silicon + Intel)
+bun run build:tauri:macos-universal
+```
+
+#### Linux システム依存パッケージ
+
+Linux で Tauri デスクトップアプリをビルドするには、以下のシステムパッケージが必要です：
+
+```bash
+# Ubuntu / Debian
+sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev libayatana-appindicator3-dev
+
+# Fedora
+sudo dnf install webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel patchelf openssl-devel libayatana-appindicator-gtk3-devel
+
+# Arch Linux
+sudo pacman -S webkit2gtk-4.1 libappindicator-gtk3 librsvg patchelf openssl ayatana-appindicator
 ```
 
 ## コマンド
@@ -100,6 +130,12 @@ bun run build:tauri
 | `bun dev:tauri`   | Tauri デスクトップ開発を起動   |
 | `bun build`       | すべてのパッケージとアプリをビルド |
 | `bun build:web`   | Web アプリをビルド             |
+| `bun build:tauri`              | Tauri デスクトップをビルド（現在のプラットフォーム） |
+| `bun build:tauri:linux-x64`    | Linux x86_64 向けビルド        |
+| `bun build:tauri:linux-arm64`  | Linux ARM64 向けビルド         |
+| `bun build:tauri:macos-arm64`  | macOS Apple Silicon 向けビルド |
+| `bun build:tauri:macos-x64`    | macOS Intel 向けビルド         |
+| `bun build:tauri:macos-universal`| macOS ユニバーサルビルド（ファットバイナリ） |
 | `bun lint`        | Biome でリント                 |
 | `bun lint:fix`    | リント問題を自動修正           |
 | `bun format`      | コードをフォーマット           |

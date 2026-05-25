@@ -89,6 +89,36 @@ bun run dev:tauri
 
 # Release build
 bun run build:tauri
+
+# Linux x64
+bun run build:tauri:linux-x64
+
+# Linux ARM64
+bun run build:tauri:linux-arm64
+
+# macOS Apple Silicon
+bun run build:tauri:macos-arm64
+
+# macOS Intel
+bun run build:tauri:macos-x64
+
+# macOS Universal (Apple Silicon + Intel)
+bun run build:tauri:macos-universal
+```
+
+#### Linux System Dependencies
+
+Building the Tauri desktop app on Linux requires the following system packages:
+
+```bash
+# Ubuntu / Debian
+sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev libayatana-appindicator3-dev
+
+# Fedora
+sudo dnf install webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel patchelf openssl-devel libayatana-appindicator-gtk3-devel
+
+# Arch Linux
+sudo pacman -S webkit2gtk-4.1 libappindicator-gtk3 librsvg patchelf openssl ayatana-appindicator
 ```
 
 ## Commands
@@ -100,6 +130,12 @@ bun run build:tauri
 | `bun dev:tauri` | Start Tauri desktop dev     |
 | `bun build`     | Build all packages and apps |
 | `bun build:web` | Build web app               |
+| `bun build:tauri`            | Build Tauri desktop (current platform) |
+| `bun build:tauri:linux-x64`  | Build Tauri for Linux x86_64           |
+| `bun build:tauri:linux-arm64`| Build Tauri for Linux ARM64            |
+| `bun build:tauri:macos-arm64`| Build Tauri for macOS Apple Silicon    |
+| `bun build:tauri:macos-x64`  | Build Tauri for macOS Intel            |
+| `bun build:tauri:macos-universal`| Build Tauri for macOS Universal (fat binary) |
 | `bun lint`      | Lint with Biome             |
 | `bun lint:fix`  | Auto-fix lint issues        |
 | `bun format`    | Format code                 |

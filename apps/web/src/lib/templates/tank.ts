@@ -136,8 +136,8 @@ export const LEVEL_MAP: number[][] = [
 	[0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0],
 	[0,0,1,0,0,1,0,2,2,0,1,0,0,1,0,0],
 	[0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0],
-	[0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0],
-	[0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+	[0,0,1,0,0,0,1,1,1,1,0,0,0,1,0,0],
+	[0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0],
 	[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 ];
 `,
@@ -399,8 +399,9 @@ export class GameScene extends Phaser.Scene {
 			}
 
 			let hit = false;
+			const bhs = b.rect.width / 2;
 			for (let j = this.bricks.length - 1; j >= 0; j--) {
-				if (this.pointInRect(b.rect.x, b.rect.y, this.bricks[j])) {
+				if (this.rectsOverlap(b.rect.x, b.rect.y, bhs, this.bricks[j].x, this.bricks[j].y, (TILE - 2) / 2)) {
 					this.explodeAt(this.bricks[j].x, this.bricks[j].y, BRICK_COLOR);
 					this.bricks[j].destroy(); this.bricks.splice(j, 1);
 					this.sfx.hitWall(); hit = true; break;
@@ -409,13 +410,13 @@ export class GameScene extends Phaser.Scene {
 			if (hit) { b.rect.destroy(); bullets.splice(i, 1); continue; }
 
 			for (const ir of this.irons) {
-				if (this.pointInRect(b.rect.x, b.rect.y, ir)) {
+				if (this.rectsOverlap(b.rect.x, b.rect.y, bhs, ir.x, ir.y, (TILE - 2) / 2)) {
 					this.sfx.hitWall(); hit = true; break;
 				}
 			}
 			if (hit) { b.rect.destroy(); bullets.splice(i, 1); continue; }
 
-			if (this.nestAlive && this.pointInRect(b.rect.x, b.rect.y, this.nest)) {
+			if (this.nestAlive && this.rectsOverlap(b.rect.x, b.rect.y, bhs, this.nest.x, this.nest.y, (TILE * 2 - 4) / 2)) {
 				this.nestAlive = false;
 				this.nest.setFillStyle(0x7f1d1d);
 				this.explodeAt(this.nest.x, this.nest.y, NEST_COLOR);
@@ -427,7 +428,7 @@ export class GameScene extends Phaser.Scene {
 			if (isPlayer) {
 				for (const e of this.enemies) {
 					if (!e.alive) continue;
-					if (this.pointInRect(b.rect.x, b.rect.y, e.body)) {
+					if (this.rectsOverlap(b.rect.x, b.rect.y, bhs, e.body.x, e.body.y, (TILE - 4) / 2)) {
 						e.hp--;
 						if (e.hp <= 0) {
 							e.alive = false; e.body.destroy(); e.turret.destroy();
@@ -446,7 +447,7 @@ export class GameScene extends Phaser.Scene {
 				}
 				if (hit) { b.rect.destroy(); bullets.splice(i, 1); continue; }
 			} else {
-				if (this.playerAlive && this.pointInRect(b.rect.x, b.rect.y, this.player.body)) {
+				if (this.playerAlive && this.rectsOverlap(b.rect.x, b.rect.y, bhs, this.player.body.x, this.player.body.y, (TILE - 4) / 2)) {
 					this.playerHit();
 					b.rect.destroy(); bullets.splice(i, 1); continue;
 				}
@@ -517,11 +518,6 @@ export class GameScene extends Phaser.Scene {
 
 	private rectsOverlap(ax: number, ay: number, ahs: number, bx: number, by: number, bhs: number): boolean {
 		return Math.abs(ax - bx) < ahs + bhs && Math.abs(ay - by) < ahs + bhs;
-	}
-
-	private pointInRect(px: number, py: number, r: any): boolean {
-		const hs = r.width / 2;
-		return Math.abs(px - r.x) < hs && Math.abs(py - r.y) < r.height / 2;
 	}
 }
 `,

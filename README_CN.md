@@ -89,6 +89,36 @@ bun run dev:tauri
 
 # 正式构建
 bun run build:tauri
+
+# Linux x64
+bun run build:tauri:linux-x64
+
+# Linux ARM64
+bun run build:tauri:linux-arm64
+
+# macOS Apple Silicon
+bun run build:tauri:macos-arm64
+
+# macOS Intel
+bun run build:tauri:macos-x64
+
+# macOS Universal (Apple Silicon + Intel)
+bun run build:tauri:macos-universal
+```
+
+#### Linux 系统依赖
+
+在 Linux 上构建 Tauri 桌面应用需要安装以下系统包：
+
+```bash
+# Ubuntu / Debian
+sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev libayatana-appindicator3-dev
+
+# Fedora
+sudo dnf install webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel patchelf openssl-devel libayatana-appindicator-gtk3-devel
+
+# Arch Linux
+sudo pacman -S webkit2gtk-4.1 libappindicator-gtk3 librsvg patchelf openssl ayatana-appindicator
 ```
 
 ## 命令
@@ -100,6 +130,12 @@ bun run build:tauri
 | `bun dev:tauri`   | 启动 Tauri 桌面开发      |
 | `bun build`       | 构建所有包和应用         |
 | `bun build:web`   | 构建 Web 应用            |
+| `bun build:tauri`              | 构建 Tauri 桌面版（当前平台） |
+| `bun build:tauri:linux-x64`    | 构建 Linux x86_64 版本        |
+| `bun build:tauri:linux-arm64`  | 构建 Linux ARM64 版本         |
+| `bun build:tauri:macos-arm64`  | 构建 macOS Apple Silicon 版本 |
+| `bun build:tauri:macos-x64`    | 构建 macOS Intel 版本         |
+| `bun build:tauri:macos-universal`| 构建 macOS 通用版本（胖二进制）|
 | `bun lint`        | 使用 Biome 进行代码检查  |
 | `bun lint:fix`    | 自动修复代码检查问题     |
 | `bun format`      | 格式化代码               |

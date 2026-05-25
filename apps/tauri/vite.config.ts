@@ -30,9 +30,9 @@ export default defineConfig({
 	},
 
 	build: {
-		target: ["windows", "android"].includes(process.env.TAURI_ENV_PLATFORM ?? "")
-			? "chrome130"
-			: "safari15",
+		target: ["macos", "ios"].includes(process.env.TAURI_ENV_PLATFORM ?? "")
+			? "safari15"
+			: "chrome130",
 		minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
 		sourcemap: !!process.env.TAURI_ENV_DEBUG,
 	},
