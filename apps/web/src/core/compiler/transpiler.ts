@@ -13,9 +13,9 @@ export function transpileTypeScript(code: string): string {
 		"",
 	);
 
-	// Remove interface and type alias declarations (including multi-line)
+	// Remove interface and type alias declarations (including multi-line, up to one level of nested braces)
 	result = result.replace(
-		/(?:export\s+)?(?:interface|type)\s+\w+(?:<[^>]*>)?\s*(?:extends\s+[^{]*)?\{[^}]*\}\n?/g,
+		/(?:export\s+)?(?:interface|type)\s+\w+(?:<[^>]*>)?\s*(?:extends\s+[^{]*)?\{(?:[^{}]*|\{[^}]*\})*\}\n?/g,
 		"",
 	);
 
@@ -72,14 +72,20 @@ export function transpileTypeScript(code: string): string {
 
 	// Class property declarations with type only: `  score: number;`
 	result = result.replace(
-		/^(\s+\w+)[?!]?\s*:\s*[^=\n;{]+;/gm,
+		/^(\s+(?!default\b|case\b)\w+)[?!]?\s*:\s*[^=\n;{]+;/gm,
 		"$1;",
 	);
 
 	// Class property declarations with type and initializer: `  score: number = 0`
 	result = result.replace(
-		/^(\s+\w+)[?!]?\s*:\s*[^=\n;{]+(\s*=(?!>))/gm,
+		/^(\s+(?!default\b|case\b)\w+)[?!]?\s*:\s*[^=\n;{]+(\s*=(?!>))/gm,
 		"$1$2",
+	);
+
+	// Return type annotations with object types: `): { x: T; y: T } {`
+	result = result.replace(
+		/(\))\s*:\s*\{(?:[^{}]*|\{[^}]*\})*\}\s*(\{)/g,
+		"$1 $2",
 	);
 
 	// Return type annotations: `) : Type {`

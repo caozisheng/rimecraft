@@ -26,7 +26,7 @@ const en: Messages = {
 		openProject: "Open Project",
 		importFile: "Import .rimecraft file",
 		creating: "Creating project...",
-		footer: "RimeCraft v0.1.8 — AI-powered 2D game creation tool for young creators",
+		footer: "RimeCraft v0.1.9 — AI-powered 2D game creation tool for young creators",
 		templates: {
 			"endless-runner": { name: "Endless Runner", description: "Dino-style endless runner game" },
 			platformer: { name: "Platformer", description: "Mario-style side-scrolling platformer" },
@@ -39,6 +39,7 @@ const en: Messages = {
 			tank: { name: "Tank Battle", description: "Classic tank shooting game" },
 			dodge: { name: "Dodge", description: "Drag to dodge, how long can you survive?" },
 			"flappy-bird": { name: "Flappy Bird", description: "Tap to fly through the pipes" },
+			pacman: { name: "Pac-Man", description: "Classic maze chase arcade game" },
 			blank: { name: "Blank Project", description: "Start from scratch" },
 		},
 		suggestions: [
@@ -537,6 +538,16 @@ const en: Messages = {
 			tapHint: "Tap or press SPACE to flap",
 			bestScore: "Best",
 			newBest: "🎉 New Best!",
+			retry: "🔄  Try Again",
+		},
+		pacman: {
+			subtitle: "👻 Pac-Man",
+			moveHint: "Arrow keys to move",
+			lives: "Lives",
+			getReady: "GET READY!",
+			gameOver: "GAME OVER",
+			youWin: "🎉 YOU WIN!",
+			finalScore: "Final Score",
 			retry: "🔄  Try Again",
 		},
 	},
