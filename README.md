@@ -112,7 +112,7 @@ Building the Tauri desktop app on Linux requires the following system packages:
 
 ```bash
 # Ubuntu / Debian
-sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev libayatana-appindicator3-dev
+sudo apt install libwebkit2gtk-4.1-dev librsvg2-dev patchelf libssl-dev libayatana-appindicator3-dev
 
 # Fedora
 sudo dnf install webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel patchelf openssl-devel libayatana-appindicator-gtk3-devel
