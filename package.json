@@ -4,7 +4,7 @@
 	"packageManager": "bun@1.2.18",
 	"workspaces": ["apps/*", "packages/*"],
 	"scripts": {
-		"postinstall": "cp apps/web/node_modules/phaser/dist/phaser.min.js apps/web/public/phaser.min.js",
+		"postinstall": "node -e \"const fs=require('fs'),p=require('path');const d=p.join('apps','web','public','phaser.min.js');for(const r of['apps/web/node_modules','node_modules']){const s=p.join(r,'phaser','dist','phaser.min.js');if(fs.existsSync(s)){fs.copyFileSync(s,d);break;}}\"",
 		"dev": "turbo run dev",
 		"dev:web": "turbo run dev --filter=@rimecraft/web",
 		"dev:tauri": "cd apps/tauri && bun run tauri dev",
