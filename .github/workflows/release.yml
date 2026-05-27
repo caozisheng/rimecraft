@@ -1,0 +1,165 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux-x64:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libayatana-appindicator3-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tauri/src-tauri -> target
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.18"
+      - run: bun install
+      - run: bun run build:tauri:linux-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: |
+            apps/tauri/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+            apps/tauri/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
+            apps/tauri/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+
+  build-linux-arm64:
+    runs-on: ubuntu-22.04-arm
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libayatana-appindicator3-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tauri/src-tauri -> target
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.18"
+      - run: bun install
+      - run: bun run build:tauri:linux-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: |
+            apps/tauri/src-tauri/target/aarch64-unknown-linux-gnu/release/bundle/deb/*.deb
+            apps/tauri/src-tauri/target/aarch64-unknown-linux-gnu/release/bundle/rpm/*.rpm
+            apps/tauri/src-tauri/target/aarch64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+
+  build-macos-arm64:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tauri/src-tauri -> target
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.18"
+      - run: bun install
+      - run: bun run build:tauri:macos-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64
+          path: |
+            apps/tauri/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+
+  build-macos-universal:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tauri/src-tauri -> target
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.18"
+      - run: bun install
+      - run: bun run build:tauri:macos-universal
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal
+          path: |
+            apps/tauri/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+
+  build-windows-x64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tauri/src-tauri -> target
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.18"
+      - run: bun install
+      - run: bun run build:tauri
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: |
+            apps/tauri/src-tauri/target/release/bundle/msi/*.msi
+            apps/tauri/src-tauri/target/release/bundle/nsis/*.exe
+
+  release:
+    needs:
+      - build-linux-x64
+      - build-linux-arm64
+      - build-macos-arm64
+      - build-macos-universal
+      - build-windows-x64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" -o -name "*.dmg" -o -name "*.msi" -o -name "*.exe" \) -exec cp {} release/ \;
+          ls -lh release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release/*

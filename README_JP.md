@@ -99,9 +99,6 @@ bun run build:tauri:linux-arm64
 # macOS Apple Silicon
 bun run build:tauri:macos-arm64
 
-# macOS Intel
-bun run build:tauri:macos-x64
-
 # macOS Universal (Apple Silicon + Intel)
 bun run build:tauri:macos-universal
 ```
@@ -134,7 +131,6 @@ sudo pacman -S webkit2gtk-4.1 libappindicator-gtk3 librsvg patchelf openssl ayat
 | `bun build:tauri:linux-x64`    | Linux x86_64 向けビルド        |
 | `bun build:tauri:linux-arm64`  | Linux ARM64 向けビルド         |
 | `bun build:tauri:macos-arm64`  | macOS Apple Silicon 向けビルド |
-| `bun build:tauri:macos-x64`    | macOS Intel 向けビルド         |
 | `bun build:tauri:macos-universal`| macOS ユニバーサルビルド（ファットバイナリ） |
 | `bun lint`        | Biome でリント                 |
 | `bun lint:fix`    | リント問題を自動修正           |

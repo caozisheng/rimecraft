@@ -2,9 +2,6 @@ name: Build macOS
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
 
 jobs:
   build-macos-arm64:
@@ -40,40 +37,6 @@ jobs:
           path: |
             apps/tauri/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
             apps/tauri/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
-
-  build-macos-x64:
-    runs-on: macos-13
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-apple-darwin
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: apps/tauri/src-tauri -> target
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.2.18"
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build Tauri (macOS Intel)
-        run: bun run build:tauri:macos-x64
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: rimecraft-macos-x64
-          path: |
-            apps/tauri/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
-            apps/tauri/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app
 
   build-macos-universal:
     runs-on: macos-14
