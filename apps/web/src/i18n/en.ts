@@ -26,7 +26,7 @@ const en: Messages = {
 		openProject: "Open Project",
 		importFile: "Import .rimecraft file",
 		creating: "Creating project...",
-		footer: "RimeCraft v0.1.9 — AI-powered 2D game creation tool for young creators",
+		footer: "RimeCraft v0.2.0 — AI-powered 2D game creation tool for young creators",
 		templates: {
 			"endless-runner": { name: "Endless Runner", description: "Dino-style endless runner game" },
 			platformer: { name: "Platformer", description: "Mario-style side-scrolling platformer" },
