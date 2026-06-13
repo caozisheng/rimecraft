@@ -12,6 +12,8 @@ import { tankTemplate } from "./tank";
 import { dodgeTemplate } from "./dodge";
 import { flappyBirdTemplate } from "./flappy-bird";
 import { pacmanTemplate } from "./pacman";
+import { quickRushTemplate } from "./quick-rush";
+import { skeletonGuardTemplate } from "./skeleton-guard";
 
 export interface TemplateFile {
 	path: string;
@@ -33,6 +35,8 @@ const TEMPLATE_MAP: Record<string, TemplateGenerator> = {
 	dodge: dodgeTemplate,
 	"flappy-bird": flappyBirdTemplate,
 	pacman: pacmanTemplate,
+	"quick-rush": quickRushTemplate,
+	"skeleton-guard": skeletonGuardTemplate,
 };
 
 export function generateTemplateFiles(meta: ProjectMeta): TemplateFile[] {

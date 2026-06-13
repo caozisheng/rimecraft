@@ -26,7 +26,9 @@ const GAME_TEMPLATES = [
 	{ id: "tank" as const, icon: "🪖" },
 	{ id: "dodge" as const, icon: "⏱️" },
 	{ id: "flappy-bird" as const, icon: "🐤" },
-	{ id: "pacman" as const, icon: "🟡" },
+	{ id: "pacman" as const, icon: "ᗧ" },
+	{ id: "quick-rush" as const, icon: "🏃" },
+	{ id: "skeleton-guard" as const, icon: "🏰" },
 ];
 
 const BLANK_TEMPLATE = { id: "blank" as const, icon: "✨" };
