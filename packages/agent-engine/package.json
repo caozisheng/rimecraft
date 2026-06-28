@@ -1,6 +1,6 @@
 {
 	"name": "@rime/agent-engine",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"private": false,
 	"description": "Host-agnostic LLM agent engine with tool registry, streaming, and expert role orchestration",
 	"type": "module",

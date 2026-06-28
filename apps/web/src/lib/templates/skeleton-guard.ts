@@ -8,23 +8,88 @@ export function skeletonGuardTemplate(meta: ProjectMeta): TemplateFile[] {
 		{
 			path: "src/main.ts",
 			content: `import Phaser from "phaser";
+import { BootScene } from "./scenes/boot-scene";
 import { MenuScene } from "./scenes/menu-scene";
 import { GameScene } from "./scenes/game-scene";
 import { GameOverScene } from "./scenes/game-over-scene";
 
-const config = {
+const config: Phaser.Types.Core.GameConfig = {
 	type: Phaser.AUTO,
-	width: 800,
-	height: 500,
+	width: 512,
+	height: 256,
 	backgroundColor: "#1a1a2e",
+	scale: {
+		mode: Phaser.Scale.FIT,
+		autoCenter: Phaser.Scale.CENTER_BOTH,
+	},
 	physics: {
 		default: "arcade",
 		arcade: { gravity: { x: 0, y: 0 }, debug: false },
 	},
-	scene: [MenuScene, GameScene, GameOverScene],
+	scene: [BootScene, MenuScene, GameScene, GameOverScene],
 };
 
 new Phaser.Game(config);
+`,
+		},
+		{
+			path: "src/scenes/boot-scene.ts",
+			content: `import Phaser from "phaser";
+
+const ASSET = "/assets/games/skeleton-guard";
+
+export class BootScene extends Phaser.Scene {
+	constructor() { super("BootScene"); }
+
+	preload() {
+		const cx = 256;
+		const cy = 128;
+		const box = this.add.graphics();
+		box.fillStyle(0x222222, 0.8);
+		box.fillRect(cx - 130, cy - 10, 260, 20);
+		const bar = this.add.graphics();
+		const pct = this.add.text(cx, cy + 20, "0%", {
+			fontSize: "14px", color: "#ffffff", fontFamily: "Arial",
+		}).setOrigin(0.5);
+
+		this.load.on("progress", (v: number) => {
+			pct.setText(Math.round(v * 100) + "%");
+			bar.clear();
+			bar.fillStyle(0x22c55e, 1);
+			bar.fillRect(cx - 125, cy - 6, 250 * v, 12);
+		});
+
+		this.load.image("back", ASSET + "/backgrounds/back.png");
+		this.load.image("sky", ASSET + "/backgrounds/sky.png");
+		this.load.image("rock", ASSET + "/backgrounds/rock.png");
+		this.load.spritesheet("tower", ASSET + "/backgrounds/tower.png", {
+			frameWidth: 139, frameHeight: 262,
+		});
+		this.load.spritesheet("stones", ASSET + "/backgrounds/stones.png", {
+			frameWidth: 170, frameHeight: 128,
+		});
+
+		for (let i = 1; i <= 18; i++) {
+			this.load.image("m1_" + i, ASSET + "/sprites/m1/" + i + ".png");
+			this.load.image("m2_" + i, ASSET + "/sprites/m2/" + i + ".png");
+			this.load.image("m3_" + i, ASSET + "/sprites/m3/" + i + ".png");
+			this.load.image("s1_" + i, ASSET + "/sprites/s1/" + i + ".png");
+			this.load.image("s2_" + i, ASSET + "/sprites/s2/" + i + ".png");
+			this.load.image("s3_" + i, ASSET + "/sprites/s3/" + i + ".png");
+		}
+
+		this.load.spritesheet("buttons", ASSET + "/buttons/buttons.png", {
+			frameWidth: 50, frameHeight: 50,
+		});
+		this.load.spritesheet("buttons2", ASSET + "/buttons/buttons2.png", {
+			frameWidth: 300, frameHeight: 113,
+		});
+	}
+
+	create() {
+		this.scene.start("MenuScene");
+	}
+}
 `,
 		},
 		{
@@ -35,40 +100,27 @@ export class MenuScene extends Phaser.Scene {
 	constructor() { super("MenuScene"); }
 
 	create() {
-		const gfx = this.add.graphics();
-		gfx.fillGradientStyle(0x2d1b69, 0x2d1b69, 0x0f172a, 0x0f172a, 1);
-		gfx.fillRect(0, 0, 800, 500);
+		this.add.image(0, 0, "back").setOrigin(0, 0).setDisplaySize(512, 256);
 
-		gfx.fillStyle(0x334155, 1);
-		gfx.fillRect(0, 380, 800, 120);
-		gfx.fillStyle(0x475569, 1);
-		gfx.fillRect(0, 375, 800, 8);
+		this.add.text(256, 60, "${meta.name}", {
+			fontSize: "28px", color: "#ffffff", fontFamily: "Arial",
+			stroke: "#000000", strokeThickness: 3,
+		}).setOrigin(0.5);
 
-		gfx.fillStyle(0x64748b, 1);
-		gfx.fillRect(680, 280, 60, 100);
-		gfx.fillRect(670, 260, 80, 25);
-		gfx.fillStyle(0x94a3b8, 1);
-		gfx.fillTriangle(710, 230, 660, 262, 760, 262);
+		this.add.text(256, 90, "${g.skeletonGuard.subtitle}", {
+			fontSize: "16px", color: "#a3e635", fontFamily: "Arial",
+		}).setOrigin(0.5);
 
-		gfx.fillStyle(0x475569, 1);
-		gfx.fillRect(50, 300, 50, 80);
-		gfx.fillRect(40, 280, 70, 25);
+		this.add.text(256, 120, "${g.skeletonGuard.rpsHint}", {
+			fontSize: "9px", color: "#d4d4d8", fontFamily: "Arial",
+			align: "center", wordWrap: { width: 400 },
+		}).setOrigin(0.5);
 
-		const colors = [0xef4444, 0x22c55e, 0x3b82f6];
-		const labels = ["${g.skeletonGuard.cavalry}", "${g.skeletonGuard.spear}", "${g.skeletonGuard.archer}"];
-		for (let i = 0; i < 3; i++) {
-			const cx = 300 + i * 80;
-			gfx.fillStyle(colors[i], 1);
-			gfx.fillCircle(cx, 340, 12);
-			gfx.fillRect(cx - 6, 340, 12, 20);
-			this.add.text(cx, 370, labels[i], { fontSize: "11px", color: "#94a3b8", fontFamily: "Arial" }).setOrigin(0.5, 0);
-		}
+		const startBtn = this.add.text(256, 190, "${g.common.startGame}", {
+			fontSize: "20px", color: "#06b6d4", fontFamily: "Arial",
+			stroke: "#000000", strokeThickness: 2,
+		}).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-		this.add.text(400, 80, "${meta.name}", { fontSize: "44px", color: "#ffffff", fontFamily: "Arial" }).setOrigin(0.5);
-		this.add.text(400, 130, "${g.skeletonGuard.subtitle}", { fontSize: "22px", color: "#a3e635", fontFamily: "Arial" }).setOrigin(0.5);
-		this.add.text(400, 180, "${g.skeletonGuard.rpsHint}", { fontSize: "14px", color: "#94a3b8", fontFamily: "Arial", align: "center", wordWrap: { width: 600 } }).setOrigin(0.5);
-
-		const startBtn = this.add.text(400, 440, "${g.common.startGame}", { fontSize: "28px", color: "#06b6d4", fontFamily: "Arial" }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 		startBtn.on("pointerdown", () => this.scene.start("GameScene"));
 		startBtn.on("pointerover", () => startBtn.setColor("#22c55e"));
 		startBtn.on("pointerout", () => startBtn.setColor("#06b6d4"));
@@ -80,266 +132,263 @@ export class MenuScene extends Phaser.Scene {
 			path: "src/scenes/game-scene.ts",
 			content: `import Phaser from "phaser";
 
-const LANE_Y = [200, 320];
-const TOWER_X = 720;
-const NEST_X = 80;
-const UNIT_SPEED = 0.8;
-const TOWER_MAX_HP = 5;
-const NEST_MAX_HP = 8;
-const MAX_UNITS = 3;
-const SPAWN_MIN = 2000;
-const SPAWN_MAX = 4000;
+interface UnitData {
+	sprite: Phaser.GameObjects.Image;
+	unitType: number;
+	enemy: boolean;
+	status: "walk" | "attack" | "die" | "dead";
+	animFrame: number;
+	animTick: number;
+	walkFrame: number;
+	floorIdx: number;
+	passCount: number;
+}
 
-const UNIT_COLORS = [0xef4444, 0x22c55e, 0x3b82f6];
-const ENEMY_COLORS = [0xfbbf24, 0xa78bfa, 0xf472b6];
-const TYPE_NAMES_PLAYER = ["${g.skeletonGuard.cavalry}", "${g.skeletonGuard.spear}", "${g.skeletonGuard.archer}"];
-const BEATS: any = { 0: 2, 1: 0, 2: 1 };
+const FLOOR_Y = [50, 170];
+const ROCK_X = 260;
+const TOWER_HIT_X = 405;
+const MAX_PER_TYPE = 2;
+const TOWER_MAX_HP = 5;
+const NEST_MAX_HP = 10;
+const BEATS: Record<number, number> = { 0: 2, 1: 0, 2: 1 };
+const ENEMY_Y_OFFSET: Record<number, number> = { 0: -15, 1: 0, 2: 0 };
 
 export class GameScene extends Phaser.Scene {
-	private units: any[] = [];
+	private sky!: Phaser.GameObjects.TileSprite;
+	private towerSprite!: Phaser.GameObjects.Sprite;
+	private nestSprite!: Phaser.GameObjects.Sprite;
+	private towerHpText!: Phaser.GameObjects.Text;
+	private nestHpText!: Phaser.GameObjects.Text;
+	private units: UnitData[] = [];
 	private towerHp = TOWER_MAX_HP;
 	private nestHp = NEST_MAX_HP;
-	private spawnTimer = 0;
-	private nextSpawn = 3000;
-	private gfx!: Phaser.GameObjects.Graphics;
-	private bgGfx!: Phaser.GameObjects.Graphics;
-	private hpText!: Phaser.GameObjects.Text;
-	private nestHpText!: Phaser.GameObjects.Text;
-	private waveText!: Phaser.GameObjects.Text;
-	private btnTexts: Phaser.GameObjects.Text[] = [];
-	private gameOver = false;
-	private animTick = 0;
+	private tick = 0;
+	private playerCounts = [0, 0, 0];
+	private ended = false;
 
 	constructor() { super("GameScene"); }
+
+	private spriteKey(enemy: boolean, unitType: number, frame: number): string {
+		return (enemy ? "s" : "m") + (unitType + 1) + "_" + frame;
+	}
 
 	create() {
 		this.units = [];
 		this.towerHp = TOWER_MAX_HP;
 		this.nestHp = NEST_MAX_HP;
-		this.spawnTimer = 0;
-		this.nextSpawn = 3000;
-		this.gameOver = false;
-		this.animTick = 0;
+		this.tick = 0;
+		this.playerCounts = [0, 0, 0];
+		this.ended = false;
 
-		this.bgGfx = this.add.graphics();
-		this.gfx = this.add.graphics();
+		this.sky = this.add.tileSprite(0, 0, 335, 87, "sky").setOrigin(0, 0);
+		this.add.image(0, 0, "back").setOrigin(0, 0).setDisplaySize(512, 256);
 
-		this.drawBackground();
+		this.towerSprite = this.add.sprite(330, 0, "tower", 0)
+			.setOrigin(0, 0).setScale(0.9);
+		this.add.image(260, -10, "rock").setOrigin(0, 0).setScale(0.9);
+		this.nestSprite = this.add.sprite(150, -15, "stones", 0)
+			.setOrigin(0, 0).setScale(0.9);
 
-		this.hpText = this.add.text(TOWER_X - 10, 100, "", { fontSize: "14px", color: "#22c55e", fontFamily: "Arial" }).setOrigin(0.5).setDepth(100);
-		this.nestHpText = this.add.text(NEST_X, 100, "", { fontSize: "14px", color: "#ef4444", fontFamily: "Arial" }).setOrigin(0.5).setDepth(100);
-		this.waveText = this.add.text(400, 20, "", { fontSize: "13px", color: "#94a3b8", fontFamily: "Arial" }).setOrigin(0.5).setDepth(100);
+		this.towerHpText = this.add.text(380, 6, "", {
+			fontSize: "10px", color: "#22c55e", fontFamily: "Arial",
+			stroke: "#000", strokeThickness: 2,
+		}).setDepth(10);
+		this.nestHpText = this.add.text(10, 6, "", {
+			fontSize: "10px", color: "#ef4444", fontFamily: "Arial",
+			stroke: "#000", strokeThickness: 2,
+		}).setDepth(10);
+		this.updateHpDisplay();
 
-		const btnY = 460;
-		const labels = ["${g.skeletonGuard.cavalry}", "${g.skeletonGuard.spear}", "${g.skeletonGuard.archer}"];
-		const keys = ["1", "2", "3"];
-		this.btnTexts = [];
 		for (let i = 0; i < 3; i++) {
-			const bx = 620 + i * 65;
-			const btn = this.add.text(bx, btnY, labels[i], {
-				fontSize: "16px", color: "#ffffff", fontFamily: "Arial",
-				backgroundColor: "#334155", padding: { x: 8, y: 6 },
-			}).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(100);
+			const btn = this.add.sprite(0, 0, "buttons", i)
+				.setScale(0.8).setOrigin(0, 0).setDepth(10);
+			btn.x = 512 - btn.displayWidth * (3 - i);
+			btn.y = 256 - btn.displayHeight;
+			btn.setInteractive({ useHandCursor: true });
 			const idx = i;
-			btn.on("pointerdown", () => this.spawnPlayerUnit(idx));
-			btn.on("pointerover", () => btn.setStyle({ backgroundColor: "#475569" }));
-			btn.on("pointerout", () => btn.setStyle({ backgroundColor: "#334155" }));
-			this.btnTexts.push(btn);
-
-			this.input.keyboard!.addKey(keys[i]).on("down", () => this.spawnPlayerUnit(idx));
+			btn.on("pointerdown", () => this.spawnPlayer(idx));
 		}
 
-		this.add.text(400, 460, "${g.skeletonGuard.spawnHint}", { fontSize: "12px", color: "#64748b", fontFamily: "Arial" }).setOrigin(0.5).setDepth(100);
+		this.input.keyboard!.addKey("1").on("down", () => this.spawnPlayer(0));
+		this.input.keyboard!.addKey("2").on("down", () => this.spawnPlayer(1));
+		this.input.keyboard!.addKey("3").on("down", () => this.spawnPlayer(2));
 
-		this.updateHud();
-	}
+		this.add.text(400, 230, "${g.skeletonGuard.spawnHint}", {
+			fontSize: "7px", color: "#94a3b8", fontFamily: "Arial",
+		}).setOrigin(0.5, 0).setDepth(10);
 
-	private spawnPlayerUnit(type: number) {
-		if (this.gameOver) return;
-		const count = this.units.filter(u => u.alive && !u.enemy && u.type === type).length;
-		if (count >= MAX_UNITS) return;
-		const lane = Phaser.Math.Between(0, 1);
-		this.units.push({
-			x: TOWER_X - 40, y: LANE_Y[lane] + Phaser.Math.Between(-10, 10),
-			type, lane, alive: true, enemy: false, fighting: false, fightTimer: 0, hp: 1,
+		const spawnDelay = Phaser.Math.Between(2000, 4000);
+		this.time.addEvent({
+			delay: spawnDelay,
+			repeat: 99,
+			callback: () => this.spawnEnemy(),
 		});
 	}
 
-	private spawnEnemyUnit() {
-		const type = Phaser.Math.Between(0, 2);
-		const lane = Phaser.Math.Between(0, 1);
+	private spawnPlayer(unitType: number) {
+		if (this.ended) return;
+		if (this.playerCounts[unitType] >= MAX_PER_TYPE) return;
+		this.playerCounts[unitType]++;
+
+		const sprite = this.add.image(400, 0, this.spriteKey(false, unitType, 1));
+		sprite.y = 256 - 40 - sprite.height;
+		sprite.setFlipX(true);
+
 		this.units.push({
-			x: NEST_X + 30, y: LANE_Y[lane] + Phaser.Math.Between(-10, 10),
-			type, lane, alive: true, enemy: true, fighting: false, fightTimer: 0, hp: 1,
+			sprite, unitType, enemy: false,
+			status: "walk", animFrame: 0, animTick: 0, walkFrame: 0,
+			floorIdx: 0, passCount: 0,
 		});
 	}
 
-	update(_time: number, delta: number) {
-		if (this.gameOver) return;
-		this.animTick += delta;
+	private spawnEnemy() {
+		if (this.ended) return;
+		const unitType = Phaser.Math.Between(0, 2);
+		const yOff = ENEMY_Y_OFFSET[unitType] ?? 0;
 
-		this.spawnTimer += delta;
-		if (this.spawnTimer >= this.nextSpawn) {
-			this.spawnTimer = 0;
-			this.nextSpawn = Phaser.Math.Between(SPAWN_MIN, SPAWN_MAX);
-			this.spawnEnemyUnit();
-		}
+		const sprite = this.add.image(30, FLOOR_Y[0] + yOff,
+			this.spriteKey(true, unitType, 1));
+		sprite.setFlipX(true);
+
+		this.units.push({
+			sprite, unitType, enemy: true,
+			status: "walk", animFrame: 0, animTick: 0, walkFrame: 0,
+			floorIdx: 0, passCount: 0,
+		});
+	}
+
+	update() {
+		if (this.ended) return;
+		this.tick++;
+		this.sky.tilePositionX += 0.15;
 
 		for (const u of this.units) {
-			if (!u.alive || u.fighting) continue;
+			if (u.status !== "walk") continue;
 			if (u.enemy) {
-				u.x += UNIT_SPEED;
-				if (u.x >= TOWER_X - 20) {
-					u.alive = false;
+				u.sprite.x++;
+				const yOff = ENEMY_Y_OFFSET[u.unitType] ?? 0;
+				if (u.passCount === 0 && u.floorIdx === 0
+					&& u.sprite.x >= ROCK_X) {
+					u.passCount = 1;
+					u.floorIdx = 1;
+					u.sprite.x = 25;
+					u.sprite.y = FLOOR_Y[1] + yOff;
+				}
+				if (u.sprite.x > TOWER_HIT_X) {
 					this.towerHp--;
+					if (this.towerHp >= 0) {
+						this.towerSprite.setFrame(TOWER_MAX_HP - this.towerHp);
+					}
+					u.status = "dead";
+					u.sprite.destroy();
+					this.updateHpDisplay();
 					if (this.towerHp <= 0) { this.endGame(false); return; }
 				}
 			} else {
-				u.x -= UNIT_SPEED;
-				if (u.x <= NEST_X + 20) {
-					u.alive = false;
+				u.sprite.x--;
+				if (u.sprite.x < 0) {
 					this.nestHp--;
+					if (this.nestHp >= 0) {
+						this.nestSprite.setFrame(NEST_MAX_HP - this.nestHp);
+					}
+					this.playerCounts[u.unitType]--;
+					u.status = "dead";
+					u.sprite.destroy();
+					this.updateHpDisplay();
 					if (this.nestHp <= 0) { this.endGame(true); return; }
 				}
 			}
 		}
 
-		for (let i = 0; i < this.units.length; i++) {
-			const a = this.units[i];
-			if (!a.alive || a.fighting || a.enemy) continue;
-			for (let j = 0; j < this.units.length; j++) {
-				const b = this.units[j];
-				if (!b.alive || b.fighting || !b.enemy) continue;
-				if (Math.abs(a.y - b.y) > 30) continue;
-				if (Math.abs(a.x - b.x) < 20) {
-					this.resolveCombat(a, b);
+		for (const p of this.units) {
+			if (p.enemy || p.status !== "walk") continue;
+			for (const e of this.units) {
+				if (!e.enemy || e.status !== "walk") continue;
+				if (Math.abs(p.sprite.x - e.sprite.x) < 20
+					&& Math.abs(p.sprite.y - e.sprite.y) < 30) {
+					this.resolveCombat(p, e);
+					break;
 				}
 			}
 		}
 
 		for (const u of this.units) {
-			if (u.fighting) {
-				u.fightTimer -= delta;
-				if (u.fightTimer <= 0) u.alive = false;
+			if (u.status === "attack") {
+				u.animTick++;
+				if (u.animTick % 2 === 0) {
+					const frame = 5 + u.animFrame;
+					if (frame <= 9) {
+						u.sprite.setTexture(
+							this.spriteKey(u.enemy, u.unitType, frame));
+						u.animFrame++;
+					} else {
+						u.status = "walk";
+						u.animFrame = 0;
+						u.animTick = 0;
+						u.walkFrame = 0;
+					}
+				}
+			} else if (u.status === "die") {
+				u.animTick++;
+				if (u.animTick % 2 === 0) {
+					const frame = 14 + u.animFrame;
+					if (frame <= 17) {
+						u.sprite.setTexture(
+							this.spriteKey(u.enemy, u.unitType, frame));
+						u.animFrame++;
+					} else {
+						if (!u.enemy) this.playerCounts[u.unitType]--;
+						u.status = "dead";
+						u.sprite.destroy();
+					}
+				}
 			}
 		}
 
-		this.units = this.units.filter(u => u.alive);
-		this.updateHud();
-		this.drawUnits();
+		if (this.tick % 10 === 0) {
+			for (const u of this.units) {
+				if (u.status !== "walk") continue;
+				u.walkFrame = (u.walkFrame + 1) % 4;
+				u.sprite.setTexture(
+					this.spriteKey(u.enemy, u.unitType, u.walkFrame + 1));
+				if (!u.enemy) {
+					u.sprite.y = 256 - 40 - u.sprite.height;
+				}
+			}
+		}
+
+		this.units = this.units.filter(u => u.status !== "dead");
 	}
 
-	private resolveCombat(player: any, enemy: any) {
-		player.fighting = true;
-		enemy.fighting = true;
-
-		if (player.type === enemy.type) {
-			player.fightTimer = 400;
-			enemy.fightTimer = 400;
-		} else if (BEATS[player.type] === enemy.type) {
-			enemy.fightTimer = 300;
-			player.fightTimer = 600;
-			this.time.delayedCall(350, () => { player.fighting = false; });
+	private resolveCombat(player, enemy) {
+		if (player.unitType === enemy.unitType) {
+			player.status = "die";
+			enemy.status = "die";
+		} else if (BEATS[player.unitType] === enemy.unitType) {
+			player.status = "attack";
+			enemy.status = "die";
 		} else {
-			player.fightTimer = 300;
-			enemy.fightTimer = 600;
-			this.time.delayedCall(350, () => { enemy.fighting = false; });
+			enemy.status = "attack";
+			player.status = "die";
 		}
+		player.animFrame = 0;
+		player.animTick = 0;
+		enemy.animFrame = 0;
+		enemy.animTick = 0;
 	}
 
 	private endGame(win: boolean) {
-		this.gameOver = true;
+		this.ended = true;
 		this.time.delayedCall(800, () => {
 			this.scene.start("GameOverScene", { win });
 		});
 	}
 
-	private updateHud() {
-		this.hpText.setText("${g.skeletonGuard.tower}: " + this.towerHp + "/" + TOWER_MAX_HP);
-		this.nestHpText.setText("${g.skeletonGuard.nest}: " + this.nestHp + "/" + NEST_MAX_HP);
-		const enemyCount = this.units.filter(u => u.alive && u.enemy).length;
-		const playerCount = this.units.filter(u => u.alive && !u.enemy).length;
-		this.waveText.setText("${g.skeletonGuard.yourUnits}: " + playerCount + "  |  ${g.skeletonGuard.enemyUnits}: " + enemyCount);
-	}
-
-	private drawBackground() {
-		const bg = this.bgGfx;
-		bg.fillGradientStyle(0x1e1b4b, 0x1e1b4b, 0x334155, 0x334155, 1);
-		bg.fillRect(0, 0, 800, 500);
-
-		bg.fillStyle(0x475569, 1);
-		bg.fillRect(0, 380, 800, 120);
-		bg.fillStyle(0x64748b, 1);
-		bg.fillRect(0, 375, 800, 8);
-
-		bg.fillStyle(0x1e293b, 1);
-		bg.fillRect(0, 420, 800, 80);
-
-		bg.lineStyle(1, 0x475569, 0.3);
-		for (const ly of LANE_Y) {
-			bg.lineBetween(NEST_X + 40, ly + 15, TOWER_X - 30, ly + 15);
-		}
-
-		bg.fillStyle(0x64748b, 1);
-		bg.fillRect(TOWER_X - 30, 140, 60, 240);
-		bg.fillRect(TOWER_X - 40, 120, 80, 25);
-		bg.fillStyle(0x94a3b8, 1);
-		bg.fillTriangle(TOWER_X, 90, TOWER_X - 45, 122, TOWER_X + 45, 122);
-		bg.fillStyle(0xfbbf24, 0.6);
-		bg.fillRect(TOWER_X - 8, 160, 16, 20);
-		bg.fillRect(TOWER_X - 8, 200, 16, 20);
-
-		bg.fillStyle(0x475569, 1);
-		bg.fillRect(NEST_X - 30, 160, 60, 220);
-		bg.fillRect(NEST_X - 40, 140, 80, 25);
-		bg.fillStyle(0x78716c, 1);
-		bg.fillTriangle(NEST_X, 110, NEST_X - 45, 142, NEST_X + 45, 142);
-		bg.fillStyle(0xef4444, 0.5);
-		bg.fillCircle(NEST_X, 180, 8);
-
-		bg.fillStyle(0x374151, 1);
-		bg.fillRect(340, 250, 120, 130);
-		bg.fillRect(330, 240, 140, 15);
-	}
-
-	private drawUnits() {
-		const g = this.gfx;
-		g.clear();
-		const bounce = Math.sin(this.animTick * 0.008) * 2;
-
-		for (const u of this.units) {
-			if (!u.alive) continue;
-			const color = u.enemy ? ENEMY_COLORS[u.type] : UNIT_COLORS[u.type];
-			const bx = u.x;
-			const by = u.y + (u.fighting ? 0 : bounce);
-
-			if (u.fighting) {
-				g.fillStyle(0xffffff, 0.7);
-				g.fillCircle(bx, by - 5, 12);
-				g.fillStyle(color, 0.5);
-				g.fillCircle(bx, by - 5, 8);
-			} else {
-				g.fillStyle(color, 1);
-				g.fillCircle(bx, by - 10, 8);
-				g.fillRect(bx - 4, by - 3, 8, 14);
-				g.fillRect(bx - 6, by + 8, 5, 6);
-				g.fillRect(bx + 1, by + 8, 5, 6);
-
-				if (u.type === 0) {
-					g.lineStyle(2, 0xffffff, 0.6);
-					const sx = u.enemy ? 6 : -6;
-					g.lineBetween(bx + sx, by - 8, bx + sx * 2, by - 14);
-				} else if (u.type === 1) {
-					g.lineStyle(2, 0xd4d4d8, 0.8);
-					const sx = u.enemy ? 1 : -1;
-					g.lineBetween(bx, by - 10, bx + sx * 18, by - 10);
-				} else {
-					g.lineStyle(2, 0x92400e, 0.8);
-					const sx = u.enemy ? 1 : -1;
-					g.lineBetween(bx + sx * 4, by - 14, bx + sx * 4, by + 2);
-				}
-			}
-		}
+	private updateHpDisplay() {
+		this.towerHpText.setText(
+			"${g.skeletonGuard.tower}: " + this.towerHp + "/" + TOWER_MAX_HP);
+		this.nestHpText.setText(
+			"${g.skeletonGuard.nest}: " + this.nestHp + "/" + NEST_MAX_HP);
 	}
 }
 `,
@@ -351,26 +400,31 @@ export class GameScene extends Phaser.Scene {
 export class GameOverScene extends Phaser.Scene {
 	constructor() { super("GameOverScene"); }
 
-	create(data: any) {
-		const win = data.win ?? false;
+	create(data = {}) {
+		const win = "win" in data && (data).win === true;
 
-		this.add.text(400, 150, win ? "${g.skeletonGuard.victory}" : "${g.skeletonGuard.defeat}", {
-			fontSize: "44px", color: win ? "#22c55e" : "#ef4444", fontFamily: "Arial",
+		this.add.image(0, 0, "back").setOrigin(0, 0).setDisplaySize(512, 256);
+
+		this.add.sprite(256, 100, "buttons2", win ? 1 : 0).setOrigin(0.5);
+
+		this.add.text(256, 170, win
+			? "${g.skeletonGuard.victoryMsg}"
+			: "${g.skeletonGuard.defeatMsg}", {
+			fontSize: "10px", color: "#d4d4d8", fontFamily: "Arial",
+			align: "center", wordWrap: { width: 400 },
 		}).setOrigin(0.5);
 
-		this.add.text(400, 220, win ? "${g.skeletonGuard.victoryMsg}" : "${g.skeletonGuard.defeatMsg}", {
-			fontSize: "18px", color: "#94a3b8", fontFamily: "Arial", align: "center", wordWrap: { width: 500 },
-		}).setOrigin(0.5);
-
-		const retryBtn = this.add.text(400, 340, "${g.skeletonGuard.retry}", {
-			fontSize: "24px", color: "#06b6d4", fontFamily: "Arial",
+		const retryBtn = this.add.text(200, 210, "${g.skeletonGuard.retry}", {
+			fontSize: "16px", color: "#06b6d4", fontFamily: "Arial",
+			stroke: "#000000", strokeThickness: 2,
 		}).setOrigin(0.5).setInteractive({ useHandCursor: true });
 		retryBtn.on("pointerdown", () => this.scene.start("GameScene"));
 		retryBtn.on("pointerover", () => retryBtn.setColor("#22c55e"));
 		retryBtn.on("pointerout", () => retryBtn.setColor("#06b6d4"));
 
-		const menuBtn = this.add.text(400, 400, "${g.common.backToMenu}", {
-			fontSize: "20px", color: "#94a3b8", fontFamily: "Arial",
+		const menuBtn = this.add.text(312, 210, "${g.common.backToMenu}", {
+			fontSize: "14px", color: "#94a3b8", fontFamily: "Arial",
+			stroke: "#000000", strokeThickness: 2,
 		}).setOrigin(0.5).setInteractive({ useHandCursor: true });
 		menuBtn.on("pointerdown", () => this.scene.start("MenuScene"));
 		menuBtn.on("pointerover", () => menuBtn.setColor("#22c55e"));
@@ -383,8 +437,8 @@ export class GameOverScene extends Phaser.Scene {
 			path: "src/config/game-config.ts",
 			content: `export const GAME_CONFIG = {
 	title: "${meta.name}",
-	width: 800,
-	height: 500,
+	width: 512,
+	height: 256,
 	fps: 60,
 	gravity: 0,
 	debug: false,

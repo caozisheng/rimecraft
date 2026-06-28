@@ -1,0 +1,6 @@
+发版命令：
+  node scripts/bump-version.mjs 0.2.0
+  git add -A
+  git commit -m "release: v0.2.0"
+  git tag v0.2.0
+  git push && git push --tags
