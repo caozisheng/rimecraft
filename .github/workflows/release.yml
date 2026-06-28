@@ -13,6 +13,13 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v5
+      - name: Use official crates.io registry
+        run: |
+          cat > apps/tauri/src-tauri/.cargo/config.toml << 'EOF'
+          [net]
+          retry = 5
+          git-fetch-with-cli = true
+          EOF
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -45,6 +52,13 @@ jobs:
     runs-on: ubuntu-22.04-arm
     steps:
       - uses: actions/checkout@v5
+      - name: Use official crates.io registry
+        run: |
+          cat > apps/tauri/src-tauri/.cargo/config.toml << 'EOF'
+          [net]
+          retry = 5
+          git-fetch-with-cli = true
+          EOF
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -77,6 +91,13 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v5
+      - name: Use official crates.io registry
+        run: |
+          cat > apps/tauri/src-tauri/.cargo/config.toml << 'EOF'
+          [net]
+          retry = 5
+          git-fetch-with-cli = true
+          EOF
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin
@@ -100,6 +121,13 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v5
+      - name: Use official crates.io registry
+        run: |
+          cat > apps/tauri/src-tauri/.cargo/config.toml << 'EOF'
+          [net]
+          retry = 5
+          git-fetch-with-cli = true
+          EOF
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
@@ -123,6 +151,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Use official crates.io registry
+        shell: bash
+        run: |
+          cat > apps/tauri/src-tauri/.cargo/config.toml << 'EOF'
+          [net]
+          retry = 5
+          git-fetch-with-cli = true
+          EOF
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
