@@ -17,7 +17,7 @@ import {
 	Settings,
 	ArrowLeft,
 } from "lucide-react";
-import { ExpertRoleRegistry, type AgentMessage } from "@rime/agent-engine";
+import { ExpertRoleRegistry, type AgentMessage } from "rimeagent"
 import type { GameExpertRole } from "@/core/agent-roles";
 import Markdown from "react-markdown";
 import { useI18n } from "@/i18n";

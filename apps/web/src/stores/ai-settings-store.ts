@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { GameExpertRole } from "@/core/agent-roles";
-import type { LLMProvider, AgentLLMConfig } from "@rime/agent-engine";
+import type { LLMProvider, AgentLLMConfig } from "rimeagent"
 
 export interface RoleLLMOverride {
 	enabled: boolean;

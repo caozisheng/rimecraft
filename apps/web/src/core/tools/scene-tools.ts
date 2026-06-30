@@ -1,4 +1,4 @@
-import type { AgentTool } from "@rime/agent-engine";
+import type { AgentTool } from "rimeagent"
 import type { ToolContext, Command } from "./tool-context";
 import { refreshFileList, getMessages, t, normalizeError } from "./tool-context";
 import { sceneBridge } from "../scene-bridge";

@@ -12,7 +12,7 @@
     },
     "apps/tauri": {
       "name": "@rimecraft/tauri",
-      "version": "0.1.7",
+      "version": "0.2.2",
       "dependencies": {
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -20,7 +20,6 @@
         "@radix-ui/react-separator": "^1.1.8",
         "@radix-ui/react-slot": "^1.2.4",
         "@radix-ui/react-tooltip": "^1.2.8",
-        "@rime/agent-engine": "workspace:*",
         "@rimecraft/core": "workspace:*",
         "@rimecraft/phaser-runtime": "workspace:*",
         "@rimecraft/ui": "workspace:*",
@@ -40,6 +39,7 @@
         "react-markdown": "^10.1.0",
         "react-resizable-panels": "^2.1.7",
         "react-router": "^7.5.0",
+        "rimeagent": "github:caozisheng/rimeagent",
         "sonner": "^1.7.1",
         "tailwind-merge": "^3.5.0",
         "tailwindcss-animate": "^1.0.7",
@@ -62,7 +62,7 @@
     },
     "apps/web": {
       "name": "@rimecraft/web",
-      "version": "0.1.7",
+      "version": "0.2.2",
       "dependencies": {
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -70,7 +70,6 @@
         "@radix-ui/react-separator": "^1.1.8",
         "@radix-ui/react-slot": "^1.2.4",
         "@radix-ui/react-tooltip": "^1.2.8",
-        "@rime/agent-engine": "workspace:*",
         "@rimecraft/code-editor": "workspace:*",
         "@rimecraft/core": "workspace:*",
         "@rimecraft/phaser-runtime": "workspace:*",
@@ -90,6 +89,7 @@
         "react-dom": "^19.0.0",
         "react-markdown": "^10.1.0",
         "react-resizable-panels": "^2.1.7",
+        "rimeagent": "github:caozisheng/rimeagent",
         "sonner": "^1.7.1",
         "tailwind-merge": "^3.5.0",
         "tailwindcss-animate": "^1.0.7",
@@ -111,19 +111,9 @@
         "typescript": "^5.8.3",
       },
     },
-    "packages/agent-engine": {
-      "name": "@rime/agent-engine",
-      "version": "0.1.0",
-      "dependencies": {
-        "nanoid": "^5.1.5",
-      },
-      "devDependencies": {
-        "typescript": "^5.8.3",
-      },
-    },
     "packages/code-editor": {
       "name": "@rimecraft/code-editor",
-      "version": "0.1.7",
+      "version": "0.2.2",
       "dependencies": {
         "@monaco-editor/react": "^4.7.0",
         "monaco-editor": "^0.52.0",
@@ -139,7 +129,7 @@
     },
     "packages/core": {
       "name": "@rimecraft/core",
-      "version": "0.1.7",
+      "version": "0.2.2",
       "dependencies": {
         "uuid": "^11.1.0",
       },
@@ -149,7 +139,7 @@
     },
     "packages/phaser-runtime": {
       "name": "@rimecraft/phaser-runtime",
-      "version": "0.1.7",
+      "version": "0.2.2",
       "dependencies": {
         "eventemitter3": "^5.0.1",
         "phaser": "4.0.0",
@@ -157,7 +147,7 @@
     },
     "packages/ui": {
       "name": "@rimecraft/ui",
-      "version": "0.1.7",
+      "version": "0.2.2",
       "dependencies": {
         "@radix-ui/react-dialog": "^1.1.15",
         "@radix-ui/react-dropdown-menu": "^2.1.16",
@@ -411,8 +401,6 @@
     "@radix-ui/react-visually-hidden": ["@radix-ui/react-visually-hidden@1.2.3", "https://registry.npmmirror.com/@radix-ui/react-visually-hidden/-/react-visually-hidden-1.2.3.tgz", { "dependencies": { "@radix-ui/react-primitive": "2.1.3" }, "peerDependencies": { "@types/react": "*", "@types/react-dom": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc", "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-pzJq12tEaaIhqjbzpCuv/OypJY/BPavOofm+dbab+MHLajy277+1lLm6JFcGgF5eskJ6mquGirhXY2GD/8u8Ug=="],
 
     "@radix-ui/rect": ["@radix-ui/rect@1.1.1", "https://registry.npmmirror.com/@radix-ui/rect/-/rect-1.1.1.tgz", {}, "sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw=="],
-
-    "@rime/agent-engine": ["@rime/agent-engine@workspace:packages/agent-engine"],
 
     "@rimecraft/code-editor": ["@rimecraft/code-editor@workspace:packages/code-editor"],
 
@@ -837,6 +825,8 @@
     "remark-parse": ["remark-parse@11.0.0", "https://registry.npmmirror.com/remark-parse/-/remark-parse-11.0.0.tgz", { "dependencies": { "@types/mdast": "^4.0.0", "mdast-util-from-markdown": "^2.0.0", "micromark-util-types": "^2.0.0", "unified": "^11.0.0" } }, "sha512-FCxlKLNGknS5ba/1lmpYijMUzX2esxW5xQqjWxw2eHFfS2MSdaHVINFmhjo+qN1WhZhNimq0dZATN9pH0IDrpA=="],
 
     "remark-rehype": ["remark-rehype@11.1.2", "https://registry.npmmirror.com/remark-rehype/-/remark-rehype-11.1.2.tgz", { "dependencies": { "@types/hast": "^3.0.0", "@types/mdast": "^4.0.0", "mdast-util-to-hast": "^13.0.0", "unified": "^11.0.0", "vfile": "^6.0.0" } }, "sha512-Dh7l57ianaEoIpzbp0PC9UKAdCSVklD8E5Rpw7ETfbTl3FqcOOgq5q2LVDhgGCkaBv7p24JXikPdvhhmHvKMsw=="],
+
+    "rimeagent": ["rimeagent@github:caozisheng/rimeagent#f30d9cb", { "dependencies": { "nanoid": "^5.1.5" } }, "caozisheng-rimeagent-f30d9cb", "sha512-ql65NxaM5zQYFOymuBZwDESIPrXj/wgX4gqeYZezvXFceN1slUa0Gg5ulGNXqUS/Xt/yU3m6zqbzCvTW+ER6WA=="],
 
     "rollup": ["rollup@4.60.3", "https://registry.npmmirror.com/rollup/-/rollup-4.60.3.tgz", { "dependencies": { "@types/estree": "1.0.8" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.60.3", "@rollup/rollup-android-arm64": "4.60.3", "@rollup/rollup-darwin-arm64": "4.60.3", "@rollup/rollup-darwin-x64": "4.60.3", "@rollup/rollup-freebsd-arm64": "4.60.3", "@rollup/rollup-freebsd-x64": "4.60.3", "@rollup/rollup-linux-arm-gnueabihf": "4.60.3", "@rollup/rollup-linux-arm-musleabihf": "4.60.3", "@rollup/rollup-linux-arm64-gnu": "4.60.3", "@rollup/rollup-linux-arm64-musl": "4.60.3", "@rollup/rollup-linux-loong64-gnu": "4.60.3", "@rollup/rollup-linux-loong64-musl": "4.60.3", "@rollup/rollup-linux-ppc64-gnu": "4.60.3", "@rollup/rollup-linux-ppc64-musl": "4.60.3", "@rollup/rollup-linux-riscv64-gnu": "4.60.3", "@rollup/rollup-linux-riscv64-musl": "4.60.3", "@rollup/rollup-linux-s390x-gnu": "4.60.3", "@rollup/rollup-linux-x64-gnu": "4.60.3", "@rollup/rollup-linux-x64-musl": "4.60.3", "@rollup/rollup-openbsd-x64": "4.60.3", "@rollup/rollup-openharmony-arm64": "4.60.3", "@rollup/rollup-win32-arm64-msvc": "4.60.3", "@rollup/rollup-win32-ia32-msvc": "4.60.3", "@rollup/rollup-win32-x64-gnu": "4.60.3", "@rollup/rollup-win32-x64-msvc": "4.60.3", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-pAQK9HalE84QSm4Po3EmWIZPd3FnjkShVkiMlz1iligWYkWQ7wHYd1PF/T7QZ5TVSD6uSTon5gBVMSM4JfBV+A=="],
 

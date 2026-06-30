@@ -1,4 +1,4 @@
-import { ExpertRoleRegistry } from "@rime/agent-engine";
+import { ExpertRoleRegistry } from "rimeagent"
 
 let registered = false;
 

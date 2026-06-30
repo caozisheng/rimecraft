@@ -1,4 +1,4 @@
-import type { AgentTool } from "@rime/agent-engine";
+import type { AgentTool } from "rimeagent"
 import type { ToolContext } from "./tool-context";
 import { getMessages, normalizeError } from "./tool-context";
 

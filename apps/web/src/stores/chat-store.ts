@@ -1,10 +1,8 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
 import { getMessages } from "@/i18n";
-import type {
-	AgentMessage,
-	AgentStatus,
-} from "@rime/agent-engine";
+import type { AgentMessage,
+	AgentStatus, } from "rimeagent"
 import { runChatAgentLoop } from "./agent-loop";
 
 let _saveChatTimer: ReturnType<typeof setTimeout> | null = null;
